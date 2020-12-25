@@ -164,19 +164,199 @@ short Cpu::ExecuteOpcode() {
 		case 0x6D: cycles = LDreg(registers.l, registers.l); break;
 		case 0x6E: cycles = LDregHL(registers.l); break;
 
+		case 0x70: cycles = 8; MemoryWrite(Combinebytes(registers.h, registers.l), registers.b); break;
+		case 0x71: cycles = 8; MemoryWrite(Combinebytes(registers.h, registers.l), registers.b); break;
+		case 0x72: cycles = 8; MemoryWrite(Combinebytes(registers.h, registers.l), registers.b); break;
+		case 0x73: cycles = 8; MemoryWrite(Combinebytes(registers.h, registers.l), registers.b); break;
+		case 0x74: cycles = 8; MemoryWrite(Combinebytes(registers.h, registers.l), registers.b); break;
+		case 0x75: cycles = 8; MemoryWrite(Combinebytes(registers.h, registers.l), registers.b); break;
+		case 0x36: cycles = 12; MemoryWrite(Combinebytes(registers.h, registers.l), MemoryRead(registers.pc));  registers.pc++; break;
 
-		//case 0x70: break;
-		//case 0x71: break;
-		//case 0x72: break;
-		//case 0x73: break;
-		//case 0x74: break;
-		//case 0x75: break;
-		//case 0x36: break;
+		case 0x0A: cycles = LDRegFromMemory(registers.a, Combinebytes(registers.b, registers.c)); break;
+		case 0x1A: cycles = LDRegFromMemory(registers.a, Combinebytes(registers.d, registers.e)); break;
+		case 0xFA: cycles = LDRegFromMemory(registers.a); break;
+		case 0x3E: cycles = 8; registers.a = MemoryRead(registers.pc); registers.pc++; break;
 
+		case 0x47: cycles = LDreg(registers.b, registers.a); break;
+		case 0x4F: cycles = LDreg(registers.c, registers.a); break;
+		case 0x57: cycles = LDreg(registers.d, registers.a); break;
+		case 0x5F: cycles = LDreg(registers.e, registers.a); break;
+		case 0x67: cycles = LDreg(registers.h, registers.a); break;
+		case 0x6F: cycles = LDreg(registers.l, registers.a); break;
 
+		case 0x02: cycles = 8; MemoryWrite(Combinebytes(registers.b, registers.c), registers.a); break;
+		case 0x12: cycles = 8; MemoryWrite(Combinebytes(registers.b, registers.c), registers.a); break;
+		case 0x77: cycles = 8; MemoryWrite(Combinebytes(registers.b, registers.c), registers.a); break;
+		case 0xEA: cycles = 16; MemoryWrite(Combinebytes(MemoryRead(registers.pc), MemoryRead(registers.pc + 1)), registers.a); registers.pc += 2; break;
 
+		case 0xF2: cycles = 8; registers.a = MemoryRead(0xFF00 + registers.c); break;
 
+		case 0xE2: cycles = 8; MemoryWrite(0xFF00 + registers.c, registers.a); break;
 
+		case 0x3A: cycles = 8; registers.a = MemoryRead(Combinebytes(registers.h, registers.l)); decrement16reg(registers.h, registers.l); break;
+
+		case 0x32: cycles = 8; MemoryWrite(Combinebytes(registers.h, registers.l), registers.a); decrement16reg(registers.h, registers.l); break;
+
+		case 0x2A: cycles = 8; registers.a = MemoryRead(Combinebytes(registers.h, registers.l)); increment16reg(registers.h, registers.l); break;
+
+		case 0x22: cycles = 8; MemoryWrite(Combinebytes(registers.h, registers.l), registers.a); increment16reg(registers.h, registers.l); break;
+
+		case 0xE0: cycles = 12; MemoryWrite(0xFF00 + MemoryRead(registers.pc), registers.a); registers.pc++; break;
+
+		case 0xF0: cycles = 12; registers.a = MemoryRead(0xFF00 + MemoryRead(registers.pc)); break;
+
+		case 0x01: cycles = LD16(registers.b, registers.c); break;
+		case 0x11: cycles = LD16(registers.b, registers.c); break;
+		case 0x21: cycles = LD16(registers.b, registers.c); break;
+		case 0x31: cycles = LD16(registers.b, registers.c); break;
+
+		case 0xF9: cycles = 8; registers.pc = Combinebytes(registers.h, registers.l); break;
+
+		case 0xF8: cycles = LDHL(); break;
+
+		case 0x08: cycles = 20; MemoryWrite(MemoryRead(registers.pc), registers.sp); registers.pc++; break;
+
+		// push register pairs onto the stack
+		case 0xF5: cycles = Push(registers.a, registers.f); break;
+		case 0xC5: cycles = Push(registers.b, registers.c); break;
+		case 0xD5: cycles = Push(registers.d, registers.e); break;
+		case 0xE5: cycles = Push(registers.h, registers.l); break;
+
+		// pop register pairs off of the stack
+		case 0xF1: cycles = Pop(registers.a, registers.f); break;
+		case 0xC1: cycles = Pop(registers.b, registers.c); break;
+		case 0xD1: cycles = Pop(registers.d, registers.e); break;
+		case 0xE1: cycles = Pop(registers.h, registers.l); break;
+
+		// add
+		case 0x87: cycles = ADD(registers.a); break;
+		case 0x80: cycles = ADD(registers.b); break;
+		case 0x81: cycles = ADD(registers.c); break;
+		case 0x82: cycles = ADD(registers.d); break;
+		case 0x83: cycles = ADD(registers.e); break;
+		case 0x84: cycles = ADD(registers.h); break;
+		case 0x85: cycles = ADD(registers.l); break;
+		case 0x86: cycles = 8; ADD(MemoryRead(Combinebytes(registers.h, registers.l))); break;
+		case 0xC6: cycles = 8; ADD(MemoryRead(registers.pc)); registers.pc++; break;
+
+		// add with carry
+		case 0x8F: cycles = ADDC(registers.a); break;
+		case 0x88: cycles = ADDC(registers.b); break;
+		case 0x89: cycles = ADDC(registers.c); break;
+		case 0x8A: cycles = ADDC(registers.d); break;
+		case 0x8B: cycles = ADDC(registers.e); break;
+		case 0x8C: cycles = ADDC(registers.h); break;
+		case 0x8D: cycles = ADDC(registers.l); break;
+		case 0x8E: cycles = 8; ADDC(MemoryRead(Combinebytes(registers.h, registers.l))); break;
+		case 0xCE: cycles = 8; ADDC(MemoryRead(registers.pc)); registers.pc++; break;
+
+		// sub
+		case 0x97: cycles = SUB(registers.a); break;
+		case 0x90: cycles = SUB(registers.b); break;
+		case 0x91: cycles = SUB(registers.c); break;
+		case 0x92: cycles = SUB(registers.d); break;
+		case 0x93: cycles = SUB(registers.e); break;
+		case 0x94: cycles = SUB(registers.h); break;
+		case 0x95: cycles = SUB(registers.l); break;
+		case 0x96: cycles = 8; SUB(MemoryRead(Combinebytes(registers.h, registers.l))); break;
+		case 0xD6: cycles = 8; SUB(MemoryRead(registers.pc)); registers.pc++; break;
+
+		// sub with carry
+		case 0x9F: cycles = SUBC(registers.a); break;
+		case 0x98: cycles = SUBC(registers.b); break;
+		case 0x99: cycles = SUBC(registers.c); break;
+		case 0x9A: cycles = SUBC(registers.d); break;
+		case 0x9B: cycles = SUBC(registers.e); break;
+		case 0x9C: cycles = SUBC(registers.h); break;
+		case 0x9D: cycles = SUBC(registers.l); break;
+		case 0x9E: cycles = 8; SUBC(MemoryRead(Combinebytes(registers.h, registers.l))); break;
+		case 0xDE: cycles = 8; SUBC(MemoryRead(registers.pc)); registers.pc++; break;
+
+		// AND
+		case 0xA7: cycles = AND(registers.a); break;
+		case 0xA0: cycles = AND(registers.b); break;
+		case 0xA1: cycles = AND(registers.c); break;
+		case 0xA2: cycles = AND(registers.d); break;
+		case 0xA3: cycles = AND(registers.e); break;
+		case 0xA4: cycles = AND(registers.h); break;
+		case 0xA5: cycles = AND(registers.l); break;
+		case 0xA6: cycles = 8; AND(Combinebytes(registers.h, registers.l)); break;
+		case 0xE6: cycles = 8; AND(MemoryRead(registers.pc)); registers.pc++; break;
+
+		// OR
+		case 0xB7: cycles = OR(registers.a); break;
+		case 0xB0: cycles = OR(registers.b); break;
+		case 0xB1: cycles = OR(registers.c); break;
+		case 0xB2: cycles = OR(registers.d); break;
+		case 0xB3: cycles = OR(registers.e); break;
+		case 0xB4: cycles = OR(registers.h); break;
+		case 0xB5: cycles = OR(registers.l); break;
+		case 0xB6: cycles = 8; OR(Combinebytes(registers.h, registers.l)); break;
+		case 0xF6: cycles = 8; OR(MemoryRead(registers.pc)); registers.pc++; break;
+
+		// XOR
+		case 0xAF: cycles = XOR(registers.a); break;
+		case 0xA8: cycles = XOR(registers.b); break;
+		case 0xA9: cycles = XOR(registers.c); break;
+		case 0xAA: cycles = XOR(registers.d); break;
+		case 0xAB: cycles = XOR(registers.e); break;
+		case 0xAC: cycles = XOR(registers.h); break;
+		case 0xAD: cycles = XOR(registers.l); break;
+		case 0xAE: cycles = 8; XOR(Combinebytes(registers.h, registers.l)); break;
+		case 0xEE: cycles = 8; XOR(MemoryRead(registers.pc)); registers.pc++; break;
+
+		// CP
+		case 0xBF: cycles = CP(registers.a); break;
+		case 0xB8: cycles = CP(registers.b); break;
+		case 0xB9: cycles = CP(registers.c); break;
+		case 0xBA: cycles = CP(registers.d); break;
+		case 0xBB: cycles = CP(registers.e); break;
+		case 0xBC: cycles = CP(registers.h); break;
+		case 0xBD: cycles = CP(registers.l); break;
+		case 0xBE: cycles = 8; CP(Combinebytes(registers.h, registers.l)); break;
+		case 0xFE: cycles = 8; CP(MemoryRead(registers.pc)); registers.pc++; break;
+
+		// INC
+		case 0x3C: cycles = INC(registers.a); break;
+		case 0x04: cycles = INC(registers.b); break;
+		case 0x0C: cycles = INC(registers.c); break;
+		case 0x14: cycles = INC(registers.d); break;
+		case 0x1C: cycles = INC(registers.e); break;
+		case 0x24: cycles = INC(registers.h); break;
+		case 0x2C: cycles = INC(registers.l); break;
+		case 0x34: cycles = INCMemory(Combinebytes(registers.h, registers.l)); break;
+
+		// DEC
+		case 0x3D: cycles = DEC(registers.a); break;
+		case 0x05: cycles = DEC(registers.b); break;
+		case 0x0D: cycles = DEC(registers.c); break;
+		case 0x15: cycles = DEC(registers.d); break;
+		case 0x1D: cycles = DEC(registers.e); break;
+		case 0x25: cycles = DEC(registers.h); break;
+		case 0x2D: cycles = DEC(registers.l); break;
+		case 0x35: cycles = DECMemory(Combinebytes(registers.h, registers.l)); break;
+
+		// 16 bit ALU
+		// ADD HL
+		case 0x09: cycles = ADDHL(Combinebytes(registers.b, registers.c)); break;
+		case 0x19: cycles = ADDHL(Combinebytes(registers.d, registers.e)); break;
+		case 0x29: cycles = ADDHL(Combinebytes(registers.h, registers.l)); break;
+		case 0x39: cycles = ADDHL(registers.sp); break;
+
+		// ADD SP
+		case 0xE8: cycles = ADDSP(); break;
+
+		// INC 16 bit
+		case 0x03: cycles = INC16(registers.b, registers.c); break;
+		case 0x13: cycles = INC16(registers.d, registers.e); break;
+		case 0x23: cycles = INC16(registers.h, registers.l); break;
+		case 0x33: cycles = INC16(registers.sp); break;
+
+		// DEC 16 bit
+		case 0x0B: cycles = DEC16(registers.b, registers.c); break;
+		case 0x1B: cycles = DEC16(registers.d, registers.e); break;
+		case 0x2B: cycles = DEC16(registers.h, registers.l); break;
+		case 0x3B: cycles = DEC16(registers.sp); break;
 
 	default:
 		break;
@@ -199,18 +379,29 @@ short Cpu::LDreg(unsigned char & reg1, unsigned char & reg2) {
 	return 4; // cycles
 }
 
-short Cpu::LDregHL(unsigned char & reg) {
+short Cpu::LDRegFromMemory(unsigned char & reg, unsigned short address) {
 
-	short address = CombineReg(registers.h, registers.l);
 	reg = MemoryRead(address);
 
-	return 8;
+	return 8; // cycles
+}
+
+short Cpu::LDRegFromMemory(unsigned char & reg) {
+
+	reg = Combinebytes(MemoryRead(registers.pc), MemoryRead(registers.pc + 1));
+	registers.pc += 2;
+	return 16; // cycles
+}
+
+short Cpu::LDregHL(unsigned char & reg) {
+
+	unsigned short address = Combinebytes(registers.h, registers.l);
+	reg = MemoryRead(address);
+
+	return 8; // cycles
 }
 
 short Cpu::LDmemfromreg(unsigned char & reg) {
-
-
-
 	return 0;
 }
 
@@ -218,7 +409,503 @@ short Cpu::LDmem() {
 	return 0;
 }
 
-unsigned char Cpu::MemoryRead(short address) {
+// put stackpointer plus immediate value into hl
+short Cpu::LDHL() {
+
+	signed char n = MemoryRead(registers.pc);
+	short hl = registers.sp + n;
+	registers.pc++;
+	auto pair = splitBytes(hl);
+	registers.h = pair.first;
+	registers.l = pair.second;
+
+	flags.zero = false;
+	flags.negative = false;
+	flags.halfCarry = halfCarry(registers.sp, n);
+	flags.carry = carry(registers.sp, n);
+
+	return 12; // cycles
+}
+
+// load immediate 16-bit value into register pair
+short Cpu::LD16(unsigned char & reg1, unsigned char & reg2) {
+
+	reg1 = MemoryRead(registers.pc + 1);
+	reg2 = MemoryRead(registers.pc);
+	registers.pc += 2;
+	return 12;
+}
+
+// push two bytes onto the stack from a register pair
+short Cpu::Push(unsigned char & reg1, unsigned char & reg2) {
+
+	registers.sp--;
+	MemoryWrite(registers.sp, reg1);
+	registers.sp--;
+	MemoryWrite(registers.sp, reg2);
+
+	return 16;
+}
+
+// pop two bytes off the stack into a register pair
+short Cpu::Pop(unsigned char & reg1, unsigned char & reg2) {
+
+	reg2 = MemoryRead(registers.sp);
+	registers.sp++;
+	reg1 = MemoryRead(registers.sp);
+	registers.sp++;
+
+	return 12;
+}
+
+// indicates if the carry flag is set after addition from bit 3
+bool Cpu::halfCarry(unsigned char value1, unsigned char value2) {
+
+	value1 &= 0xF;
+	value2 &= 0xF;
+
+	return (value1 + value2) > 0xF;
+}
+
+// indicates if the carry flag is set after addition from bit 11
+bool Cpu::halfCarry16(unsigned short value1, unsigned short value2) {
+
+	value1 &= 0xFFF;
+	value2 &= 0xFFF;
+
+	return (value1 + value2) > 0xFFF;
+}
+
+// indicates if the carry flag is set after addition from bit 7
+bool Cpu::carry(unsigned char value1, unsigned char value2) {
+
+	unsigned short add = value1;
+	add += value2;
+
+	return add > 0xFF;
+}
+
+// indicates if the carry flag is set after 16-bit addition from bit 15
+bool Cpu::carry16(unsigned short value1, unsigned short value2) {
+
+	unsigned int add = value1;
+	add += value2;
+
+	return add > 0xFFFF;
+}
+
+// indicates if a bit is borrowed from bit 4 after a subtraction
+bool Cpu::halfNoBorrow(unsigned char value1, unsigned char value2) {
+
+	value1 &= 0xF;
+	value2 &= 0xF;
+
+	return ((value1 & 0xF) < (value2 & 0xF));
+}
+
+// indicates if a bit is borrowed after a subtraction
+bool Cpu::noBorrow(unsigned char value1, unsigned char value2) {
+
+	return (value1 < value2);
+}
+
+// add value to a, ignore carry
+short Cpu::ADD(unsigned char value) {
+
+	unsigned char result = registers.a + value;
+	
+	flags.zero = (result == 0);
+	flags.negative = false;
+	flags.halfCarry = halfCarry(registers.a, value);
+	flags.carry = carry(registers.a, value);
+
+	registers.a = result;
+
+	return 4; // sometimes add is 8 cycles, check the manual
+}
+
+// add value to a, include carry
+short Cpu::ADDC(unsigned char value) {
+
+	if (flags.carry) value++;
+	unsigned char result = registers.a + value;
+
+	flags.zero = (result == 0);
+	flags.negative = false;
+	flags.halfCarry = halfCarry(registers.a, value);
+	flags.carry = carry(registers.a, value);
+
+	registers.a = result;
+
+	return 4; // sometimes add is 8 cycles, check the manual
+}
+
+// subtract value from a, ignore carry
+short Cpu::SUB(unsigned char value) {
+
+	unsigned char result = registers.a - value;
+
+	flags.zero = (result == 0);
+	flags.negative = true;
+	flags.halfCarry = halfNoBorrow(registers.a, value);
+	flags.carry = noBorrow(registers.a, value);
+
+	registers.a = result;
+
+	return 4; // sometimes sub is 8 cycles, check the manual
+}
+
+// subtract value from a, include carry
+short Cpu::SUBC(unsigned char value) {
+
+	if (flags.carry) value++;
+	unsigned char result = registers.a - value;
+
+	flags.zero = (result == 0);
+	flags.negative = true;
+	flags.halfCarry = halfNoBorrow(registers.a, value);
+	flags.carry = noBorrow(registers.a, value);
+
+	registers.a = result;
+
+	return 4; // sometimes sub is 8 cycles, check the manual
+}
+
+// and value with register a
+short Cpu::AND(unsigned char value) {
+
+	unsigned char result = registers.a & value;
+
+	flags.zero = (result == 0);
+	flags.negative = false;
+	flags.halfCarry = true;
+	flags.carry = false;
+
+	registers.a = result;
+
+	return 4; // sometimes is 8 cycles, check the manual
+}
+
+// or value with register a
+short Cpu::OR(unsigned char value) {
+
+	unsigned char result = registers.a | value;
+
+	flags.zero = (result == 0);
+	flags.negative = false;
+	flags.halfCarry = false;
+	flags.carry = false;
+
+	registers.a = result;
+
+	return 4; // sometimes is 8 cycles, check the manual
+}
+
+// xor value with register a
+short Cpu::XOR(unsigned char value) {
+
+	unsigned char result = registers.a ^ value;
+
+	flags.zero = (result == 0);
+	flags.negative = false;
+	flags.halfCarry = false;
+	flags.carry = false;
+
+	registers.a = result;
+
+	return 4; // sometimes is 8 cycles, check the manual
+}
+
+// compare value to register a and set flags accordingly
+short Cpu::CP(unsigned char value) {
+
+	unsigned char result = registers.a - value;
+
+	flags.zero = (result == 0);
+	flags.negative = true;
+	flags.halfCarry = halfNoBorrow(registers.a, value);
+	flags.carry = noBorrow(registers.a, value);
+
+	return 4; // sometimes is 8 cycles, check the manual
+}
+
+// increment register
+short Cpu::INC(unsigned char& reg) {
+
+	unsigned char result = reg + 1;
+
+	flags.zero = (result == 0);
+	flags.negative = false;
+	flags.halfCarry = halfCarry(reg, 1);
+
+	reg = result;
+
+	return 4; // sometimes is 12 cycles, check the manual
+}
+
+// increment memory location pointed to by register hl
+short Cpu::INCMemory(unsigned short address) {
+
+	unsigned char result = MemoryRead(address);
+	result++;
+
+	flags.zero = (result == 0);
+	flags.negative = false;
+	flags.halfCarry = halfCarry(result, 1);
+
+	MemoryWrite(address, result);
+
+	return 12; // sometimes is 12 cycles, check the manual
+}
+
+// decrement register
+short Cpu::DEC(unsigned char& reg) {
+
+	unsigned char result = reg - 1;
+
+	flags.zero = (result == 0);
+	flags.negative = true;
+	flags.halfCarry = halfNoBorrow(reg, 1);
+
+	reg = result;
+
+	return 4; // sometimes is 12 cycles, check the manual
+}
+
+// decrement memory location pointed to by register hl
+short Cpu::DECMemory(unsigned short address) {
+
+	unsigned char result = MemoryRead(address);
+	result--;
+
+	flags.zero = (result == 0);
+	flags.negative = true;
+	flags.halfCarry = halfNoBorrow(result, 1);
+
+	MemoryWrite(address, result);
+
+
+	return 12; 
+}
+
+// add value to register combination hl
+short Cpu::ADDHL(unsigned short value) {
+
+	unsigned short hl = Combinebytes(registers.h, registers.l);
+	unsigned short result = hl + value;
+
+	flags.negative = false;
+	flags.halfCarry = halfCarry16(hl, value);
+	flags.carry = halfCarry16(hl, value);
+
+	auto pair = splitBytes(result);
+
+	registers.h = pair.first;
+	registers.l = pair.second;
+
+	return 8;
+}
+
+// add immediate signed value to stack pointer
+short Cpu::ADDSP() {
+
+	signed char n = MemoryRead(registers.pc);
+	registers.pc++;
+
+	unsigned short result = registers.sp + n;
+
+	flags.zero = false;
+	flags.negative = false;
+	flags.halfCarry = halfCarry16(registers.sp, n);
+	flags.carry = carry16(registers.sp, n);;
+
+	registers.sp = result;
+	
+	return 16;
+}
+
+// increment two registers as if they were one 16 bit register
+short Cpu::INC16(unsigned char & reg1, unsigned char & reg2) {
+
+	unsigned short combinedRegister = Combinebytes(reg1, reg2);
+
+	combinedRegister++;
+
+	auto pair = splitBytes(combinedRegister);
+
+	reg1 = pair.first;
+	reg2 = pair.second;
+
+	return 8;
+}
+
+// increment 16 bit register
+short Cpu::INC16(unsigned short & reg) {
+
+	reg++;
+
+	return 8;
+}
+
+// decrement two registers as if they were one 16 bit register
+short Cpu::DEC16(unsigned char & reg1, unsigned char & reg2) {
+
+	unsigned short combinedRegister = Combinebytes(reg1, reg2);
+
+	combinedRegister--;
+
+	auto pair = splitBytes(combinedRegister);
+
+	reg1 = pair.first;
+	reg2 = pair.second;
+
+	return 8;
+}
+
+
+// decrement 16 bit register
+short Cpu::DEC16(unsigned short & reg) {
+
+	reg--;
+
+	return 8;
+}
+
+// swap the lower and upper nibble
+short Cpu::SWAP(unsigned char & reg) {
+
+	unsigned char upper = reg & 0xF0;
+	unsigned char lower = reg & 0x0F;
+
+	upper >> 4;
+	lower << 4;
+
+	unsigned char result = upper | lower;
+
+	flags.zero = (result == 0);
+	flags.negative = false;
+	flags.halfCarry = false;
+	flags.carry = false;
+
+	reg = result;
+
+	return 8;
+}
+
+// swap the lower and upper nibble of a byte in memory
+short Cpu::SWAPMemory() {
+
+	unsigned short address = Combinebytes(registers.h, registers.l);
+
+	unsigned char data = MemoryRead(address);
+
+	SWAP(data);
+
+	MemoryWrite(address, data);
+
+	return 16;
+}
+
+// copied
+short Cpu::DAA() {
+
+	if (flags.negative) {
+		if ((registers.a & 0x0F) > 0x09 || flags.halfCarry == true) {
+			registers.a -= 0x06; //Half borrow: (0-1) = (0xF-0x6) = 9
+			if ((registers.a & 0xF0) == 0xF0) flags.carry = true; else flags.carry = false;
+		}
+
+		if ((registers.a & 0xF0) > 0x90 || flags.carry == true) registers.a -= 0x60;
+	}
+	else {
+		if ((registers.a & 0x0F) > 9 || flags.halfCarry == true) {
+			registers.a += 0x06; //Half carry: (9+1) = (0xA+0x6) = 10
+			if ((registers.a & 0xF0) == 0) flags.carry = true; else flags.carry = false;
+		}
+
+		if ((registers.a & 0xF0) > 0x90 || flags.carry == true) registers.a += 0x60;
+	}
+
+	if (registers.a == 0) flags.zero = true; else flags.zero = false;
+
+	return 4; // cycles
+}
+
+short Cpu::CPL() {
+
+	registers.a = ~registers.a;
+
+	flags.negative = true;
+	flags.halfCarry = true;
+
+	return 4;
+}
+
+short Cpu::CCF() {
+
+	flags.negative = false;
+	flags.halfCarry = false;
+	flags.carry = !flags.carry;
+
+	return 4;
+}
+
+short Cpu::SCF() {
+
+	flags.negative = false;
+	flags.halfCarry = false;
+	flags.carry = true;
+
+	return 0;
+}
+
+short Cpu::NOP() {
+	// does nothing
+	return 4;
+}
+
+short Cpu::HALT() {
+
+	halted = true;
+	return 4;
+}
+
+short Cpu::STOP() {
+	// todo
+	return 4;
+}
+
+short Cpu::DI() {
+	interupt = false;
+	return 4;
+}
+
+short Cpu::EI() {
+	interupt = true;
+	return 4;
+}
+
+short Cpu::decrement16reg(unsigned char & reg1, unsigned char & reg2) {
+
+	unsigned short combined = Combinebytes(reg1, reg2);
+	combined--;
+	reg1 = (combined >> 8);
+	reg2 = (combined & 0xFF);
+
+	return 0;
+}
+
+short Cpu::increment16reg(unsigned char & reg1, unsigned char & reg2) {
+
+	unsigned short combined = Combinebytes(reg1, reg2);
+	combined++;
+	reg1 = (combined >> 8);
+	reg2 = (combined & 0xFF);
+
+	return 0;
+}
+
+unsigned char Cpu::MemoryRead(unsigned short address) {
 
 	// rom bank 0x4000 - 0x7FFF
 	if (address >= 0x4000 && address <= 0x7FFF) {
@@ -236,7 +923,7 @@ unsigned char Cpu::MemoryRead(short address) {
 	return m_rom[address];
 }
 
-void Cpu::MemoryWrite(short address, unsigned char data) {
+void Cpu::MemoryWrite(unsigned short address, unsigned char data) {
 
 	// 0 - 7FFF cartrigde
 	// 8000 - 7FFF
@@ -244,7 +931,7 @@ void Cpu::MemoryWrite(short address, unsigned char data) {
 	if (address <= 0x3FFF) { // 16kb cartridge fixed bank
 
 		if (address >= 0x0000 && address <= 0x1FFF) {
-			if (mbc == 1) {
+			if (mbc == 1 || mbc == 3 || mbc == 5) {
 
 				data &= 0xF;
 
@@ -321,7 +1008,7 @@ void Cpu::MemoryWrite(short address, unsigned char data) {
 
 		// ref 2.6
 		if (address >= 0x4000 && address <= 0x5FFF && mbc == 1) {
-			if (mbc == 1) {
+			if (mbc == 1 || mbc == 3) {
 				if (memoryModel == mm4_32) {
 
 					data &= 3;
@@ -343,7 +1030,7 @@ void Cpu::MemoryWrite(short address, unsigned char data) {
 
 		// ref 2.6
 		if (address >= 0x6000 && address <= 0x7FFF) {
-			if (mbc = 1) {
+			if (mbc = 1 || mbc == 3 || mbc == 5) {
 				data &= 1;
 
 				if (data == 0) {
@@ -361,7 +1048,7 @@ void Cpu::MemoryWrite(short address, unsigned char data) {
 
 	}
 	else if (address >= 0xA000 && address <= 0xBFFF) { // 8kb external ram
-		if (ramBankEnabled == true && mbc == 1) {
+		if (ramBankEnabled == true && mbc == 1 || mbc == 3 || mbc == 5) {
 			//unsigned short newAddress = address - 0xA000;
 			//ramBank.at(currentRamBank)[newAddress] = data;
 		}
@@ -395,10 +1082,19 @@ void Cpu::MemoryWrite(short address, unsigned char data) {
 	}
 }
 
-unsigned short Cpu::CombineReg(unsigned char & reg1, unsigned char & reg2) {
+unsigned short Cpu::Combinebytes(unsigned char value1, unsigned char value2) {
 
-	short combinedReg = reg1;
-	combinedReg <<= 8;
-	combinedReg |= reg2;
-	return combinedReg;
+	unsigned short combine = value2;
+	combine <<= 8;
+	combine |= value1;
+
+	return combine;
+}
+
+std::pair<unsigned char, unsigned char> Cpu::splitBytes(unsigned short value) {
+
+	unsigned char first = value & 0xFF;
+	unsigned char second = (value >> 8) & 0xFF;
+
+	return std::make_pair(first, second);
 }
