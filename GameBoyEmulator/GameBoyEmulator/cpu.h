@@ -1,5 +1,9 @@
 #pragma once
 #include <vector>
+#include "memory.h"
+
+typedef unsigned char byte;
+typedef unsigned short word;
 
 
 class Cpu {
@@ -11,17 +15,24 @@ public:
 		mm4_32
 	};
 
+	enum condition {
+		NotZero,
+		Zero,
+		NotCarry,
+		Carry
+	};
+
 	struct Registers {
-		unsigned char a;
-		unsigned char b;
-		unsigned char c;
-		unsigned char d;
-		unsigned char e;
-		unsigned char f;
-		unsigned char h;
-		unsigned char l;
-		unsigned short sp = 0xFFFE;
-		unsigned short pc = 0x100;
+		byte a;
+		byte b;
+		byte c;
+		byte d;
+		byte e;
+		byte f;
+		byte h;
+		byte l;
+		word sp = 0xFFFE;
+		word pc = 0x100;
 	};
 
 	struct Flags {
@@ -33,84 +44,119 @@ public:
 
 	Registers registers;
 	Flags flags;
-	unsigned char* m_rom;
-	int currentRamBank = 0;
-	int currentRomBank = 0;
-	int numberOfRamBanks = 0;
-	bool ramBankEnabled;
-	std::vector<unsigned char*> ramBank;	
-	int mbc = 0;
-	MemoryModel memoryModel;
 	bool halted;
 	bool interupt;
 
+	Memory memory;
+
 	void PowerUpSequence();
-	void CreateRamBanks();
-	short ExecuteOpcode();
-	short LD(unsigned char& reg);
-	short LDreg(unsigned char& reg1, unsigned char& reg2);
-	short LDRegFromMemory(unsigned char& reg, unsigned short address);
-	short LDRegFromMemory(unsigned char& reg);
-	short LDregHL(unsigned char& reg);
-	short LDmemfromreg(unsigned char& reg);
-	short LDmem();
-	short LDHL();
+	word ExecuteOpcode();
+	word ExecuteExtendedOpcode();
+	word LD(byte& reg);
+	word LDreg(byte& reg1, byte& reg2);
+	word LDRegFromMemory(byte& reg, word address);
+	word LDRegFromMemory();
+	word LDregHL(byte& reg);
+	word LDmemfromreg(byte& reg);
+	word LDmem();
+	word LDHL();
 
-	short LD16(unsigned char& reg1, unsigned char& reg2);
+	word LD16(byte& reg1, byte& reg2);
 
-	short Push(unsigned char& reg1, unsigned char& reg2);
-	short Pop(unsigned char& reg1, unsigned char& reg2);
+	word Push(byte& reg1, byte& reg2);
+	word Pop(byte& reg1, byte& reg2);
 
-	bool halfCarry(unsigned char value1, unsigned char value2);
-	bool halfCarry16(unsigned short value1, unsigned short value2);
-	bool carry(unsigned char value1, unsigned char value2);
-	bool carry16(unsigned short value1, unsigned short value2);
-	bool halfNoBorrow(unsigned char value1, unsigned char value2);
-	bool noBorrow(unsigned char value1, unsigned char value2);
+	bool halfCarry(byte value1, byte value2);
+	bool halfCarry16(word value1, word value2);
+	bool carry(byte value1, byte value2);
+	bool carry16(word value1, word value2);
+	bool halfNoBorrow(byte value1, byte value2);
+	bool noBorrow(byte value1, byte value2);
 
 	// ALU
-	short ADD(unsigned char value);
-	short ADDC(unsigned char value);
-	short SUB(unsigned char value);
-	short SUBC(unsigned char value);
-	short AND(unsigned char value);
-	short OR(unsigned char value);
-	short XOR(unsigned char value);
-	short CP(unsigned char value);
-	short INC(unsigned char& reg);
-	short INCMemory(unsigned short address);
-	short DEC(unsigned char& reg);
-	short DECMemory(unsigned short address);
+	word ADD(byte value);
+	word ADDC(byte value);
+	word SUB(byte value);
+	word SUBC(byte value);
+	word AND(byte value);
+	word OR(byte value);
+	word XOR(byte value);
+	word CP(byte value);
+	word INC(byte& reg);
+	word INCMemory(word address);
+	word DEC(byte& reg);
+	word DECMemory(word address);
 
 	// 16 bit ALU
-	short ADDHL(unsigned short value);
-	short ADDSP();
-	short INC16(unsigned char& reg1, unsigned char& reg2);
-	short INC16(unsigned short& reg);
-	short DEC16(unsigned char& reg1, unsigned char& reg2);
-	short DEC16(unsigned short& reg);
+	word ADDHL(word value);
+	word ADDSP();
+	word INC16(byte& reg1, byte& reg2);
+	word INC16(word& reg);
+	word DEC16(byte& reg1, byte& reg2);
+	word DEC16(word& reg);
 
 	// Miscellaneous
-	short SWAP(unsigned char& reg);
-	short SWAPMemory();
-	short DAA();
-	short CPL();
-	short CCF();
-	short SCF();
-	short NOP();
-	short HALT();
-	short STOP();
-	short DI();
-	short EI();
+	word SWAP(byte& reg);
+	word SWAP(word address);
+	word SWAPMemory();
+	word DAA();
+	word CPL();
+	word CCF();
+	word SCF();
+	word NOP();
+	word HALT();
+	word STOP();
+	word DI();
+	word EI();
 
-	short decrement16reg(unsigned char& reg1, unsigned char& reg2);
-	short increment16reg(unsigned char& reg1, unsigned char& reg2);
+	// rotates and shifts
+	word RLC(byte& reg);
+	word RLC(word address);
+	word RL(byte& reg);
+	word RL(word address);
+	word RRC(byte& reg);
+	word RRC(word address);
+	word RR(byte& reg);
+	word RR(word address);
+	word SLA(byte& reg);
+	word SLA(word address);
+	word SRA(byte& reg);
+	word SRA(word address);
+	word SRL(byte& reg);
+	word SRL(word address);
 
-	unsigned char MemoryRead(unsigned short address);
-	void MemoryWrite(unsigned short address, unsigned char data);
+	// bit opcodes
+	word BIT(byte reg, byte bit);
+	word SET(byte& reg, byte bit);
+	word SET(word address, byte bit);
+	word RES(byte reg, byte bit);
+	word RES(word address, byte bit);
 
-	unsigned short Combinebytes(unsigned char value1, unsigned char value2);
-	std::pair<unsigned char, unsigned char> splitBytes(unsigned short value);
+	// jumps
+	word JP();
+	word JPcc(condition cdn);
+	word JPHL();
+	word JR();
+	word JRcc(condition cdn);
+
+	// calls
+	word CALL();
+	word CALLcc(condition cdn);
+
+	// restarts
+	word RST(short offset);
+
+	// returns
+	word RET();
+	word RETcc(condition cdn);
+	word RETI();
+
+
+	word decrement16reg(byte& reg1, byte& reg2);
+	word increment16reg(byte& reg1, byte& reg2);
+
+	word Combinebytes(byte value1, byte value2);
+	std::pair<byte, byte> splitBytes(word value);
 
 
 };

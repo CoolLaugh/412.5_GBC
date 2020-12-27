@@ -124,6 +124,7 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="cpu.cpp" />
+    <ClCompile Include="cpuOpcodeSwitch.cpp" />
     <ClCompile Include="Emulator.cpp" />
     <ClCompile Include="main.cpp" />
     <ClCompile Include="memory.cpp" />
