@@ -1,5 +1,37 @@
 #include "cpu.h"
 
+bool Cpu::flagTest(flagType flag) {
+
+	byte result = registers.f & flag;
+	if (result == 0) {
+		return false;
+	}
+	else {
+		return true;
+	}
+}
+
+void Cpu::flagSet(flagType flag) {
+	
+	registers.f |= flag;
+}
+
+void Cpu::flagSet(flagType flag, bool value) {
+
+	if (value == true) {
+		flagSet(flag);
+	}
+	else {
+		flagReset(flag);
+	}
+
+}
+
+void Cpu::flagReset(flagType flag) {
+
+	registers.f &= ~flag;
+}
+
 void Cpu::PowerUpSequence() {
 
 	// 2.7.1
@@ -76,10 +108,10 @@ word Cpu::LDHL() {
 	registers.h = pair.first;
 	registers.l = pair.second;
 
-	flags.zero = false;
-	flags.negative = false;
-	flags.halfCarry = halfCarry(registers.sp, n);
-	flags.carry = carry(registers.sp, n);
+	flagReset(flagType::zero);
+	flagReset(flagType::negative);
+	halfCarryFlag(registers.sp, n);
+	carryFlag(registers.sp, n);
 
 	return 12; // cycles
 }
@@ -90,6 +122,13 @@ word Cpu::LD16(byte & reg1, byte & reg2) {
 	reg1 = memory.Read(registers.pc + 1);
 	reg2 = memory.Read(registers.pc);
 	registers.pc += 2;
+	return 12;
+}
+
+word Cpu::LD16(word & reg1) {
+
+	reg1 = Combinebytes(memory.Read(registers.pc), memory.Read(registers.pc + 1));
+
 	return 12;
 }
 
@@ -116,54 +155,59 @@ word Cpu::Pop(byte & reg1, byte & reg2) {
 }
 
 // indicates if the carry flag is set after addition from bit 3
-bool Cpu::halfCarry(byte value1, byte value2) {
+void Cpu::halfCarryFlag(byte value1, byte value2) {
 
 	value1 &= 0xF;
 	value2 &= 0xF;
 
-	return (value1 + value2) > 0xF;
+	flagSet(flagType::halfCarry, (value1 + value2) > 0xF);
 }
 
 // indicates if the carry flag is set after addition from bit 11
-bool Cpu::halfCarry16(word value1, word value2) {
+void Cpu::halfCarryFlag16(word value1, word value2) {
 
 	value1 &= 0xFFF;
 	value2 &= 0xFFF;
 
-	return (value1 + value2) > 0xFFF;
+	flagSet(flagType::halfCarry, (value1 + value2) > 0xFFF);
 }
 
 // indicates if the carry flag is set after addition from bit 7
-bool Cpu::carry(byte value1, byte value2) {
+void Cpu::carryFlag(byte value1, byte value2) {
 
 	word add = value1;
 	add += value2;
 
-	return add > 0xFF;
+	flagSet(flagType::carry, add > 0xFF);
 }
 
 // indicates if the carry flag is set after 16-bit addition from bit 15
-bool Cpu::carry16(word value1, word value2) {
+void Cpu::carryFlag16(word value1, word value2) {
 
 	unsigned int add = value1;
 	add += value2;
 
-	return add > 0xFFFF;
+	flagSet(flagType::carry, add > 0xFFFF);
 }
 
 // indicates if a bit is borrowed from bit 4 after a subtraction
-bool Cpu::halfNoBorrow(byte value1, byte value2) {
+void Cpu::halfNoBorrow(byte value1, byte value2) {
 
 	value1 &= 0xF;
 	value2 &= 0xF;
 
-	return ((value1 & 0xF) < (value2 & 0xF));
+	flagSet(flagType::halfCarry, (value1 & 0xF) < (value2 & 0xF));
 }
 
 // indicates if a bit is borrowed after a subtraction
-bool Cpu::noBorrow(byte value1, byte value2) {
+void Cpu::noBorrow(byte value1, byte value2) {
 
-	return (value1 < value2);
+	flagSet(flagType::carry, value1 < value2);
+}
+
+void Cpu::zeroFlag(byte val) {
+
+	flagSet(flagType::zero, val == 0);
 }
 
 // add value to a, ignore carry
@@ -171,10 +215,10 @@ word Cpu::ADD(byte value) {
 
 	byte result = registers.a + value;
 	
-	flags.zero = (result == 0);
-	flags.negative = false;
-	flags.halfCarry = halfCarry(registers.a, value);
-	flags.carry = carry(registers.a, value);
+	zeroFlag(result);
+	flagReset(flagType::negative);
+	halfCarryFlag(registers.a, value);
+	carryFlag(registers.a, value);
 
 	registers.a = result;
 
@@ -184,13 +228,13 @@ word Cpu::ADD(byte value) {
 // add value to a, include carry
 word Cpu::ADDC(byte value) {
 
-	if (flags.carry) value++;
+	if (flagTest(flagType::carry)) value++;
 	byte result = registers.a + value;
 
-	flags.zero = (result == 0);
-	flags.negative = false;
-	flags.halfCarry = halfCarry(registers.a, value);
-	flags.carry = carry(registers.a, value);
+	zeroFlag(result);
+	flagReset(flagType::negative);
+	halfCarryFlag(registers.a, value);
+	carryFlag(registers.a, value);
 
 	registers.a = result;
 
@@ -202,10 +246,10 @@ word Cpu::SUB(byte value) {
 
 	byte result = registers.a - value;
 
-	flags.zero = (result == 0);
-	flags.negative = true;
-	flags.halfCarry = halfNoBorrow(registers.a, value);
-	flags.carry = noBorrow(registers.a, value);
+	zeroFlag(result);
+	flagSet(flagType::negative);
+	halfNoBorrow(registers.a, value);
+	noBorrow(registers.a, value);
 
 	registers.a = result;
 
@@ -215,13 +259,13 @@ word Cpu::SUB(byte value) {
 // subtract value from a, include carry
 word Cpu::SUBC(byte value) {
 
-	if (flags.carry) value++;
+	if (flagTest(flagType::carry)) value++;
 	byte result = registers.a - value;
 
-	flags.zero = (result == 0);
-	flags.negative = true;
-	flags.halfCarry = halfNoBorrow(registers.a, value);
-	flags.carry = noBorrow(registers.a, value);
+	zeroFlag(result);
+	flagSet(flagType::negative);
+	halfNoBorrow(registers.a, value);
+	noBorrow(registers.a, value);
 
 	registers.a = result;
 
@@ -233,10 +277,10 @@ word Cpu::AND(byte value) {
 
 	byte result = registers.a & value;
 
-	flags.zero = (result == 0);
-	flags.negative = false;
-	flags.halfCarry = true;
-	flags.carry = false;
+	zeroFlag(result);
+	flagReset(flagType::negative);
+	flagSet(flagType::halfCarry);
+	flagReset(flagType::carry);
 
 	registers.a = result;
 
@@ -248,10 +292,10 @@ word Cpu::OR(byte value) {
 
 	byte result = registers.a | value;
 
-	flags.zero = (result == 0);
-	flags.negative = false;
-	flags.halfCarry = false;
-	flags.carry = false;
+	zeroFlag(result);
+	flagReset(flagType::negative);
+	flagReset(flagType::halfCarry);
+	flagReset(flagType::carry);
 
 	registers.a = result;
 
@@ -263,10 +307,10 @@ word Cpu::XOR(byte value) {
 
 	byte result = registers.a ^ value;
 
-	flags.zero = (result == 0);
-	flags.negative = false;
-	flags.halfCarry = false;
-	flags.carry = false;
+	zeroFlag(result);
+	flagReset(flagType::negative);
+	flagReset(flagType::halfCarry);
+	flagReset(flagType::carry);
 
 	registers.a = result;
 
@@ -278,10 +322,10 @@ word Cpu::CP(byte value) {
 
 	byte result = registers.a - value;
 
-	flags.zero = (result == 0);
-	flags.negative = true;
-	flags.halfCarry = halfNoBorrow(registers.a, value);
-	flags.carry = noBorrow(registers.a, value);
+	zeroFlag(result);
+	flagSet(flagType::negative);
+	halfNoBorrow(registers.a, value);
+	noBorrow(registers.a, value);
 
 	return 4; // sometimes is 8 cycles, check the manual
 }
@@ -291,9 +335,9 @@ word Cpu::INC(byte& reg) {
 
 	byte result = reg + 1;
 
-	flags.zero = (result == 0);
-	flags.negative = false;
-	flags.halfCarry = halfCarry(reg, 1);
+	zeroFlag(result);
+	flagReset(flagType::negative);
+	halfCarryFlag(reg, 1);
 
 	reg = result;
 
@@ -306,9 +350,9 @@ word Cpu::INCMemory(word address) {
 	byte result = memory.Read(address);
 	result++;
 
-	flags.zero = (result == 0);
-	flags.negative = false;
-	flags.halfCarry = halfCarry(result, 1);
+	zeroFlag(result);
+	flagReset(flagType::negative);
+	halfCarryFlag(result, 1);
 
 	memory.Write(address, result);
 
@@ -320,9 +364,9 @@ word Cpu::DEC(byte& reg) {
 
 	byte result = reg - 1;
 
-	flags.zero = (result == 0);
-	flags.negative = true;
-	flags.halfCarry = halfNoBorrow(reg, 1);
+	zeroFlag(result);
+	flagSet(flagType::negative);
+	halfNoBorrow(reg, 1);
 
 	reg = result;
 
@@ -335,9 +379,9 @@ word Cpu::DECMemory(word address) {
 	byte result = memory.Read(address);
 	result--;
 
-	flags.zero = (result == 0);
-	flags.negative = true;
-	flags.halfCarry = halfNoBorrow(result, 1);
+	zeroFlag(result);
+	flagSet(flagType::negative);
+	halfNoBorrow(result, 1);
 
 	memory.Write(address, result);
 
@@ -351,9 +395,9 @@ word Cpu::ADDHL(word value) {
 	word hl = Combinebytes(registers.h, registers.l);
 	word result = hl + value;
 
-	flags.negative = false;
-	flags.halfCarry = halfCarry16(hl, value);
-	flags.carry = halfCarry16(hl, value);
+	flagReset(flagType::negative);
+	halfCarryFlag16(hl, value);
+	carryFlag16(hl, value);
 
 	auto pair = splitBytes(result);
 
@@ -371,10 +415,10 @@ word Cpu::ADDSP() {
 
 	word result = registers.sp + n;
 
-	flags.zero = false;
-	flags.negative = false;
-	flags.halfCarry = halfCarry16(registers.sp, n);
-	flags.carry = carry16(registers.sp, n);;
+	flagReset(flagType::zero);
+	flagReset(flagType::negative);
+	halfCarryFlag16(registers.sp, n);
+	carryFlag16(registers.sp, n);;
 
 	registers.sp = result;
 	
@@ -439,10 +483,10 @@ word Cpu::SWAP(byte & reg) {
 
 	byte result = upper | lower;
 
-	flags.zero = (result == 0);
-	flags.negative = false;
-	flags.halfCarry = false;
-	flags.carry = false;
+	zeroFlag(result);
+	flagReset(flagType::negative);
+	flagReset(flagType::halfCarry);
+	flagReset(flagType::carry);
 
 	reg = result;
 
@@ -462,10 +506,10 @@ word Cpu::SWAP(word address) {
 
 	byte result = upper | lower;
 
-	flags.zero = (result == 0);
-	flags.negative = false;
-	flags.halfCarry = false;
-	flags.carry = false;
+	zeroFlag(result);
+	flagReset(flagType::negative);
+	flagReset(flagType::halfCarry);
+	flagReset(flagType::carry);
 
 	memory.Write(address, result);
 
@@ -490,24 +534,24 @@ word Cpu::SWAPMemory() {
 // copied
 word Cpu::DAA() {
 
-	if (flags.negative) {
-		if ((registers.a & 0x0F) > 0x09 || flags.halfCarry == true) {
+	if (flagTest(flagType::negative)) {
+		if ((registers.a & 0x0F) > 0x09 || flagTest(flagType::halfCarry)) {
 			registers.a -= 0x06; //Half borrow: (0-1) = (0xF-0x6) = 9
-			if ((registers.a & 0xF0) == 0xF0) flags.carry = true; else flags.carry = false;
+			if ((registers.a & 0xF0) == 0xF0) flagSet(flagType::carry); else flagReset(flagType::carry);
 		}
 
-		if ((registers.a & 0xF0) > 0x90 || flags.carry == true) registers.a -= 0x60;
+		if ((registers.a & 0xF0) > 0x90 || flagTest(flagType::carry) == true) registers.a -= 0x60;
 	}
 	else {
-		if ((registers.a & 0x0F) > 9 || flags.halfCarry == true) {
+		if ((registers.a & 0x0F) > 9 || flagTest(flagType::halfCarry)) {
 			registers.a += 0x06; //Half carry: (9+1) = (0xA+0x6) = 10
-			if ((registers.a & 0xF0) == 0) flags.carry = true; else flags.carry = false;
+			if ((registers.a & 0xF0) == 0) flagSet(flagType::carry); else flagReset(flagType::carry);
 		}
 
-		if ((registers.a & 0xF0) > 0x90 || flags.carry == true) registers.a += 0x60;
+		if ((registers.a & 0xF0) > 0x90 || flagTest(flagType::carry) == true) registers.a += 0x60;
 	}
 
-	if (registers.a == 0) flags.zero = true; else flags.zero = false;
+	if (registers.a == 0) flagSet(flagType::zero); else flagReset(flagType::zero);
 
 	return 4; // cycles
 }
@@ -517,8 +561,8 @@ word Cpu::CPL() {
 
 	registers.a = ~registers.a;
 
-	flags.negative = true;
-	flags.halfCarry = true;
+	flagSet(flagType::negative);
+	flagSet(flagType::halfCarry);
 
 	return 4;
 }
@@ -526,9 +570,11 @@ word Cpu::CPL() {
 // complement carry flag
 word Cpu::CCF() {
 
-	flags.negative = false;
-	flags.halfCarry = false;
-	flags.carry = !flags.carry;
+	flagReset(flagType::negative);
+	flagReset(flagType::halfCarry);
+
+	flagSet(flagType::carry, !flagTest(flagType::carry));
+	
 
 	return 4;
 }
@@ -536,9 +582,9 @@ word Cpu::CCF() {
 // set carry flag
 word Cpu::SCF() {
 
-	flags.negative = false;
-	flags.halfCarry = false;
-	flags.carry = true;
+	flagReset(flagType::negative);
+	flagReset(flagType::halfCarry);
+	flagSet(flagType::carry);
 
 	return 0;
 }
@@ -584,10 +630,10 @@ word Cpu::RLC(byte& reg) {
 
 	result <<= 1;
 
-	flags.zero = (result == 0);
-	flags.negative = false;
-	flags.halfCarry = false;
-	flags.carry = bit7;
+	zeroFlag(result);
+	flagReset(flagType::negative);
+	flagReset(flagType::halfCarry);
+	flagSet(flagType::carry, bit7);
 
 	reg = result;
 
@@ -603,10 +649,10 @@ word Cpu::RLC(word address) {
 
 	result <<= 1;
 
-	flags.zero = (result == 0);
-	flags.negative = false;
-	flags.halfCarry = false;
-	flags.carry = bit7;
+	zeroFlag(result);
+	flagReset(flagType::negative);
+	flagReset(flagType::halfCarry);
+	flagSet(flagType::carry, bit7);
 
 	memory.Write(address, result);
 
@@ -621,14 +667,14 @@ word Cpu::RL(byte & reg) {
 	bool bit7 = (result & 0x80) == 0x80;
 
 	result <<= 1;
-	if (flags.carry == true) {
+	if (flagTest(flagType::carry) == true) {
 		result |= 0x1;
 	}
 
-	flags.zero = (result == 0);
-	flags.negative = false;
-	flags.halfCarry = false;
-	flags.carry = bit7;
+	zeroFlag(result);
+	flagReset(flagType::negative);
+	flagReset(flagType::halfCarry);
+	flagSet(flagType::carry, bit7);
 
 	reg = result;
 
@@ -643,14 +689,14 @@ word Cpu::RL(word address) {
 	bool bit7 = (result & 0x80) == 0x80;
 
 	result <<= 1;
-	if (flags.carry == true) {
+	if (flagTest(flagType::carry) == true) {
 		result |= 0x1;
 	}
 
-	flags.zero = (result == 0);
-	flags.negative = false;
-	flags.halfCarry = false;
-	flags.carry = bit7;
+	zeroFlag(result);
+	flagReset(flagType::negative);
+	flagReset(flagType::halfCarry);
+	flagSet(flagType::carry, bit7);
 
 	memory.Write(address, result);
 
@@ -666,10 +712,10 @@ word Cpu::RRC(byte & reg) {
 
 	result >>= 1;
 
-	flags.zero = (result == 0);
-	flags.negative = false;
-	flags.halfCarry = false;
-	flags.carry = bit0;
+	zeroFlag(result);
+	flagReset(flagType::negative);
+	flagReset(flagType::halfCarry);
+	flagSet(flagType::carry, bit0);
 
 	reg = result;
 
@@ -685,10 +731,10 @@ word Cpu::RRC(word address) {
 
 	result >>= 1;
 
-	flags.zero = (result == 0);
-	flags.negative = false;
-	flags.halfCarry = false;
-	flags.carry = bit0;
+	zeroFlag(result);
+	flagReset(flagType::negative);
+	flagReset(flagType::halfCarry);
+	flagSet(flagType::carry, bit0);
 
 	memory.Write(address, result);
 
@@ -703,14 +749,14 @@ word Cpu::RR(byte & reg) {
 	bool bit0 = (result & 0x1) == 0x1;
 
 	result >>= 1;
-	if (flags.carry == true) {
+	if (flagTest(flagType::carry) == true) {
 		result |= 0x80;
 	}
 
-	flags.zero = (result == 0);
-	flags.negative = false;
-	flags.halfCarry = false;
-	flags.carry = bit0;
+	zeroFlag(result);
+	flagReset(flagType::negative);
+	flagReset(flagType::halfCarry);
+	flagSet(flagType::carry, bit0);
 
 	reg = result;
 
@@ -725,14 +771,14 @@ word Cpu::RR(word address) {
 	bool bit0 = (result & 0x1) == 0x1;
 
 	result >>= 1;
-	if (flags.carry == true) {
+	if (flagTest(flagType::carry) == true) {
 		result |= 0x80;
 	}
 
-	flags.zero = (result == 0);
-	flags.negative = false;
-	flags.halfCarry = false;
-	flags.carry = bit0;
+	zeroFlag(result);
+	flagReset(flagType::negative);
+	flagReset(flagType::halfCarry);
+	flagSet(flagType::carry, bit0);
 
 	memory.Write(address, result);
 
@@ -749,10 +795,10 @@ word Cpu::SLA(byte & reg) {
 	result <<= 1;
 	result &= 0xFE; //LSB set to 0
 
-	flags.zero = (result == 0);
-	flags.negative = false;
-	flags.halfCarry = false;
-	flags.carry = bit7;
+	zeroFlag(result);
+	flagReset(flagType::negative);
+	flagReset(flagType::halfCarry);
+	flagSet(flagType::carry, bit7);
 
 	reg = result;
 
@@ -769,10 +815,10 @@ word Cpu::SLA(word address) {
 	result <<= 1;
 	result &= 0xFE; //LSB set to 0
 
-	flags.zero = (result == 0);
-	flags.negative = false;
-	flags.halfCarry = false;
-	flags.carry = bit7;
+	zeroFlag(result);
+	flagReset(flagType::negative);
+	flagReset(flagType::halfCarry);
+	flagSet(flagType::carry, bit7);
 
 	memory.Write(address, result);
 
@@ -792,10 +838,10 @@ word Cpu::SRA(byte & reg) {
 		result |= 0x80; // keep MSB the same
 	}
 
-	flags.zero = (result == 0);
-	flags.negative = false;
-	flags.halfCarry = false;
-	flags.carry = bit0;
+	zeroFlag(result);
+	flagReset(flagType::negative);
+	flagReset(flagType::halfCarry);
+	flagSet(flagType::carry, bit0);
 
 	reg = result;
 
@@ -815,10 +861,10 @@ word Cpu::SRA(word address) {
 		result |= 0x80; // keep MSB the same
 	}
 
-	flags.zero = (result == 0);
-	flags.negative = false;
-	flags.halfCarry = false;
-	flags.carry = bit0;
+	zeroFlag(result);
+	flagReset(flagType::negative);
+	flagReset(flagType::halfCarry);
+	flagSet(flagType::carry, bit0);
 
 	memory.Write(address, result);
 
@@ -835,10 +881,10 @@ word Cpu::SRL(byte & reg) {
 	result >>= 1;
 	result &= 0x7F;
 
-	flags.zero = (result == 0);
-	flags.negative = false;
-	flags.halfCarry = false;
-	flags.carry = bit0;
+	zeroFlag(result);
+	flagReset(flagType::negative);
+	flagReset(flagType::halfCarry);
+	flagSet(flagType::carry, bit0);
 
 	reg = result;
 
@@ -855,10 +901,10 @@ word Cpu::SRL(word address) {
 	result >>= 1;
 	result &= 0x7F;
 
-	flags.zero = (result == 0);
-	flags.negative = false;
-	flags.halfCarry = false;
-	flags.carry = bit0;
+	zeroFlag(result);
+	flagReset(flagType::negative);
+	flagReset(flagType::halfCarry);
+	flagSet(flagType::carry, bit0);
 
 	memory.Write(address, result);
 
@@ -870,9 +916,10 @@ word Cpu::BIT(byte reg, byte bit) {
 
 	byte bitmask = 1 << bit;
 
-	flags.zero = (reg & bitmask) == 0;
-	flags.negative = false;
-	flags.halfCarry = true;
+	flagSet(flagType::zero, (reg & bitmask) == 0);
+
+	flagReset(flagType::negative);
+	flagSet(flagType::halfCarry);
 
 	return 8;
 }
@@ -943,10 +990,10 @@ word Cpu::JPcc(condition cdn) {
 	registers.pc += 2;
 
 	switch (cdn) {
-	case Cpu::NotZero:	if (flags.zero == false)	registers.pc = address; break;
-	case Cpu::Zero:		if (flags.zero == true)		registers.pc = address; break;
-	case Cpu::NotCarry: if (flags.carry == false)	registers.pc = address; break;
-	case Cpu::Carry:	if (flags.carry == true)	registers.pc = address; break;
+	case Cpu::NotZero:	if (flagTest(flagType::zero) == false)	registers.pc = address; break;
+	case Cpu::Zero:		if (flagTest(flagType::zero) == true)	registers.pc = address; break;
+	case Cpu::NotCarry: if (flagTest(flagType::carry) == false)	registers.pc = address; break;
+	case Cpu::Carry:	if (flagTest(flagType::carry) == true)	registers.pc = address; break;
 	}
 
 	return 12;
@@ -974,12 +1021,13 @@ word Cpu::JR() {
 word Cpu::JRcc(condition cdn) {
 
 	signed char offset = memory.Read(registers.pc);
+	registers.pc++;
 
 	switch (cdn) {
-	case Cpu::NotZero:	if (flags.zero == false)	registers.pc += offset; break;
-	case Cpu::Zero:		if (flags.zero == true)		registers.pc += offset; break;
-	case Cpu::NotCarry: if (flags.carry == false)	registers.pc += offset; break;
-	case Cpu::Carry:	if (flags.carry == true)	registers.pc += offset; break;
+	case Cpu::NotZero:	if (flagTest(flagType::zero) == false)	registers.pc += offset; break;
+	case Cpu::Zero:		if (flagTest(flagType::zero) == true)	registers.pc += offset; break;
+	case Cpu::NotCarry: if (flagTest(flagType::carry) == false)	registers.pc += offset; break;
+	case Cpu::Carry:	if (flagTest(flagType::carry) == true)	registers.pc += offset; break;
 	}
 
 	return 8;
@@ -1008,10 +1056,10 @@ word Cpu::CALLcc(condition cdn) {
 
 	bool call = false;
 	switch (cdn) {
-	case Cpu::NotZero:	if (flags.zero == false)	call = true; break;
-	case Cpu::Zero:		if (flags.zero == true)		call = true; break;
-	case Cpu::NotCarry: if (flags.carry == false)	call = true; break;
-	case Cpu::Carry:	if (flags.carry == true)	call = true; break;
+	case Cpu::NotZero:	if (flagTest(flagType::zero) == false)	call = true; break;
+	case Cpu::Zero:		if (flagTest(flagType::zero) == true)	call = true; break;
+	case Cpu::NotCarry: if (flagTest(flagType::carry) == false)	call = true; break;
+	case Cpu::Carry:	if (flagTest(flagType::carry) == true)	call = true; break;
 	}
 
 	if (call == true) {
@@ -1064,10 +1112,10 @@ word Cpu::RETcc(condition cdn) {
 
 	bool ret = false;
 	switch (cdn) {
-	case Cpu::NotZero:	if (flags.zero == false)	ret = true; break;
-	case Cpu::Zero:		if (flags.zero == true)		ret = true; break;
-	case Cpu::NotCarry: if (flags.carry == false)	ret = true; break;
-	case Cpu::Carry:	if (flags.carry == true)	ret = true; break;
+	case Cpu::NotZero:	if (flagTest(flagType::zero) == false)	ret = true; break;
+	case Cpu::Zero:		if (flagTest(flagType::zero) == true)		ret = true; break;
+	case Cpu::NotCarry: if (flagTest(flagType::carry) == false)	ret = true; break;
+	case Cpu::Carry:	if (flagTest(flagType::carry) == true)	ret = true; break;
 	}
 
 	if (ret == true) {

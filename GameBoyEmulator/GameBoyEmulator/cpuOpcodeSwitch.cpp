@@ -113,7 +113,7 @@ word Cpu::ExecuteOpcode() {
 
 	case 0x3A: cycles = 8; registers.a = memory.Read(Combinebytes(registers.h, registers.l)); decrement16reg(registers.h, registers.l); break;
 
-	case 0x32: cycles = 8; memory.Write(Combinebytes(registers.h, registers.l), registers.a); decrement16reg(registers.h, registers.l); break;
+	case 0x32: cycles = 8; memory.Write(Combinebytes(registers.l, registers.h), registers.a); decrement16reg(registers.l, registers.h); break;
 
 	case 0x2A: cycles = 8; registers.a = memory.Read(Combinebytes(registers.h, registers.l)); increment16reg(registers.h, registers.l); break;
 
@@ -124,9 +124,9 @@ word Cpu::ExecuteOpcode() {
 	case 0xF0: cycles = 12; registers.a = memory.Read(0xFF00 + memory.Read(registers.pc)); break;
 
 	case 0x01: cycles = LD16(registers.b, registers.c); break;
-	case 0x11: cycles = LD16(registers.b, registers.c); break;
-	case 0x21: cycles = LD16(registers.b, registers.c); break;
-	case 0x31: cycles = LD16(registers.b, registers.c); break;
+	case 0x11: cycles = LD16(registers.d, registers.e); break;
+	case 0x21: cycles = LD16(registers.h, registers.l); break;
+	case 0x31: cycles = LD16(registers.sp); break;
 
 	case 0xF9: cycles = 8; registers.pc = Combinebytes(registers.h, registers.l); break;
 

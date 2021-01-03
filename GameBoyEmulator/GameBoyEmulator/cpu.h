@@ -22,6 +22,13 @@ public:
 		Carry
 	};
 
+	enum flagType {
+		zero = 0x80,
+		negative = 0x40,
+		halfCarry = 0x20,
+		carry = 0x10
+	};
+
 	struct Registers {
 		byte a;
 		byte b;
@@ -35,19 +42,16 @@ public:
 		word pc = 0x100;
 	};
 
-	struct Flags {
-		bool zero;
-		bool negative;
-		bool halfCarry;
-		bool carry;
-	};
-
 	Registers registers;
-	Flags flags;
 	bool halted;
 	bool interupt;
 
 	Memory memory;
+
+	bool flagTest(flagType flag);
+	void flagSet(flagType flag);
+	void flagSet(flagType flag, bool value);
+	void flagReset(flagType flag);
 
 	void PowerUpSequence();
 	word ExecuteOpcode();
@@ -62,16 +66,18 @@ public:
 	word LDHL();
 
 	word LD16(byte& reg1, byte& reg2);
+	word LD16(word& reg1);
 
 	word Push(byte& reg1, byte& reg2);
 	word Pop(byte& reg1, byte& reg2);
 
-	bool halfCarry(byte value1, byte value2);
-	bool halfCarry16(word value1, word value2);
-	bool carry(byte value1, byte value2);
-	bool carry16(word value1, word value2);
-	bool halfNoBorrow(byte value1, byte value2);
-	bool noBorrow(byte value1, byte value2);
+	void halfCarryFlag(byte value1, byte value2);
+	void halfCarryFlag16(word value1, word value2);
+	void carryFlag(byte value1, byte value2);
+	void carryFlag16(word value1, word value2);
+	void halfNoBorrow(byte value1, byte value2);
+	void noBorrow(byte value1, byte value2);
+	void zeroFlag(byte val);
 
 	// ALU
 	word ADD(byte value);

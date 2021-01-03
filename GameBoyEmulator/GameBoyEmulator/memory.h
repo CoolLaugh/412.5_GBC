@@ -9,6 +9,8 @@ class Memory {
 
 private:
 
+	const int romSize = 0x10000;
+	const int gameBankSize = 0x200000;
 
 
 public:
@@ -18,8 +20,8 @@ public:
 		mm4_32
 	};
 
-	byte* m_rom;
-	byte* m_GameBank;
+	byte* rom;
+	byte* gameBank;
 	int currentRamBank = 0;
 	int currentRomBank = 0;
 	int numberOfRamBanks = 0;
