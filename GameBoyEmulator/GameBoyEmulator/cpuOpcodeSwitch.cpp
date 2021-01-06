@@ -655,3 +655,100 @@ word Cpu::ExecuteExtendedOpcode() {
 	}
 	return cycles;
 }
+
+void Cpu::performInterupts() {
+
+	if (interuptEnable == true && interuptEnableInstructionCount == 0) {
+		// interupts enable is delayed by one instruction
+		interuptEnableInstructionCount++;
+	}
+	else if (interuptEnable == true && interuptEnableInstructionCount >= 1) {
+		interuptEnableInstructionCount = 0;
+		interupt = true;
+	}
+
+	if (interuptDisable == true && interuptDisableInstructionCount == 0) {
+		// interupts disable is delayed by one instruction
+		interuptDisableInstructionCount++;
+	}
+	else if (interuptDisable == true && interuptDisableInstructionCount >= 1) {
+		interuptDisableInstructionCount = 0;
+		interupt = false;
+	}
+
+	if (interupt == true) {
+
+		interupt = false;
+		byte interuptFlags = memory.Read(0xFF0F);
+		byte interuptsEnabled = memory.Read(0xFFFF);
+
+		for (size_t i = 0; i < interuptFlags::END; i++) {
+
+			bool interuptFlag = (interuptFlags & (1 << i)) != 0;
+			bool interuptEnabled = (interuptsEnabled & (1 << i)) != 0;
+
+			if (interuptFlag == true && interuptEnabled == true){
+
+				auto pair = splitBytes(registers.pc);
+				Pop(pair.first, pair.second);
+
+				switch (i) {
+				case 0: registers.pc = 0x40; break;
+				case 1: registers.pc = 0x48; break;
+				case 2: registers.pc = 0x50; break;
+				case 3: registers.pc = 0x58; break;
+				case 4: registers.pc = 0x60; break;
+				}
+
+				interuptFlags &= ~(1 << i); // reset bit of interupt
+				memory.Write(0xFF0F, interuptFlags);
+
+				break; // don't check interupts of lower prioriry
+			}
+		}
+
+	}
+}
+
+void Cpu::dividerRegisterINC(short cycles) {
+
+	dividerCycles += cycles;
+
+	if (dividerCycles > 256) { // incremented at rate of 16384Hz (4194304 Hz cpu / 16384Hz = 256)
+		dividerCycles -= 256;
+		byte dividerRegister = memory.Read(0xFF04);
+		dividerRegister++;
+		memory.Write(0xFF04, dividerRegister);
+	}
+
+}
+
+void Cpu::TimerCounterINC(short cycles) {
+
+	if ((memory.Read(0xFF07) & 0x4) != 0) {
+		return;
+	}
+
+	timerCycles += cycles;
+
+	if (timerCycles > clockFrequency) {
+
+		timerCycles -= clockFrequency;
+		byte TimerCounter = memory.Read(0xFF05);
+
+		if (TimerCounter == 0xFF) {
+
+			TimerCounter = memory.Read(0xFF06);
+
+			byte interuptFlags = memory.Read(0xFF0F);
+			interuptFlags |= (1 << interuptFlags::Timer);
+			memory.Write(0xFF0F, interuptFlags);
+		}
+		else {
+
+			TimerCounter++;
+		}
+
+		memory.Write(0xFF05, TimerCounter);
+	}
+}

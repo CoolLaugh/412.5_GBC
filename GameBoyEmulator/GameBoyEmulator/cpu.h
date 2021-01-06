@@ -10,6 +10,15 @@ class Cpu {
 
 public:
 
+	enum interuptFlags {
+		VBlank,
+		LCDSTAT,
+		Timer,
+		Serial,
+		Joypad,
+		END
+	};
+
 	enum MemoryModel {
 		mm16_8,
 		mm4_32
@@ -43,8 +52,16 @@ public:
 	};
 
 	Registers registers;
-	bool halted;
-	bool interupt;
+	bool halted = false;
+
+	bool interupt = false;
+	bool interuptEnable = false;
+	int interuptEnableInstructionCount = 0;
+	bool interuptDisable = false;
+	int interuptDisableInstructionCount = 0;
+	int dividerCycles = 0;
+	int clockFrequency = 1024;
+	int timerCycles = 0;
 
 	Memory memory;
 
@@ -56,6 +73,11 @@ public:
 	void PowerUpSequence();
 	word ExecuteOpcode();
 	word ExecuteExtendedOpcode();
+
+	void performInterupts();
+	void dividerRegisterINC(short cycles);
+	void TimerCounterINC(short cycles);
+
 	word LD(byte& reg);
 	word LDreg(byte& reg1, byte& reg2);
 	word LDRegFromMemory(byte& reg, word address);

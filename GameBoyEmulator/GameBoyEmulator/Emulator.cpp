@@ -13,11 +13,16 @@ Emulator::~Emulator() {
 
 void Emulator::Update() {
 
-	for (size_t i = 0; i < 70221; i++) {
+	int totalCycles = 0;
+
+	while (totalCycles < 70221) {
 
 		short cycles = cpu.ExecuteOpcode();
-		int ff44 = cpu.memory.Read(0xFF44);
+		totalCycles += cycles;
 		graphics.update(cycles);
+		cpu.performInterupts();
+		cpu.dividerRegisterINC(cycles);
+		cpu.TimerCounterINC(cycles);
 	}
 
 }

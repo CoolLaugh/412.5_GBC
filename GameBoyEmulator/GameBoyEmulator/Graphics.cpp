@@ -22,6 +22,12 @@ void Graphics::update(short cyclesThisUpdate) {
 		cyclesThisLine += cyclesThisUpdate;
 	}
 
+	if (memory->Read(0xFF44) == 144) {
+		byte interuptFlags = memory->Read(0xFF0F);
+		interuptFlags |= 0x1;
+		memory->Write(0xFF0F, interuptFlags);
+	}
+
 	if (memory->Read(0xFF44) > 153) {
 		memory->Write(0xFF44, 0);
 	}
@@ -34,9 +40,9 @@ void Graphics::update(short cyclesThisUpdate) {
 
 void Graphics::drawScanLine() {
 
-	byte mem = memory->rom[0xFF44];
+	byte mem = memory->Read(0xFF44);
 	mem++;
-	memory->rom[0xFF44] = mem;
+	memory->Write(0xFF44, mem);
 
 	//drawBackground2();
 }

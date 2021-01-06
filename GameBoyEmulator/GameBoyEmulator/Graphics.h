@@ -8,6 +8,7 @@ class Graphics {
 	sf::View* view;
 	sf::Image* background;
 
+
 	const short cyclesPerLine = 456;
 	const word screenWidth = 160;
 	const word screenHeight = 144;
