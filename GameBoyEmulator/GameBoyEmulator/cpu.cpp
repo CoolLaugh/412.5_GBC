@@ -38,7 +38,7 @@ void Cpu::PowerUpSequence() {
 	registers.a = 0x01;
 	registers.f = 0xB0;
 	registers.b = 0x00;
-	registers.c = 0x13;
+	registers.c = 0x00;
 	registers.d = 0x00;
 	registers.e = 0xD8;
 	registers.h = 0x01;
@@ -84,7 +84,7 @@ word Cpu::LDRegFromMemory() {
 
 word Cpu::LDregHL(byte & reg) {
 
-	word address = Combinebytes(registers.h, registers.l);
+	word address = Combinebytes(registers.l, registers.h);
 	reg = memory.Read(address);
 
 	return 8; // cycles
@@ -105,8 +105,8 @@ word Cpu::LDHL() {
 	word hl = registers.sp + n;
 	registers.pc++;
 	auto pair = splitBytes(hl);
-	registers.h = pair.first;
-	registers.l = pair.second;
+	registers.l = pair.first;
+	registers.h = pair.second;
 
 	flagReset(flagType::zero);
 	flagReset(flagType::negative);
@@ -128,6 +128,7 @@ word Cpu::LD16(byte & reg1, byte & reg2) {
 word Cpu::LD16(word & reg1) {
 
 	reg1 = Combinebytes(memory.Read(registers.pc), memory.Read(registers.pc + 1));
+	registers.pc += 2;
 
 	return 12;
 }
@@ -136,9 +137,9 @@ word Cpu::LD16(word & reg1) {
 word Cpu::Push(byte & reg1, byte & reg2) {
 
 	registers.sp--;
-	memory.Write(registers.sp, reg1);
-	registers.sp--;
 	memory.Write(registers.sp, reg2);
+	registers.sp--;
+	memory.Write(registers.sp, reg1);
 
 	return 16;
 }
@@ -146,9 +147,9 @@ word Cpu::Push(byte & reg1, byte & reg2) {
 // pop two bytes off the stack into a register pair
 word Cpu::Pop(byte & reg1, byte & reg2) {
 
-	reg2 = memory.Read(registers.sp);
-	registers.sp++;
 	reg1 = memory.Read(registers.sp);
+	registers.sp++;
+	reg2 = memory.Read(registers.sp);
 	registers.sp++;
 
 	return 12;
@@ -392,7 +393,7 @@ word Cpu::DECMemory(word address) {
 // add value to register combination hl
 word Cpu::ADDHL(word value) {
 
-	word hl = Combinebytes(registers.h, registers.l);
+	word hl = Combinebytes(registers.l, registers.h);
 	word result = hl + value;
 
 	flagReset(flagType::negative);
@@ -401,8 +402,8 @@ word Cpu::ADDHL(word value) {
 
 	auto pair = splitBytes(result);
 
-	registers.h = pair.first;
-	registers.l = pair.second;
+	registers.l = pair.first;
+	registers.h = pair.second;
 
 	return 8;
 }
@@ -428,14 +429,14 @@ word Cpu::ADDSP() {
 // increment two registers as if they were one 16 bit register
 word Cpu::INC16(byte & reg1, byte & reg2) {
 
-	word combinedRegister = Combinebytes(reg1, reg2);
+	word combinedRegister = Combinebytes(reg2, reg1);
 
 	combinedRegister++;
 
 	auto pair = splitBytes(combinedRegister);
 
-	reg1 = pair.first;
-	reg2 = pair.second;
+	reg1 = pair.second;
+	reg2 = pair.first;
 
 	return 8;
 }
@@ -478,8 +479,8 @@ word Cpu::SWAP(byte & reg) {
 	byte upper = reg & 0xF0;
 	byte lower = reg & 0x0F;
 
-	upper >> 4;
-	lower << 4;
+	upper >>= 4;
+	lower <<= 4;
 
 	byte result = upper | lower;
 
@@ -501,8 +502,8 @@ word Cpu::SWAP(word address) {
 	byte upper = data & 0xF0;
 	byte lower = data & 0x0F;
 
-	upper >> 4;
-	lower << 4;
+	upper >>= 4;
+	lower <<= 4;
 
 	byte result = upper | lower;
 
@@ -611,13 +612,13 @@ word Cpu::STOP() {
 
 // disable interupts
 word Cpu::DI() {
-	interupt = false;
+	interuptDisable = true;
 	return 4;
 }
 
 // enable interupts
 word Cpu::EI() {
-	interupt = true;
+	interuptEnable = true;
 	return 4;
 }
 
@@ -1002,7 +1003,7 @@ word Cpu::JPcc(condition cdn) {
 // jump to hl
 word Cpu::JPHL() {
 
-	word address = Combinebytes(registers.h, registers.l);
+	word address = Combinebytes(registers.l, registers.h);
 	registers.pc = address;
 
 	return 4;
@@ -1012,6 +1013,7 @@ word Cpu::JPHL() {
 word Cpu::JR() {
 
 	signed char offset = memory.Read(registers.pc);
+	registers.pc++;
 	registers.pc += offset;
 
 	return 8;
@@ -1127,9 +1129,6 @@ word Cpu::RETcc(condition cdn) {
 
 		registers.pc = Combinebytes(first, second);
 	}
-	else {
-		registers.pc++;
-	}
 
 	return 8;
 }
@@ -1152,10 +1151,10 @@ word Cpu::RETI() {
 // decrement two registers as one 16 bit registers
 word Cpu::decrement16reg(byte & reg1, byte & reg2) {
 
-	word combined = Combinebytes(reg1, reg2);
+	word combined = Combinebytes(reg2, reg1);
 	combined--;
-	reg2 = (combined >> 8);
-	reg1 = (combined & 0xFF);
+	reg2 = (combined & 0xFF);
+	reg1 = (combined >> 8);
 
 	return 0;
 }
@@ -1163,10 +1162,10 @@ word Cpu::decrement16reg(byte & reg1, byte & reg2) {
 // increment two registers as one 16 bit registers
 word Cpu::increment16reg(byte & reg1, byte & reg2) {
 
-	word combined = Combinebytes(reg1, reg2);
+	word combined = Combinebytes(reg2, reg1);
 	combined++;
-	reg2 = (combined >> 8);
-	reg1 = (combined & 0xFF);
+	reg2 = (combined & 0xFF);
+	reg1 = (combined >> 8);
 
 	return 0;
 }
@@ -1186,6 +1185,23 @@ std::pair<byte, byte> Cpu::splitBytes(word value) {
 
 	byte first = value & 0xFF;
 	byte second = (value >> 8) & 0xFF;
+
+	return std::make_pair(first, second);
+}
+
+word Cpu::CombinebytesR(byte value1, byte value2) {
+
+	word combine = value1;
+	combine <<= 8;
+	combine |= value2;
+
+	return combine;
+}
+
+std::pair<byte, byte> Cpu::splitBytesR(word value) {
+
+	byte first = (value >> 8) & 0xFF;
+	byte second = value & 0xFF;
 
 	return std::make_pair(first, second);
 }

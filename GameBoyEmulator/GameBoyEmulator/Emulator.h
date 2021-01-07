@@ -13,6 +13,7 @@ public:
 	Emulator();
 	~Emulator();
 	void Update();
+	void Loop();
 
 };
 

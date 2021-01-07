@@ -6,7 +6,7 @@
 int main() {
 
 	Emulator emulator;
-	emulator.Update();
+	emulator.Loop();
 
 	return 0;
 }

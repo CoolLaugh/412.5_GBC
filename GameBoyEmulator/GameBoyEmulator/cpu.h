@@ -40,11 +40,11 @@ public:
 
 	struct Registers {
 		byte a;
+		byte f;
 		byte b;
 		byte c;
 		byte d;
 		byte e;
-		byte f;
 		byte h;
 		byte l;
 		word sp = 0xFFFE;
@@ -186,5 +186,7 @@ public:
 	word Combinebytes(byte value1, byte value2);
 	std::pair<byte, byte> splitBytes(word value);
 
+	word CombinebytesR(byte value1, byte value2);
+	std::pair<byte, byte> splitBytesR(word value);
 
 };

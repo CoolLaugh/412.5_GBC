@@ -289,12 +289,21 @@ void Memory::Write(word address, byte data) {
 		}
 		else if (address == 0xFF02) { // serial control
 			rom[address] = data;
+			if (data == 0x81) { // output for test rom
+				std::cout << rom[0xFF01];
+				std::ofstream resultsFile;
+				resultsFile.open("results.txt", std::ios::app);
+				byte out = rom[0xFF01];
+				char toHex[16] = { '0', '1', '2' , '3' , '4' , '5' , '6' , '7' , '8', '9', 'A', 'B', 'C', 'D', 'E', 'F' };
+				resultsFile << "0x" << toHex[(out >> 4)] << toHex[(out & 0xF)] << "\n";
+				resultsFile.close();
+			}
 		}
 		else if (address == 0xFF04) { // DIV register
 			rom[address] = 0;
 		}
-		else if(address == 0xFF04) {
-			
+		else if(address == 0xFF07) { // timer control
+			rom[address] = data;
 		}
 		else if (address == 0xFF0F) { // interupt flag
 			rom[address] = data;

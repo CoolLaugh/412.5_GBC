@@ -5,13 +5,76 @@ Graphics::Graphics() {
 	window = new sf::RenderWindow(sf::VideoMode(screenWidth, screenHeight), "Gameboy Emulator");
 	window->setPosition(sf::Vector2i(150, 150));
 	window->setVerticalSyncEnabled(false);
-	window->setFramerateLimit(57);
+	window->setFramerateLimit(60);
 
 	view = new sf::View(sf::FloatRect(0, 0, screenWidth, screenHeight));
 	window->setView(*view);
 
 	background = new sf::Image();
 	background->create(screenWidth, screenHeight, sf::Color::White);
+
+	setupTileWindow();
+}
+
+void Graphics::setupTileWindow() {
+
+	tileMemoryWindow = new sf::RenderWindow(sf::VideoMode(128, 192), "VRAM Tiles");
+	tileMemoryWindow->setPosition(sf::Vector2i(250, 150));
+	tileMemoryWindow->setVerticalSyncEnabled(false);
+	tileMemoryWindow->setFramerateLimit(60);
+
+	tileMemoryView = new sf::View(sf::FloatRect(0, 0, 128, 192));
+	tileMemoryWindow->setView(*tileMemoryView);
+
+	tileMemoryBackground = new sf::Image();
+	tileMemoryBackground->create(128, 192, sf::Color::White);
+}
+
+void Graphics::updateTileWindow() {
+
+	tileMemoryWindow->clear();
+	tileMemoryWindow->setView(*tileMemoryView);
+
+	for (size_t y = 0; y < 24; y++) {
+
+		for (size_t x = 0; x < 16; x++) {
+
+			short memoryTile = 0x8000 + (y * 0x100) + (x * 0x10);
+
+			for (size_t i = 0; i < 16; i++) {
+
+				int row = i / 2;
+				int column = i % 2;
+
+				short address = memoryTile + i;
+
+				byte pixelData = memory->Read(address);
+
+				byte pixel0 = pixelData & 0x3;
+				byte pixel1 = (pixelData >> 2) & 0x3;
+				byte pixel2 = (pixelData >> 4) & 0x3;
+				byte pixel3 = (pixelData >> 6) & 0x3;
+
+				int tileX = x * 8 + (column * 4);
+				int tileY = y * 8 + row;
+
+				tileMemoryBackground->setPixel(tileX, tileY, BWPalette[pixel0]);
+				tileMemoryBackground->setPixel(tileX + 1, tileY, BWPalette[pixel1]);
+				tileMemoryBackground->setPixel(tileX + 2, tileY, BWPalette[pixel2]);
+				tileMemoryBackground->setPixel(tileX + 3, tileY, BWPalette[pixel3]);
+			}
+		}
+	}
+
+
+	sf::Texture tilesTexture;
+	tilesTexture.loadFromImage(*tileMemoryBackground);
+	sf::Sprite tilesSprite;
+	tilesSprite.setTexture(tilesTexture, true);
+	tilesSprite.setPosition(0, 0);
+	
+	tileMemoryWindow->draw(tilesSprite);
+	tileMemoryWindow->display();
 }
 
 void Graphics::update(short cyclesThisUpdate) { 
