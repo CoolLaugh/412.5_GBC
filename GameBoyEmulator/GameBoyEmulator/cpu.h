@@ -157,7 +157,7 @@ public:
 	word BIT(byte reg, byte bit);
 	word SET(byte& reg, byte bit);
 	word SET(word address, byte bit);
-	word RES(byte reg, byte bit);
+	word RES(byte& reg, byte bit);
 	word RES(word address, byte bit);
 
 	// jumps

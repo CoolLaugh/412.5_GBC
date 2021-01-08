@@ -13,21 +13,22 @@ Graphics::Graphics() {
 	background = new sf::Image();
 	background->create(screenWidth, screenHeight, sf::Color::White);
 
-	setupTileWindow();
+	setupTileWindow(); 
+	setupBGMapWindow();
 }
 
 void Graphics::setupTileWindow() {
 
-	tileMemoryWindow = new sf::RenderWindow(sf::VideoMode(128, 192), "VRAM Tiles");
-	tileMemoryWindow->setPosition(sf::Vector2i(250, 150));
+	tileMemoryWindow = new sf::RenderWindow(sf::VideoMode((128 + 16) * scale, (192 + 24) * scale), "VRAM Tiles");
+	tileMemoryWindow->setPosition(sf::Vector2i(350, 150));
 	tileMemoryWindow->setVerticalSyncEnabled(false);
 	tileMemoryWindow->setFramerateLimit(60);
 
-	tileMemoryView = new sf::View(sf::FloatRect(0, 0, 128, 192));
+	tileMemoryView = new sf::View(sf::FloatRect(0, 0, 128 + 16, 192 + 24));
 	tileMemoryWindow->setView(*tileMemoryView);
 
 	tileMemoryBackground = new sf::Image();
-	tileMemoryBackground->create(128, 192, sf::Color::White);
+	tileMemoryBackground->create(128 + 16, 192 + 24, sf::Color::Magenta);
 }
 
 void Graphics::updateTileWindow() {
@@ -41,31 +42,42 @@ void Graphics::updateTileWindow() {
 
 			short memoryTile = 0x8000 + (y * 0x100) + (x * 0x10);
 
-			for (size_t i = 0; i < 16; i++) {
+			int tileX = x * 8;
+			int tileY = y * 8;
 
-				int row = i / 2;
-				int column = i % 2;
+			for (size_t i = 0; i < 8; i++) {
 
-				short address = memoryTile + i;
+				short address = memoryTile + i * 2;
 
-				byte pixelData = memory->Read(address);
+				byte pixelDataLow = memory->Read(address);
+				byte pixelDataHigh = memory->Read(address + 1);
 
-				byte pixel0 = pixelData & 0x3;
-				byte pixel1 = (pixelData >> 2) & 0x3;
-				byte pixel2 = (pixelData >> 4) & 0x3;
-				byte pixel3 = (pixelData >> 6) & 0x3;
+				for (size_t j = 0; j < 8; j++) {
 
-				int tileX = x * 8 + (column * 4);
-				int tileY = y * 8 + row;
+					byte pixel = 0;
+					if ((pixelDataLow & (0x80 >> j)) != 0) {
+						pixel |= 0x1;
+					}
+					if ((pixelDataHigh & (0x80 >> j)) != 0) {
+						pixel |= 0x2;
+					}
 
-				tileMemoryBackground->setPixel(tileX, tileY, BWPalette[pixel0]);
-				tileMemoryBackground->setPixel(tileX + 1, tileY, BWPalette[pixel1]);
-				tileMemoryBackground->setPixel(tileX + 2, tileY, BWPalette[pixel2]);
-				tileMemoryBackground->setPixel(tileX + 3, tileY, BWPalette[pixel3]);
+					tileMemoryBackground->setPixel(x + tileX + j, y + tileY + i, BWPalette[pixel]);
+				}
+
 			}
 		}
 	}
 
+	for (size_t y = 0; y < 192 + 24; y++) {
+		for (size_t x = 0; x < 128 + 16; x++) {
+
+			if ((y + 1) % 9 == 0 || (x + 1) % 9 == 0) {
+				tileMemoryBackground->setPixel(x, y, sf::Color::Red);
+			}
+
+		}
+	}
 
 	sf::Texture tilesTexture;
 	tilesTexture.loadFromImage(*tileMemoryBackground);
@@ -75,6 +87,72 @@ void Graphics::updateTileWindow() {
 	
 	tileMemoryWindow->draw(tilesSprite);
 	tileMemoryWindow->display();
+}
+
+void Graphics::setupBGMapWindow() {
+
+	BGMapWindow = new sf::RenderWindow(sf::VideoMode(256 * scale, 256 * scale), "VRAM BGMap");
+	BGMapWindow->setPosition(sf::Vector2i(150, 350));
+	BGMapWindow->setVerticalSyncEnabled(false);
+	BGMapWindow->setFramerateLimit(60);
+
+	BGMapView = new sf::View(sf::FloatRect(0, 0, 256, 256));
+	BGMapWindow->setView(*BGMapView);
+
+	BGMapBackground = new sf::Image();
+	BGMapBackground->create(256, 256, sf::Color::Magenta);
+}
+
+void Graphics::updateBGMapWindow() {
+
+	BGMapWindow->clear();
+	BGMapWindow->setView(*BGMapView);
+
+	for (size_t y = 0; y < 32; y++) {
+
+		for (size_t x = 0; x < 32; x++) {
+
+			short address = 0x9800 + y * 32 + x;
+
+			byte tileNumber = memory->Read(address);
+
+			short memoryTile = 0x8000 + tileNumber * 16;
+
+			int tileX = x * 8;
+			int tileY = y * 8;
+
+			for (size_t i = 0; i < 8; i++) {
+
+				short address = memoryTile + i * 2;
+
+				byte pixelDataLow = memory->Read(address);
+				byte pixelDataHigh = memory->Read(address + 1);
+
+				for (size_t j = 0; j < 8; j++) {
+
+					byte pixel = 0;
+					if ((pixelDataLow & (0x80 >> j)) != 0) {
+						pixel |= 0x1;
+					}
+					if ((pixelDataHigh & (0x80 >> j)) != 0) {
+						pixel |= 0x2;
+					}
+
+					BGMapBackground->setPixel(tileX + j, tileY + i, BWPalette[pixel]);
+				}
+
+			}
+		}
+	}
+
+	sf::Texture BGMapTexture;
+	BGMapTexture.loadFromImage(*BGMapBackground);
+	sf::Sprite BGMapSprite;
+	BGMapSprite.setTexture(BGMapTexture, true);
+	BGMapSprite.setPosition(0, 0);
+
+	BGMapWindow->draw(BGMapSprite);
+	BGMapWindow->display();
 }
 
 void Graphics::update(short cyclesThisUpdate) { 
@@ -103,9 +181,7 @@ void Graphics::update(short cyclesThisUpdate) {
 
 void Graphics::drawScanLine() {
 
-	byte mem = memory->Read(0xFF44);
-	mem++;
-	memory->Write(0xFF44, mem);
+	memory->rom[0xFF44]++;
 
 	//drawBackground2();
 }

@@ -8,6 +8,8 @@ class Emulator {
 	Cpu cpu;
 	Graphics graphics;
 
+	int elapsedFrames = 0;
+
 public:
 
 	Emulator();
@@ -15,5 +17,6 @@ public:
 	void Update();
 	void Loop();
 
+	void DumpMemory();
 };
 

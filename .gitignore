@@ -38,3 +38,6 @@ x64/
 
 # roms
 *.gb
+
+# Library Folders
+*/SFML-2.5.1/

@@ -111,7 +111,7 @@ word Cpu::ExecuteOpcode() {
 
 	case 0xE2: cycles = 8; memory.Write(0xFF00 + registers.c, registers.a); break;
 
-	case 0x3A: cycles = 8; registers.a = memory.Read(Combinebytes(registers.h, registers.l)); decrement16reg(registers.h, registers.l); break;
+	case 0x3A: cycles = 8; registers.a = memory.Read(Combinebytes(registers.l, registers.h)); decrement16reg(registers.h, registers.l); break;
 
 	case 0x32: cycles = 8; memory.Write(Combinebytes(registers.l, registers.h), registers.a); decrement16reg(registers.h, registers.l); break;
 
@@ -128,7 +128,7 @@ word Cpu::ExecuteOpcode() {
 	case 0x21: cycles = LD16(registers.h, registers.l); break;
 	case 0x31: cycles = LD16(registers.sp); break;
 
-	case 0xF9: cycles = 8; registers.pc = Combinebytes(registers.h, registers.l); break;
+	case 0xF9: cycles = 8; registers.pc = Combinebytes(registers.l, registers.h); break;
 
 	case 0xF8: cycles = LDHL(); break;
 
@@ -154,7 +154,7 @@ word Cpu::ExecuteOpcode() {
 	case 0x83: cycles = ADD(registers.e); break;
 	case 0x84: cycles = ADD(registers.h); break;
 	case 0x85: cycles = ADD(registers.l); break;
-	case 0x86: cycles = 8; ADD(memory.Read(Combinebytes(registers.h, registers.l))); break;
+	case 0x86: cycles = 8; ADD(memory.Read(Combinebytes(registers.l, registers.h))); break;
 	case 0xC6: cycles = 8; ADD(memory.Read(registers.pc)); registers.pc++; break;
 
 	// add with carry
@@ -165,7 +165,7 @@ word Cpu::ExecuteOpcode() {
 	case 0x8B: cycles = ADDC(registers.e); break;
 	case 0x8C: cycles = ADDC(registers.h); break;
 	case 0x8D: cycles = ADDC(registers.l); break;
-	case 0x8E: cycles = 8; ADDC(memory.Read(Combinebytes(registers.h, registers.l))); break;
+	case 0x8E: cycles = 8; ADDC(memory.Read(Combinebytes(registers.l, registers.h))); break;
 	case 0xCE: cycles = 8; ADDC(memory.Read(registers.pc)); registers.pc++; break;
 
 	// sub
@@ -176,7 +176,7 @@ word Cpu::ExecuteOpcode() {
 	case 0x93: cycles = SUB(registers.e); break;
 	case 0x94: cycles = SUB(registers.h); break;
 	case 0x95: cycles = SUB(registers.l); break;
-	case 0x96: cycles = 8; SUB(memory.Read(Combinebytes(registers.h, registers.l))); break;
+	case 0x96: cycles = 8; SUB(memory.Read(Combinebytes(registers.l, registers.h))); break;
 	case 0xD6: cycles = 8; SUB(memory.Read(registers.pc)); registers.pc++; break;
 
 	// sub with carry
@@ -187,7 +187,7 @@ word Cpu::ExecuteOpcode() {
 	case 0x9B: cycles = SUBC(registers.e); break;
 	case 0x9C: cycles = SUBC(registers.h); break;
 	case 0x9D: cycles = SUBC(registers.l); break;
-	case 0x9E: cycles = 8; SUBC(memory.Read(Combinebytes(registers.h, registers.l))); break;
+	case 0x9E: cycles = 8; SUBC(memory.Read(Combinebytes(registers.l, registers.h))); break;
 	case 0xDE: cycles = 8; SUBC(memory.Read(registers.pc)); registers.pc++; break;
 
 	// AND
@@ -198,7 +198,7 @@ word Cpu::ExecuteOpcode() {
 	case 0xA3: cycles = AND(registers.e); break;
 	case 0xA4: cycles = AND(registers.h); break;
 	case 0xA5: cycles = AND(registers.l); break;
-	case 0xA6: cycles = 8; AND(Combinebytes(registers.h, registers.l)); break;
+	case 0xA6: cycles = 8; AND(Combinebytes(registers.l, registers.h)); break;
 	case 0xE6: cycles = 8; AND(memory.Read(registers.pc)); registers.pc++; break;
 
 	// OR
@@ -231,7 +231,7 @@ word Cpu::ExecuteOpcode() {
 	case 0xBB: cycles = CP(registers.e); break;
 	case 0xBC: cycles = CP(registers.h); break;
 	case 0xBD: cycles = CP(registers.l); break;
-	case 0xBE: cycles = 8; CP(Combinebytes(registers.h, registers.l)); break;
+	case 0xBE: cycles = 8; CP(Combinebytes(registers.l, registers.h)); break;
 	case 0xFE: cycles = 8; CP(memory.Read(registers.pc)); registers.pc++; break;
 
 	// INC
@@ -265,15 +265,15 @@ word Cpu::ExecuteOpcode() {
 	case 0xE8: cycles = ADDSP(); break;
 
 	// INC 16 bit
-	case 0x03: cycles = INC16(registers.b, registers.c); break;
-	case 0x13: cycles = INC16(registers.d, registers.e); break;
-	case 0x23: cycles = INC16(registers.h, registers.l); break;
+	case 0x03: cycles = INC16(registers.c, registers.b); break;
+	case 0x13: cycles = INC16(registers.e, registers.d); break;
+	case 0x23: cycles = INC16(registers.l, registers.h); break;
 	case 0x33: cycles = INC16(registers.sp); break;
 
 	// DEC 16 bit
-	case 0x0B: cycles = DEC16(registers.b, registers.c); break;
-	case 0x1B: cycles = DEC16(registers.d, registers.e); break;
-	case 0x2B: cycles = DEC16(registers.h, registers.l); break;
+	case 0x0B: cycles = DEC16(registers.c, registers.b); break;
+	case 0x1B: cycles = DEC16(registers.e, registers.d); break;
+	case 0x2B: cycles = DEC16(registers.l, registers.h); break;
 	case 0x3B: cycles = DEC16(registers.sp); break;
 
 	// Extended opcodes
@@ -380,7 +380,7 @@ word Cpu::ExecuteExtendedOpcode() {
 	case 0x33: cycles = SWAP(registers.e); break;
 	case 0x34: cycles = SWAP(registers.h); break;
 	case 0x35: cycles = SWAP(registers.l); break;
-	case 0x36: cycles = SWAP(Combinebytes(registers.h, registers.l)); break;
+	case 0x36: cycles = SWAP(Combinebytes(registers.l, registers.h)); break;
 
 	// rotates and shifts
 	// rotate left bit 7 to carry
@@ -391,7 +391,7 @@ word Cpu::ExecuteExtendedOpcode() {
 	case 0x03: cycles = RLC(registers.e); break;
 	case 0x04: cycles = RLC(registers.h); break;
 	case 0x05: cycles = RLC(registers.l); break;
-	case 0x06: cycles = RLC(Combinebytes(registers.h, registers.l)); break;
+	case 0x06: cycles = RLC(Combinebytes(registers.l, registers.h)); break;
 
 	// rotate left through carry
 	case 0x17: cycles = RL(registers.a); break;
@@ -401,7 +401,7 @@ word Cpu::ExecuteExtendedOpcode() {
 	case 0x13: cycles = RL(registers.e); break;
 	case 0x14: cycles = RL(registers.h); break;
 	case 0x15: cycles = RL(registers.l); break;
-	case 0x16: cycles = RL(Combinebytes(registers.h, registers.l)); break;
+	case 0x16: cycles = RL(Combinebytes(registers.l, registers.h)); break;
 
 	// rotate right bit 7 to carry
 	case 0x0F: cycles = RRC(registers.a); break;
@@ -411,7 +411,7 @@ word Cpu::ExecuteExtendedOpcode() {
 	case 0x0B: cycles = RRC(registers.e); break;
 	case 0x0C: cycles = RRC(registers.h); break;
 	case 0x0D: cycles = RRC(registers.l); break;
-	case 0x0E: cycles = RRC(Combinebytes(registers.h, registers.l)); break;
+	case 0x0E: cycles = RRC(Combinebytes(registers.l, registers.h)); break;
 
 	// rotate right through carry
 	case 0x1F: cycles = RR(registers.a); break;
@@ -421,7 +421,7 @@ word Cpu::ExecuteExtendedOpcode() {
 	case 0x1B: cycles = RR(registers.e); break;
 	case 0x1C: cycles = RR(registers.h); break;
 	case 0x1D: cycles = RR(registers.l); break;
-	case 0x1E: cycles = RR(Combinebytes(registers.h, registers.l)); break;
+	case 0x1E: cycles = RR(Combinebytes(registers.l, registers.h)); break;
 
 	// shift left into carry lsb set to 0
 	case 0x27: cycles = SLA(registers.a); break;
@@ -431,7 +431,7 @@ word Cpu::ExecuteExtendedOpcode() {
 	case 0x23: cycles = SLA(registers.e); break;
 	case 0x24: cycles = SLA(registers.h); break;
 	case 0x25: cycles = SLA(registers.l); break;
-	case 0x26: cycles = SLA(Combinebytes(registers.h, registers.l)); break;
+	case 0x26: cycles = SLA(Combinebytes(registers.l, registers.h)); break;
 
 	// shift right into carry, msb stays the same
 	case 0x2F: cycles = SRA(registers.a); break;
@@ -441,7 +441,7 @@ word Cpu::ExecuteExtendedOpcode() {
 	case 0x2B: cycles = SRA(registers.e); break;
 	case 0x2C: cycles = SRA(registers.h); break;
 	case 0x2D: cycles = SRA(registers.l); break;
-	case 0x2E: cycles = SRA(Combinebytes(registers.h, registers.l)); break;
+	case 0x2E: cycles = SRA(Combinebytes(registers.l, registers.h)); break;
 
 	// shift right into carry msb set to 0
 	case 0x3F: cycles = SRL(registers.a); break;
@@ -451,7 +451,7 @@ word Cpu::ExecuteExtendedOpcode() {
 	case 0x3B: cycles = SRL(registers.e); break;
 	case 0x3C: cycles = SRL(registers.h); break;
 	case 0x3D: cycles = SRL(registers.l); break;
-	case 0x3E: cycles = SRL(Combinebytes(registers.h, registers.l)); break;
+	case 0x3E: cycles = SRL(Combinebytes(registers.l, registers.h)); break;
 
 	// check bit and set flags
 	case 0x40: cycles = BIT(registers.b, 0); break;
@@ -460,7 +460,7 @@ word Cpu::ExecuteExtendedOpcode() {
 	case 0x43: cycles = BIT(registers.e, 0); break;
 	case 0x44: cycles = BIT(registers.h, 0); break;
 	case 0x45: cycles = BIT(registers.l, 0); break;
-	case 0x46: cycles = 16; BIT(memory.Read(Combinebytes(registers.h, registers.l)), 0); break;
+	case 0x46: cycles = 16; BIT(memory.Read(Combinebytes(registers.l, registers.h)), 0); break;
 	case 0x47: cycles = BIT(registers.a, 0); break;
 	case 0x48: cycles = BIT(registers.b, 1); break;
 	case 0x49: cycles = BIT(registers.c, 1); break;
@@ -468,7 +468,7 @@ word Cpu::ExecuteExtendedOpcode() {
 	case 0x4B: cycles = BIT(registers.e, 1); break;
 	case 0x4C: cycles = BIT(registers.h, 1); break;
 	case 0x4D: cycles = BIT(registers.l, 1); break;
-	case 0x4E: cycles = 16; BIT(memory.Read(Combinebytes(registers.h, registers.l)), 1); break;
+	case 0x4E: cycles = 16; BIT(memory.Read(Combinebytes(registers.l, registers.h)), 1); break;
 	case 0x4F: cycles = BIT(registers.a, 1); break;
 	case 0x50: cycles = BIT(registers.b, 2); break;
 	case 0x51: cycles = BIT(registers.c, 2); break;
@@ -476,7 +476,7 @@ word Cpu::ExecuteExtendedOpcode() {
 	case 0x53: cycles = BIT(registers.e, 2); break;
 	case 0x54: cycles = BIT(registers.h, 2); break;
 	case 0x55: cycles = BIT(registers.l, 2); break;
-	case 0x56: cycles = 16; BIT(memory.Read(Combinebytes(registers.h, registers.l)), 2); break;
+	case 0x56: cycles = 16; BIT(memory.Read(Combinebytes(registers.l, registers.h)), 2); break;
 	case 0x57: cycles = BIT(registers.a, 2); break;
 	case 0x58: cycles = BIT(registers.b, 3); break;
 	case 0x59: cycles = BIT(registers.c, 3); break;
@@ -484,7 +484,7 @@ word Cpu::ExecuteExtendedOpcode() {
 	case 0x5B: cycles = BIT(registers.e, 3); break;
 	case 0x5C: cycles = BIT(registers.h, 3); break;
 	case 0x5D: cycles = BIT(registers.l, 3); break;
-	case 0x5E: cycles = 16; BIT(memory.Read(Combinebytes(registers.h, registers.l)), 3); break;
+	case 0x5E: cycles = 16; BIT(memory.Read(Combinebytes(registers.l, registers.h)), 3); break;
 	case 0x5F: cycles = BIT(registers.a, 3); break;
 	case 0x60: cycles = BIT(registers.b, 4); break;
 	case 0x61: cycles = BIT(registers.c, 4); break;
@@ -492,7 +492,7 @@ word Cpu::ExecuteExtendedOpcode() {
 	case 0x63: cycles = BIT(registers.e, 4); break;
 	case 0x64: cycles = BIT(registers.h, 4); break;
 	case 0x65: cycles = BIT(registers.l, 4); break;
-	case 0x66: cycles = 16; BIT(memory.Read(Combinebytes(registers.h, registers.l)), 4); break;
+	case 0x66: cycles = 16; BIT(memory.Read(Combinebytes(registers.l, registers.h)), 4); break;
 	case 0x67: cycles = BIT(registers.a, 4); break;
 	case 0x68: cycles = BIT(registers.b, 5); break;
 	case 0x69: cycles = BIT(registers.c, 5); break;
@@ -500,7 +500,7 @@ word Cpu::ExecuteExtendedOpcode() {
 	case 0x6B: cycles = BIT(registers.e, 5); break;
 	case 0x6C: cycles = BIT(registers.h, 5); break;
 	case 0x6D: cycles = BIT(registers.l, 5); break;
-	case 0x6E: cycles = 16; BIT(memory.Read(Combinebytes(registers.h, registers.l)), 5); break;
+	case 0x6E: cycles = 16; BIT(memory.Read(Combinebytes(registers.l, registers.h)), 5); break;
 	case 0x6F: cycles = BIT(registers.a, 5); break;
 	case 0x70: cycles = BIT(registers.b, 6); break;
 	case 0x71: cycles = BIT(registers.c, 6); break;
@@ -508,7 +508,7 @@ word Cpu::ExecuteExtendedOpcode() {
 	case 0x73: cycles = BIT(registers.e, 6); break;
 	case 0x74: cycles = BIT(registers.h, 6); break;
 	case 0x75: cycles = BIT(registers.l, 6); break;
-	case 0x76: cycles = 16; BIT(memory.Read(Combinebytes(registers.h, registers.l)), 6); break;
+	case 0x76: cycles = 16; BIT(memory.Read(Combinebytes(registers.l, registers.h)), 6); break;
 	case 0x77: cycles = BIT(registers.a, 6); break;
 	case 0x78: cycles = BIT(registers.b, 7); break;
 	case 0x79: cycles = BIT(registers.c, 7); break;
@@ -516,7 +516,7 @@ word Cpu::ExecuteExtendedOpcode() {
 	case 0x7B: cycles = BIT(registers.e, 7); break;
 	case 0x7C: cycles = BIT(registers.h, 7); break;
 	case 0x7D: cycles = BIT(registers.l, 7); break;
-	case 0x7E: cycles = 16; BIT(memory.Read(Combinebytes(registers.h, registers.l)), 7); break;
+	case 0x7E: cycles = 16; BIT(memory.Read(Combinebytes(registers.l, registers.h)), 7); break;
 	case 0x7F: cycles = BIT(registers.a, 7); break;
 
 	// set bit
@@ -526,7 +526,7 @@ word Cpu::ExecuteExtendedOpcode() {
 	case 0xC3: cycles = SET(registers.e, 0); break;
 	case 0xC4: cycles = SET(registers.h, 0); break;
 	case 0xC5: cycles = SET(registers.b, 0); break;
-	case 0xC6: cycles = SET(Combinebytes(registers.h, registers.l), 0); break;
+	case 0xC6: cycles = SET(Combinebytes(registers.l, registers.h), 0); break;
 	case 0xC7: cycles = SET(registers.a, 0); break;
 	case 0xC8: cycles = SET(registers.b, 1); break;
 	case 0xC9: cycles = SET(registers.c, 1); break;
@@ -534,7 +534,7 @@ word Cpu::ExecuteExtendedOpcode() {
 	case 0xCB: cycles = SET(registers.e, 1); break;
 	case 0xCC: cycles = SET(registers.h, 1); break;
 	case 0xCD: cycles = SET(registers.b, 1); break;
-	case 0xCE: cycles = SET(Combinebytes(registers.h, registers.l), 1); break;
+	case 0xCE: cycles = SET(Combinebytes(registers.l, registers.h), 1); break;
 	case 0xCF: cycles = SET(registers.a, 1); break;
 	case 0xD0: cycles = SET(registers.b, 2); break;
 	case 0xD1: cycles = SET(registers.c, 2); break;
@@ -542,7 +542,7 @@ word Cpu::ExecuteExtendedOpcode() {
 	case 0xD3: cycles = SET(registers.e, 2); break;
 	case 0xD4: cycles = SET(registers.h, 2); break;
 	case 0xD5: cycles = SET(registers.b, 2); break;
-	case 0xD6: cycles = SET(Combinebytes(registers.h, registers.l), 2); break;
+	case 0xD6: cycles = SET(Combinebytes(registers.l, registers.h), 2); break;
 	case 0xD7: cycles = SET(registers.a, 2); break;
 	case 0xD8: cycles = SET(registers.b, 3); break;
 	case 0xD9: cycles = SET(registers.c, 3); break;
@@ -550,7 +550,7 @@ word Cpu::ExecuteExtendedOpcode() {
 	case 0xDB: cycles = SET(registers.e, 3); break;
 	case 0xDC: cycles = SET(registers.h, 3); break;
 	case 0xDD: cycles = SET(registers.b, 3); break;
-	case 0xDE: cycles = SET(Combinebytes(registers.h, registers.l), 3); break;
+	case 0xDE: cycles = SET(Combinebytes(registers.l, registers.h), 3); break;
 	case 0xDF: cycles = SET(registers.a, 3); break;
 	case 0xE0: cycles = SET(registers.b, 4); break;
 	case 0xE1: cycles = SET(registers.c, 4); break;
@@ -558,7 +558,7 @@ word Cpu::ExecuteExtendedOpcode() {
 	case 0xE3: cycles = SET(registers.e, 4); break;
 	case 0xE4: cycles = SET(registers.h, 4); break;
 	case 0xE5: cycles = SET(registers.b, 4); break;
-	case 0xE6: cycles = SET(Combinebytes(registers.h, registers.l), 4); break;
+	case 0xE6: cycles = SET(Combinebytes(registers.l, registers.h), 4); break;
 	case 0xE7: cycles = SET(registers.a, 4); break;
 	case 0xE8: cycles = SET(registers.b, 5); break;
 	case 0xE9: cycles = SET(registers.c, 5); break;
@@ -566,7 +566,7 @@ word Cpu::ExecuteExtendedOpcode() {
 	case 0xEB: cycles = SET(registers.e, 5); break;
 	case 0xEC: cycles = SET(registers.h, 5); break;
 	case 0xED: cycles = SET(registers.b, 5); break;
-	case 0xEE: cycles = SET(Combinebytes(registers.h, registers.l), 5); break;
+	case 0xEE: cycles = SET(Combinebytes(registers.l, registers.h), 5); break;
 	case 0xEF: cycles = SET(registers.a, 5); break;
 	case 0xF0: cycles = SET(registers.b, 6); break;
 	case 0xF1: cycles = SET(registers.c, 6); break;
@@ -574,7 +574,7 @@ word Cpu::ExecuteExtendedOpcode() {
 	case 0xF3: cycles = SET(registers.e, 6); break;
 	case 0xF4: cycles = SET(registers.h, 6); break;
 	case 0xF5: cycles = SET(registers.b, 6); break;
-	case 0xF6: cycles = SET(Combinebytes(registers.h, registers.l), 6); break;
+	case 0xF6: cycles = SET(Combinebytes(registers.l, registers.h), 6); break;
 	case 0xF7: cycles = SET(registers.a, 6); break;
 	case 0xF8: cycles = SET(registers.b, 7); break;
 	case 0xF9: cycles = SET(registers.c, 7); break;
@@ -582,7 +582,7 @@ word Cpu::ExecuteExtendedOpcode() {
 	case 0xFB: cycles = SET(registers.e, 7); break;
 	case 0xFC: cycles = SET(registers.h, 7); break;
 	case 0xFD: cycles = SET(registers.b, 7); break;
-	case 0xFE: cycles = SET(Combinebytes(registers.h, registers.l), 7); break;
+	case 0xFE: cycles = SET(Combinebytes(registers.l, registers.h), 7); break;
 	case 0xFF: cycles = SET(registers.a, 7); break;
 
 	// reset bit
@@ -592,7 +592,7 @@ word Cpu::ExecuteExtendedOpcode() {
 	case 0x83: cycles = RES(registers.e, 0); break;
 	case 0x84: cycles = RES(registers.h, 0); break;
 	case 0x85: cycles = RES(registers.l, 0); break;
-	case 0x86: cycles = RES(Combinebytes(registers.h, registers.l), 0); break;
+	case 0x86: cycles = RES(Combinebytes(registers.l, registers.h), 0); break;
 	case 0x87: cycles = RES(registers.a, 0); break;
 	case 0x88: cycles = RES(registers.b, 1); break;
 	case 0x89: cycles = RES(registers.c, 1); break;
@@ -600,7 +600,7 @@ word Cpu::ExecuteExtendedOpcode() {
 	case 0x8B: cycles = RES(registers.e, 1); break;
 	case 0x8C: cycles = RES(registers.h, 1); break;
 	case 0x8D: cycles = RES(registers.l, 1); break;
-	case 0x8E: cycles = RES(Combinebytes(registers.h, registers.l), 1); break;
+	case 0x8E: cycles = RES(Combinebytes(registers.l, registers.h), 1); break;
 	case 0x8F: cycles = RES(registers.a, 1); break;
 	case 0x90: cycles = RES(registers.b, 2); break;
 	case 0x91: cycles = RES(registers.c, 2); break;
@@ -608,7 +608,7 @@ word Cpu::ExecuteExtendedOpcode() {
 	case 0x93: cycles = RES(registers.e, 2); break;
 	case 0x94: cycles = RES(registers.h, 2); break;
 	case 0x95: cycles = RES(registers.l, 2); break;
-	case 0x96: cycles = RES(Combinebytes(registers.h, registers.l), 2); break;
+	case 0x96: cycles = RES(Combinebytes(registers.l, registers.h), 2); break;
 	case 0x97: cycles = RES(registers.a, 2); break;
 	case 0x98: cycles = RES(registers.b, 3); break;
 	case 0x99: cycles = RES(registers.c, 3); break;
@@ -616,7 +616,7 @@ word Cpu::ExecuteExtendedOpcode() {
 	case 0x9B: cycles = RES(registers.e, 3); break;
 	case 0x9C: cycles = RES(registers.h, 3); break;
 	case 0x9D: cycles = RES(registers.l, 3); break;
-	case 0x9E: cycles = RES(Combinebytes(registers.h, registers.l), 3); break;
+	case 0x9E: cycles = RES(Combinebytes(registers.l, registers.h), 3); break;
 	case 0x9F: cycles = RES(registers.a, 3); break;
 	case 0xA0: cycles = RES(registers.b, 4); break;
 	case 0xA1: cycles = RES(registers.c, 4); break;
@@ -624,7 +624,7 @@ word Cpu::ExecuteExtendedOpcode() {
 	case 0xA3: cycles = RES(registers.e, 4); break;
 	case 0xA4: cycles = RES(registers.h, 4); break;
 	case 0xA5: cycles = RES(registers.l, 4); break;
-	case 0xA6: cycles = RES(Combinebytes(registers.h, registers.l), 4); break;
+	case 0xA6: cycles = RES(Combinebytes(registers.l, registers.h), 4); break;
 	case 0xA7: cycles = RES(registers.a, 4); break;
 	case 0xA8: cycles = RES(registers.b, 5); break;
 	case 0xA9: cycles = RES(registers.c, 5); break;
@@ -632,7 +632,7 @@ word Cpu::ExecuteExtendedOpcode() {
 	case 0xAB: cycles = RES(registers.e, 5); break;
 	case 0xAC: cycles = RES(registers.h, 5); break;
 	case 0xAD: cycles = RES(registers.l, 5); break;
-	case 0xAE: cycles = RES(Combinebytes(registers.h, registers.l), 5); break;
+	case 0xAE: cycles = RES(Combinebytes(registers.l, registers.h), 5); break;
 	case 0xAF: cycles = RES(registers.a, 5); break;
 	case 0xB0: cycles = RES(registers.b, 6); break;
 	case 0xB1: cycles = RES(registers.c, 6); break;
@@ -640,7 +640,7 @@ word Cpu::ExecuteExtendedOpcode() {
 	case 0xB3: cycles = RES(registers.e, 6); break;
 	case 0xB4: cycles = RES(registers.h, 6); break;
 	case 0xB5: cycles = RES(registers.l, 6); break;
-	case 0xB6: cycles = RES(Combinebytes(registers.h, registers.l), 6); break;
+	case 0xB6: cycles = RES(Combinebytes(registers.l, registers.h), 6); break;
 	case 0xB7: cycles = RES(registers.a, 6); break;
 	case 0xB8: cycles = RES(registers.b, 7); break;
 	case 0xB9: cycles = RES(registers.c, 7); break;
@@ -648,7 +648,7 @@ word Cpu::ExecuteExtendedOpcode() {
 	case 0xBB: cycles = RES(registers.e, 7); break;
 	case 0xBC: cycles = RES(registers.h, 7); break;
 	case 0xBD: cycles = RES(registers.l, 7); break;
-	case 0xBE: cycles = RES(Combinebytes(registers.h, registers.l), 7); break;
+	case 0xBE: cycles = RES(Combinebytes(registers.l, registers.h), 7); break;
 	case 0xBF: cycles = RES(registers.a, 7); break;
 
 	default: throw "Unknown extended Opcode"; break;
@@ -664,6 +664,7 @@ void Cpu::performInterupts() {
 	}
 	else if (interuptEnable == true && interuptEnableInstructionCount >= 1) {
 		interuptEnableInstructionCount = 0;
+		interuptEnable = false;
 		interupt = true;
 	}
 
@@ -673,6 +674,7 @@ void Cpu::performInterupts() {
 	}
 	else if (interuptDisable == true && interuptDisableInstructionCount >= 1) {
 		interuptDisableInstructionCount = 0;
+		interuptDisable = false;
 		interupt = false;
 	}
 
@@ -690,7 +692,7 @@ void Cpu::performInterupts() {
 			if (interuptFlag == true && interuptEnabled == true){
 
 				auto pair = splitBytes(registers.pc);
-				Pop(pair.first, pair.second);
+				Push(pair.second, pair.first);
 
 				switch (i) {
 				case 0: registers.pc = 0x40; break;

@@ -15,9 +15,14 @@ private:
 	sf::View* tileMemoryView;
 	sf::Image* tileMemoryBackground;
 
+	sf::RenderWindow* BGMapWindow;
+	sf::View* BGMapView;
+	sf::Image* BGMapBackground;
+
 	const short cyclesPerLine = 456;
 	const word screenWidth = 160;
 	const word screenHeight = 144;
+	const int scale = 4;
 
 
 	short cyclesThisLine = 0;
@@ -35,6 +40,9 @@ public:
 
 	void setupTileWindow();
 	void updateTileWindow();
+
+	void setupBGMapWindow();
+	void updateBGMapWindow();
 
 	void update(short cyclesThisUpdate);
 	void drawScanLine();

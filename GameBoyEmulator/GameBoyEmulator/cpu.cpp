@@ -38,7 +38,7 @@ void Cpu::PowerUpSequence() {
 	registers.a = 0x01;
 	registers.f = 0xB0;
 	registers.b = 0x00;
-	registers.c = 0x00;
+	registers.c = 0x13;
 	registers.d = 0x00;
 	registers.e = 0xD8;
 	registers.h = 0x01;
@@ -429,14 +429,14 @@ word Cpu::ADDSP() {
 // increment two registers as if they were one 16 bit register
 word Cpu::INC16(byte & reg1, byte & reg2) {
 
-	word combinedRegister = Combinebytes(reg2, reg1);
+	word combinedRegister = Combinebytes(reg1, reg2);
 
 	combinedRegister++;
 
 	auto pair = splitBytes(combinedRegister);
 
-	reg1 = pair.second;
-	reg2 = pair.first;
+	reg1 = pair.first;
+	reg2 = pair.second;
 
 	return 8;
 }
@@ -520,7 +520,7 @@ word Cpu::SWAP(word address) {
 // swap the lower and upper nibble of a byte in memory
 word Cpu::SWAPMemory() {
 
-	word address = Combinebytes(registers.h, registers.l);
+	word address = Combinebytes(registers.l, registers.h);
 
 	byte data = memory.Read(address);
 
@@ -950,7 +950,7 @@ word Cpu::SET(word address, byte bit) {
 }
 
 // reset bit
-word Cpu::RES(byte reg, byte bit) {
+word Cpu::RES(byte& reg, byte bit) {
 
 	byte bitmask = 1 << bit;
 	bitmask = ~bitmask;
@@ -1143,7 +1143,7 @@ word Cpu::RETI() {
 
 	registers.pc = Combinebytes(first, second);
 
-	interupt = true;
+	interuptEnable = true;
 
 	return 8;
 }

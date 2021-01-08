@@ -58,6 +58,7 @@ bool Memory::LoadRom(const std::string fileName) {
 	romFile.close();
 
 	memcpy(rom, gameBank, 0x8000);
+	currentRomBank = 1;
 
 	byte test2 = rom[0xFF42];
 
@@ -256,7 +257,7 @@ void Memory::Write(word address, byte data) {
 
 	}
 	else if (address >= 0x8000 && address <= 0x9FFF) { // 8kb video ram (vram) (1 for gameboy, 2 switchable for gameboy color)
-
+		rom[address] = data;
 	}
 	else if (address >= 0xA000 && address <= 0xBFFF) { // 8kb external ram
 		if (ramBankEnabled == true && mbc == 1 || mbc == 3 || mbc == 5) {
@@ -281,7 +282,7 @@ void Memory::Write(word address, byte data) {
 		rom[address] = data;
 	}
 	else if (address >= 0xFEA0 && address <= 0xFEFF) { // Not Usable
-
+		rom[address] = data;
 	}
 	else if (address >= 0xFF00 && address <= 0xFF7F) { // I/O Registers 
 		if (address == 0xFF01) { // serial data
@@ -309,7 +310,7 @@ void Memory::Write(word address, byte data) {
 			rom[address] = data;
 		}
 		else if (address >= 0xFF10 && address <= 0xFF3F) { // sound
-			
+			rom[address] = data;
 		}
 		else if (address == 0xFF40) {
 			rom[address] = data;
