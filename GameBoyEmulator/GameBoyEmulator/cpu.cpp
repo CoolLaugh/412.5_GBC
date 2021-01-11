@@ -1133,7 +1133,7 @@ word Cpu::RETcc(condition cdn) {
 	return 8;
 }
 
-// return and enable interups
+// return and enable interrupts
 word Cpu::RETI() {
 
 	byte second = memory.Read(registers.sp);

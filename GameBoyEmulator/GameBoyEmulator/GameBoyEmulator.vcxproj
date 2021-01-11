@@ -136,6 +136,7 @@
     <ClCompile Include="memory.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="CommonDefinitions.h" />
     <ClInclude Include="cpu.h" />
     <ClInclude Include="Emulator.h" />
     <ClInclude Include="Graphics.h" />

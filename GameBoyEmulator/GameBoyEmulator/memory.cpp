@@ -4,44 +4,43 @@
 
 Memory::Memory() {
 
-	gameBank = new byte[gameBankSize];
-	rom = new byte[romSize];
-
+	memorySpace = new byte[memorySize];
+	memset(memorySpace, 0, memorySize);
 }
 
 void Memory::PowerUpSequence() {
 
-	rom[0xFF05] = 0x00;
-	rom[0xFF06] = 0x00;
-	rom[0xFF07] = 0x00;
-	rom[0xFF10] = 0x80;
-	rom[0xFF11] = 0xBF;
-	rom[0xFF12] = 0xF3;
-	rom[0xFF14] = 0xBF;
-	rom[0xFF16] = 0x3F;
-	rom[0xFF17] = 0x00;
-	rom[0xFF19] = 0xBF;
-	rom[0xFF1A] = 0x7F;
-	rom[0xFF1B] = 0xFF;
-	rom[0xFF1C] = 0x9F;
-	rom[0xFF1E] = 0xBF;
-	rom[0xFF20] = 0xFF;
-	rom[0xFF21] = 0x00;
-	rom[0xFF22] = 0x00;
-	rom[0xFF23] = 0xBF;
-	rom[0xFF24] = 0x77;
-	rom[0xFF25] = 0xF3;
-	rom[0xFF26] = 0xF1;
-	rom[0xFF40] = 0x91;
-	rom[0xFF42] = 0x00;
-	rom[0xFF43] = 0x00;
-	rom[0xFF45] = 0x00;
-	rom[0xFF47] = 0xFC;
-	rom[0xFF48] = 0xFF;
-	rom[0xFF49] = 0xFF;
-	rom[0xFF4A] = 0x00;
-	rom[0xFF4B] = 0x00;
-	rom[0xFFFF] = 0x00;
+	memorySpace[0xFF05] = 0x00;
+	memorySpace[0xFF06] = 0x00;
+	memorySpace[0xFF07] = 0x00;
+	memorySpace[0xFF10] = 0x80;
+	memorySpace[0xFF11] = 0xBF;
+	memorySpace[0xFF12] = 0xF3;
+	memorySpace[0xFF14] = 0xBF;
+	memorySpace[0xFF16] = 0x3F;
+	memorySpace[0xFF17] = 0x00;
+	memorySpace[0xFF19] = 0xBF;
+	memorySpace[0xFF1A] = 0x7F;
+	memorySpace[0xFF1B] = 0xFF;
+	memorySpace[0xFF1C] = 0x9F;
+	memorySpace[0xFF1E] = 0xBF;
+	memorySpace[0xFF20] = 0xFF;
+	memorySpace[0xFF21] = 0x00;
+	memorySpace[0xFF22] = 0x00;
+	memorySpace[0xFF23] = 0xBF;
+	memorySpace[0xFF24] = 0x77;
+	memorySpace[0xFF25] = 0xF3;
+	memorySpace[0xFF26] = 0xF1;
+	memorySpace[0xFF40] = 0x91;
+	memorySpace[0xFF42] = 0x00;
+	memorySpace[0xFF43] = 0x00;
+	memorySpace[0xFF45] = 0x00;
+	memorySpace[0xFF47] = 0xFC;
+	memorySpace[0xFF48] = 0xFF;
+	memorySpace[0xFF49] = 0xFF;
+	memorySpace[0xFF4A] = 0x00;
+	memorySpace[0xFF4B] = 0x00;
+	memorySpace[0xFFFF] = 0x00;
 
 	// memory values not set by skipping the nintendo logo
 	//rom[0xFF44] = 0x3E;
@@ -50,17 +49,20 @@ void Memory::PowerUpSequence() {
 
 bool Memory::LoadRom(const std::string fileName) {
 
-	memset(rom, 0, romSize);
-	memset(gameBank, 0, gameBankSize);
-
 	std::ifstream romFile(fileName, std::ios::in, std::ios::binary);
-	romFile.read((char*)gameBank, gameBankSize);
+
+	romFile.seekg(0, std::ios::end);
+	int cartridgeLength = romFile.tellg();
+	romFile.seekg(0, std::ios::beg);
+
+	cartridge = new byte[cartridgeLength];
+	memset(cartridge, 0, cartridgeLength);
+
+	romFile.read((char*)cartridge, cartridgeLength);
 	romFile.close();
 
-	memcpy(rom, gameBank, 0x8000);
+	memcpy(memorySpace, cartridge, 0x8000);
 	currentRomBank = 1;
-
-	byte test2 = rom[0xFF42];
 
 	CreateRamBanks();
 
@@ -71,7 +73,7 @@ void Memory::CreateRamBanks() {
 
 	// note: use after rom is loaded
 	// 2.5.4
-	byte cartridgeType = Read(0x147);
+	byte cartridgeType = Read(Address::CartridgeType);
 
 	switch (cartridgeType) {
 	case 0x0: mbc = 0; break;
@@ -95,10 +97,10 @@ void Memory::CreateRamBanks() {
 	case 0x1E: mbc = 5; break;
 	}
 
-	byte ramSize = Read(0x149);
+	byte ramSize = Read(Address::RamSize);
 
 	switch (ramSize) {
-	case 0: numberOfRamBanks = 0; break;
+	case 0: numberOfRamBanks = 1; break;
 	case 1: numberOfRamBanks = 1; break;
 	case 2: numberOfRamBanks = 1; break;
 	case 3: numberOfRamBanks = 4; break;
@@ -121,18 +123,18 @@ byte Memory::Read(word address) {
 
 		word offset = address - 0x4000;
 		word memoryBankOffset = 0x4000 * currentRomBank;
-		return gameBank[memoryBankOffset + offset];
+		return cartridge[memoryBankOffset + offset];
 	}
 	// Ram bank 0xA000 - 0xBFFF
 	else if (address >= 0xA000 && address <= 0xBFFF) {
 		return ramBank[currentRamBank][address - 0xA000];
 	}
 	// controls 0xFF00
-	else if (address == 0xFF00) {
-
+	else if (address == Address::Joypad) {
+		return GetJoypadState();
 	}
 
-	return rom[address];
+	return memorySpace[address];
 }
 
 void Memory::Write(word address, byte data) {
@@ -257,7 +259,7 @@ void Memory::Write(word address, byte data) {
 
 	}
 	else if (address >= 0x8000 && address <= 0x9FFF) { // 8kb video ram (vram) (1 for gameboy, 2 switchable for gameboy color)
-		rom[address] = data;
+		memorySpace[address] = data;
 	}
 	else if (address >= 0xA000 && address <= 0xBFFF) { // 8kb external ram
 		if (ramBankEnabled == true && mbc == 1 || mbc == 3 || mbc == 5) {
@@ -270,65 +272,69 @@ void Memory::Write(word address, byte data) {
 		}
 	}
 	else if (address >= 0xC000 && address <= 0xCFFF) { // 4KB Work RAM (WRAM) bank 0
-		rom[address] = data;
+		memorySpace[address] = data;
 	}
 	else if (address >= 0xD000 && address <= 0xDFFF) { // 4KB Work RAM (WRAM) bank 1~N (1 for gameboy, 1-7 for gameboy color)
-		rom[address] = data;
+		memorySpace[address] = data;
 	}
 	else if (address >= 0xE000 && address <= 0xFDFF) { // typically not used
-		rom[address] = data;
+		memorySpace[address] = data;
 	}
 	else if (address >= 0xFE00 && address <= 0xFE9F) { // Sprite attribute table
-		rom[address] = data;
+	memorySpace[address] = data;
 	}
 	else if (address >= 0xFEA0 && address <= 0xFEFF) { // Not Usable
-		rom[address] = data;
+	memorySpace[address] = data;
 	}
 	else if (address >= 0xFF00 && address <= 0xFF7F) { // I/O Registers 
-		if (address == 0xFF01) { // serial data
-			rom[address] = data;
+
+		if (address == 0xFF00) { // joypad
+			memorySpace[address] = data;
+		}
+		else if (address == 0xFF01) { // serial data
+			memorySpace[address] = data;
 		}
 		else if (address == 0xFF02) { // serial control
-			rom[address] = data;
+			memorySpace[address] = data;
 			if (data == 0x81) { // output for test rom
-				std::cout << rom[0xFF01];
+				std::cout << memorySpace[0xFF01];
 				std::ofstream resultsFile;
 				resultsFile.open("results.txt", std::ios::app);
-				byte out = rom[0xFF01];
+				byte out = memorySpace[0xFF01];
 				char toHex[16] = { '0', '1', '2' , '3' , '4' , '5' , '6' , '7' , '8', '9', 'A', 'B', 'C', 'D', 'E', 'F' };
 				resultsFile << "0x" << toHex[(out >> 4)] << toHex[(out & 0xF)] << "\n";
 				resultsFile.close();
 			}
 		}
 		else if (address == 0xFF04) { // DIV register
-			rom[address] = 0;
+			memorySpace[address] = 0;
 		}
 		else if(address == 0xFF07) { // timer control
-			rom[address] = data;
+			memorySpace[address] = data;
 		}
 		else if (address == 0xFF0F) { // interupt flag
-			rom[address] = data;
+			memorySpace[address] = data;
 		}
 		else if (address >= 0xFF10 && address <= 0xFF3F) { // sound
-			rom[address] = data;
+			memorySpace[address] = data;
 		}
 		else if (address == 0xFF40) {
-			rom[address] = data;
+			memorySpace[address] = data;
 		}
 		else if (address == 0xFF41) {
-			rom[address] = data;
+			memorySpace[address] = data;
 		}
 		else if (address == 0xFF42) {
-			rom[address] = data;
+			memorySpace[address] = data;
 		}
 		else if (address == 0xFF43) {
-			rom[address] = data;
+			memorySpace[address] = data;
 		}
-		else if (address == 0xFF44) {
-			rom[address] = 0;
+		else if (address == Address::LY) {
+			memorySpace[address] = 0;
 		}
 		else if (address == 0xFF45) {
-			rom[0xFF45] = data;
+			memorySpace[0xFF45] = data;
 		}
 		else if (address == 0xFF46) { // DMA
 
@@ -336,14 +342,62 @@ void Memory::Write(word address, byte data) {
 			DMAAddress <<= 8;
 
 			for (size_t i = 0; i < 0xA0; i++) {
-				rom[0xFE00 + i] = Read(DMAAddress + i);
+				memorySpace[0xFE00 + i] = Read(DMAAddress + i);
 			}
 		}
 	}
 	else if (address >= 0xFF80 && address <= 0xFFFE) { // High RAM (HRAM) 
-		rom[address] = data;
+		if (address == 0xFF85) {
+			int a = 1;
+		}
+		memorySpace[address] = data;
 	}
 	else if (address == 0xFFFF) { // Interrupts Enable Register (IE)
-		rom[address] = data;
+		memorySpace[address] = data;
 	}
+}
+
+byte Memory::GetJoypadState() {
+
+	byte selectedKeys = memorySpace[Address::Joypad];
+
+	selectedKeys = ~selectedKeys;
+	selectedKeys &= 0x30;
+
+	byte buttonsPressed = 0xFF;
+
+	if ((selectedKeys & 0x20) != 0) { // button keys
+
+		if (buttons.start == true) buttonsPressed &= ~(1 << 3);
+		if (buttons.select == true) buttonsPressed &= ~(1 << 2);
+		if (buttons.buttonB == true) buttonsPressed &= ~(1 << 1);
+		if (buttons.buttonA == true) buttonsPressed &= ~(1 << 0);
+
+		buttonsPressed &= ~Bits::b5;
+	}
+	else if ((selectedKeys & 0x10) != 0) { // direction keys
+
+		if (buttons.down == true) buttonsPressed &= ~(1 << 3);
+		if (buttons.up == true) buttonsPressed &= ~(1 << 2);
+		if (buttons.left == true) buttonsPressed &= ~(1 << 1);
+		if (buttons.right == true) buttonsPressed &= ~(1 << 0);
+
+		buttonsPressed &= ~Bits::b4;
+	}
+
+	return buttonsPressed;
+}
+
+
+void Memory::DumpMemory(std::string fileName) {
+
+	std::ofstream out;
+	out.open(fileName + ".dmp", std::ios::binary | std::ios::out | std::ios::trunc);
+
+	for (size_t i = 0; i <= 0xFFFF; i++) {
+
+		byte value = memorySpace[i];
+		out << value;
+	}
+	out.close();
 }

@@ -10,6 +10,7 @@ class Emulator {
 
 	int elapsedFrames = 0;
 
+
 public:
 
 	Emulator();

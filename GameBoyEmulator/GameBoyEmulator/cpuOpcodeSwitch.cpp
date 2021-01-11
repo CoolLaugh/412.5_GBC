@@ -128,7 +128,7 @@ word Cpu::ExecuteOpcode() {
 	case 0x21: cycles = LD16(registers.h, registers.l); break;
 	case 0x31: cycles = LD16(registers.sp); break;
 
-	case 0xF9: cycles = 8; registers.pc = Combinebytes(registers.l, registers.h); break;
+	case 0xF9: cycles = 8; registers.sp = Combinebytes(registers.l, registers.h); break;
 
 	case 0xF8: cycles = LDHL(); break;
 
@@ -355,7 +355,7 @@ word Cpu::ExecuteOpcode() {
 	case 0xD9: cycles = RETI(); break;
 
 
-	default: throw "Unknown Opcode"; break;
+	default: std::cout << "Unknown Opcode " << std::hex << opcode << "\n" ; break;
 	}
 
 	return cycles;
@@ -680,7 +680,6 @@ void Cpu::performInterupts() {
 
 	if (interupt == true) {
 
-		interupt = false;
 		byte interuptFlags = memory.Read(0xFF0F);
 		byte interuptsEnabled = memory.Read(0xFFFF);
 
@@ -704,11 +703,11 @@ void Cpu::performInterupts() {
 
 				interuptFlags &= ~(1 << i); // reset bit of interupt
 				memory.Write(0xFF0F, interuptFlags);
+				interupt = false;
 
 				break; // don't check interupts of lower prioriry
 			}
 		}
-
 	}
 }
 
@@ -718,9 +717,7 @@ void Cpu::dividerRegisterINC(short cycles) {
 
 	if (dividerCycles > 256) { // incremented at rate of 16384Hz (4194304 Hz cpu / 16384Hz = 256)
 		dividerCycles -= 256;
-		byte dividerRegister = memory.Read(0xFF04);
-		dividerRegister++;
-		memory.Write(0xFF04, dividerRegister);
+		memory.memorySpace[Address::DIVRegister]++;
 	}
 
 }
