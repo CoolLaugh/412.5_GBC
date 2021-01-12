@@ -10,7 +10,7 @@ class Cpu {
 
 public:
 
-	enum interuptFlags {
+	enum interruptFlags {
 		VBlank,
 		LCDSTAT,
 		Timer,
@@ -53,6 +53,7 @@ public:
 
 	Registers registers;
 	bool halted = false;
+	bool stop = false;
 
 	bool interupt = false;
 	bool interuptEnable = false;
@@ -70,6 +71,11 @@ public:
 	void flagSet(flagType flag, bool value);
 	void flagReset(flagType flag);
 
+	bool bitTest(byte value, Bits bit);
+	void bitSet(byte& value, Bits bit);
+	void bitReset(byte& value, Bits bit);
+	void setInterrupt(interruptFlags flag);
+
 	void PowerUpSequence();
 	word ExecuteOpcode();
 	word ExecuteExtendedOpcode();
@@ -77,6 +83,7 @@ public:
 	void performInterupts();
 	void dividerRegisterINC(short cycles);
 	void TimerCounterINC(short cycles);
+	void LCDStatusRegister(short cyclesThisFrame);
 
 	word LD(byte& reg);
 	word LDreg(byte& reg1, byte& reg2);
@@ -86,6 +93,7 @@ public:
 	word LDmemfromreg(byte& reg);
 	word LDmem();
 	word LDHL();
+	word WriteSP();
 
 	word LD16(byte& reg1, byte& reg2);
 	word LD16(word& reg1);

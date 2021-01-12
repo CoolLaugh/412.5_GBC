@@ -2,7 +2,7 @@
 
 Emulator::Emulator() {
 
-	cpu.memory.LoadRom("./Tetris.gb");
+	cpu.memory.LoadRom("./gb/DrMario.gb");
 	cpu.PowerUpSequence();
 	graphics.memory = &cpu.memory;
 }
@@ -34,18 +34,34 @@ void Emulator::Update() {
 		//											              0xE3, 0xE4,             0xE7, 0xE8,             0xEB, 0xEC, 0xED,
 		//										/*0xF0,*/   0xF2,       0xF4,             0xF7,            /*0xFA,*/    0xFC, 0xFD,/* 0xFE,*/0xFF };
 
-		//byte nextOpcode = cpu.memory.Read(cpu.registers.pc);
+		byte nextOpcode = cpu.memory.Read(cpu.registers.pc);
 		//if (std::binary_search(uncheckedOpcodes.begin(), uncheckedOpcodes.end(), nextOpcode)) {
 		//	int a = 1;
 		//}
 
-		short cycles = cpu.ExecuteOpcode();
+		//if((elapsedOpcodes % 100) == 0){
+		//	int a = 1;
+		//}
+		//if (cpu.registers.pc == 0x289F) {
+		//	int a = 1;
+		//}
+
+		short cycles = 0;
+		if (cpu.halted == false) {
+			cycles = cpu.ExecuteOpcode();
+		}
+		else {
+			cycles = 4;
+		}
 
 		totalCycles += cycles;
+		cpu.LCDStatusRegister(totalCycles);
 		graphics.update(cycles);
 		cpu.performInterupts();
 		cpu.dividerRegisterINC(cycles);
 		cpu.TimerCounterINC(cycles);
+
+		elapsedOpcodes++;
 	}
 	graphics.updateWindow();
 	graphics.updateTileWindow();

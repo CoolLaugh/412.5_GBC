@@ -19,22 +19,23 @@ Graphics::Graphics() {
 
 void Graphics::setupTileWindow() {
 
-	tileMemoryWindow = new sf::RenderWindow(sf::VideoMode((128 + 16) * DisplayScale, (192 + 24) * DisplayScale), "VRAM Tiles");
+	tileMemoryWindow = new sf::RenderWindow(sf::VideoMode((128/* + 16*/) * DisplayScale, (192/* + 24*/) * DisplayScale), "VRAM Tiles");
 	tileMemoryWindow->setPosition(sf::Vector2i(650, 150));
 	tileMemoryWindow->setVerticalSyncEnabled(false);
 	tileMemoryWindow->setFramerateLimit(60);
 
-	tileMemoryView = new sf::View(sf::FloatRect(0, 0, 128 + 16, 192 + 24));
+	tileMemoryView = new sf::View(sf::FloatRect(0, 0, 128/* + 16*/, 192/* + 24*/));
 	tileMemoryWindow->setView(*tileMemoryView);
 
 	tileMemoryBackground = new sf::Image();
-	tileMemoryBackground->create(128 + 16, 192 + 24, sf::Color::Magenta);
+	tileMemoryBackground->create(128/* + 16*/, 192/* + 24*/, sf::Color::Magenta);
 }
 
 void Graphics::updateTileWindow() {
 
 	tileMemoryWindow->clear();
 	tileMemoryWindow->setView(*tileMemoryView);
+	byte BGP = memory->Read(Address::BGWPalette);
 
 	for (size_t y = 0; y < 24; y++) {
 
@@ -62,22 +63,25 @@ void Graphics::updateTileWindow() {
 						pixel |= Bits::b1;
 					}
 
-					tileMemoryBackground->setPixel(x + tileX + j, y + tileY + i, BWPalette[pixel]);
+					byte offset = pixel * 2;
+					byte color = (BGP & (0x3 << offset)) >> offset;
+
+					tileMemoryBackground->setPixel(/*x + */tileX + j, /*y + */tileY + i, BWPalette[color]);
 				}
 
 			}
 		}
 	}
 
-	for (size_t y = 0; y < 192 + 24; y++) {
-		for (size_t x = 0; x < 128 + 16; x++) {
+	//for (size_t y = 0; y < 192 + 24; y++) {
+	//	for (size_t x = 0; x < 128 + 16; x++) {
 
-			if ((y + 1) % 9 == 0 || (x + 1) % 9 == 0) {
-				tileMemoryBackground->setPixel(x, y, sf::Color::Red);
-			}
+	//		if ((y + 1) % 9 == 0 || (x + 1) % 9 == 0) {
+	//			tileMemoryBackground->setPixel(x, y, sf::Color::Red);
+	//		}
 
-		}
-	}
+	//	}
+	//}
 
 	sf::Texture tilesTexture;
 	tilesTexture.loadFromImage(*tileMemoryBackground);
@@ -107,6 +111,8 @@ void Graphics::updateBGMapWindow() {
 
 	BGMapWindow->clear();
 	BGMapWindow->setView(*BGMapView);
+	byte BGP = memory->Read(Address::BGWPalette);
+	byte LCDC = memory->Read(Address::LCDC);
 
 	for (size_t y = 0; y < 32; y++) {
 
@@ -114,9 +120,17 @@ void Graphics::updateBGMapWindow() {
 
 			short address = 0x9800 + y * 32 + x;
 
-			byte tileNumber = memory->Read(address);
+			short memoryTile = 0;
+			if ((LCDC & Bits::b4) == Bits::b4) {
 
-			short memoryTile = 0x8000 + tileNumber * 16;
+				byte tileNumber = memory->Read(address);
+				memoryTile = Address::TilePattern0 + tileNumber * 16;
+			}
+			else {
+
+				signed char tileNumber = memory->Read(address);
+				memoryTile = Address::TilePattern1 + (tileNumber + 0x80) * 16;
+			}
 
 			int tileX = x * 8;
 			int tileY = y * 8;
@@ -131,14 +145,17 @@ void Graphics::updateBGMapWindow() {
 				for (size_t j = 0; j < 8; j++) {
 
 					byte pixel = 0;
-					if ((pixelDataLow & (0x80 >> j)) != 0) {
-						pixel |= 0x1;
+					if ((pixelDataLow & (Bits::b7 >> j)) != 0) {
+						pixel |= Bits::b0;
 					}
-					if ((pixelDataHigh & (0x80 >> j)) != 0) {
-						pixel |= 0x2;
+					if ((pixelDataHigh & (Bits::b7 >> j)) != 0) {
+						pixel |= Bits::b1;
 					}
 
-					BGMapBackground->setPixel(tileX + j, tileY + i, BWPalette[pixel]);
+					byte offset = pixel * 2;
+					byte color = (BGP & (0x3 << offset)) >> offset;
+
+					BGMapBackground->setPixel(tileX + j, tileY + i, BWPalette[color]);
 				}
 
 			}
@@ -275,6 +292,7 @@ void Graphics::drawBackground2() {
 	}
 
 	//scrollY += memory->Read(Address::LY);
+	byte BGP = memory->Read(Address::BGWPalette);
 
 	for (size_t i = 0; i < ScreenWidth; i++) {
 
@@ -283,9 +301,18 @@ void Graphics::drawBackground2() {
 		byte TileY = (scrollY + LY) / 8;
 		byte TileX = (scrollX + i) / 8;
 
-		byte tileIndex = memory->Read(backgroundMemory + (TileY * 32) + (TileX));
+		word tileLocation = 0;
 
-		word tileLocation = Address::TilePattern0 + (tileIndex * 16);
+		if ((LCDC & Bits::b4) == Bits::b4) {
+
+			byte tileIndex = memory->Read(backgroundMemory + (TileY * 32) + (TileX));
+			tileLocation = Address::TilePattern0 + (tileIndex * 16);
+		}
+		else {
+
+			signed char tileIndex = memory->Read(backgroundMemory + (TileY * 32) + (TileX));
+			tileLocation = Address::TilePattern1 + ((tileIndex + 0x80) * 16);
+		}
 
 		byte tileLine = (scrollY + LY) % 8;
 		tileLine *= 2;
@@ -300,7 +327,11 @@ void Graphics::drawBackground2() {
 		if ((pixelDataHigh & (Bits::b7 >> (i % 8))) != 0) {
 			pixel |= Bits::b1;
 		}
-		background->setPixel(startX, LY, BWPalette[pixel]);
+
+		byte offset = pixel * 2;
+		byte color = (BGP & (0x3 << offset)) >> offset;
+
+		background->setPixel(startX, LY, BWPalette[color]);
 	}
 }
 
@@ -320,6 +351,7 @@ void Graphics::drawSprites() {
 
 	byte LCDC = memory->Read(Address::LCDC);
 	word spriteAttributeTable = Address::SpriteAttributes;
+	byte OGP = memory->Read(Address::OBJPalette0);
 
 	for (size_t i = 0; i < 40; i++) {
 
@@ -336,6 +368,10 @@ void Graphics::drawSprites() {
 		if ((LCDC & Bits::b2) != 0) {
 			spriteHeight = 16;
 			patternNumber &= ~Bits::b0;
+		}
+
+		if ((flags & Bits::b4) != 0) {
+			OGP = memory->Read(Address::OBJPalette1);
 		}
 
 		byte LY = memory->Read(Address::LY);
@@ -372,8 +408,11 @@ void Graphics::drawSprites() {
 
 				int pixelX = positionX + pixelOffsetX;
 
-				if (LY < 144 && pixelX < 160) {
-					background->setPixel(pixelX, LY, BWPalette[pixel]);
+				byte offset = pixel * 2;
+				byte color = (OGP & (0x3 << offset)) >> offset;
+
+				if (LY < 144 && pixelX < 160 && pixel != 0) {
+					background->setPixel(pixelX, LY, BWPalette[color]);
 				}
 			}
 		}

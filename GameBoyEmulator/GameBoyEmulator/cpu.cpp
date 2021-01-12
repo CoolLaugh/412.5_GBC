@@ -32,6 +32,28 @@ void Cpu::flagReset(flagType flag) {
 	registers.f &= ~flag;
 }
 
+bool Cpu::bitTest(byte value, Bits bit) {
+
+	return value & bit != 0;
+}
+
+void Cpu::bitSet(byte& value, Bits bit) {
+
+	value |= bit;
+}
+
+void Cpu::bitReset(byte& value, Bits bit) {
+
+	value &= ~bit;
+}
+
+void Cpu::setInterrupt(interruptFlags flag) {
+	
+	byte interuptFlags = memory.Read(Address::InteruptFlag);
+	interuptFlags |= (1 << flag);
+	memory.Write(Address::InteruptFlag, interuptFlags);
+}
+
 void Cpu::PowerUpSequence() {
 
 	// 2.7.1
@@ -110,10 +132,22 @@ word Cpu::LDHL() {
 
 	flagReset(flagType::zero);
 	flagReset(flagType::negative);
-	halfCarryFlag(registers.sp, n);
-	carryFlag(registers.sp, n);
+	halfCarryFlag16(registers.sp, (word)n);
+	carryFlag16(registers.sp, (word)n);
 
 	return 12; // cycles
+}
+
+word Cpu::WriteSP() {
+
+	word address = Combinebytes(memory.Read(registers.pc), memory.Read(registers.pc + 1));
+	registers.pc += 2;
+
+	auto pair = splitBytes(registers.sp);
+	memory.Write(address, pair.first);
+	memory.Write(address + 1, pair.second);
+
+	return 20;
 }
 
 // load immediate 16-bit value into register pair
@@ -197,7 +231,7 @@ void Cpu::halfNoBorrow(byte value1, byte value2) {
 	value1 &= 0xF;
 	value2 &= 0xF;
 
-	flagSet(flagType::halfCarry, (value1 & 0xF) < (value2 & 0xF));
+	flagSet(flagType::halfCarry, value1 < value2);
 }
 
 // indicates if a bit is borrowed after a subtraction
@@ -348,12 +382,12 @@ word Cpu::INC(byte& reg) {
 // increment memory location pointed to by register hl
 word Cpu::INCMemory(word address) {
 
-	byte result = memory.Read(address);
-	result++;
+	byte value = memory.Read(address);
+	byte result = value + 1;
 
 	zeroFlag(result);
 	flagReset(flagType::negative);
-	halfCarryFlag(result, 1);
+	halfCarryFlag(value, 1);
 
 	memory.Write(address, result);
 
@@ -377,15 +411,14 @@ word Cpu::DEC(byte& reg) {
 // decrement memory location pointed to by register hl
 word Cpu::DECMemory(word address) {
 
-	byte result = memory.Read(address);
-	result--;
+	byte value = memory.Read(address);
+	byte result = value - 1;
 
 	zeroFlag(result);
 	flagSet(flagType::negative);
-	halfNoBorrow(result, 1);
+	halfNoBorrow(value, 1);
 
 	memory.Write(address, result);
-
 
 	return 12; 
 }
@@ -576,7 +609,6 @@ word Cpu::CCF() {
 
 	flagSet(flagType::carry, !flagTest(flagType::carry));
 	
-
 	return 4;
 }
 
@@ -587,7 +619,7 @@ word Cpu::SCF() {
 	flagReset(flagType::halfCarry);
 	flagSet(flagType::carry);
 
-	return 0;
+	return 4;
 }
 
 // no operation
@@ -605,7 +637,8 @@ word Cpu::HALT() {
 
 // halt cpu and display until button push
 word Cpu::STOP() {
-	// todo
+
+	stop = true;
 	registers.pc++;
 	return 4;
 }
@@ -627,7 +660,7 @@ word Cpu::RLC(byte& reg) {
 
 	byte result = reg;
 
-	bool bit7 = (result & 0x80) == 0x80;
+	bool bit7 = bitTest(result, Bits::b7);
 
 	result <<= 1;
 
@@ -646,7 +679,7 @@ word Cpu::RLC(word address) {
 
 	byte result = memory.Read(address);
 
-	bool bit7 = (result & 0x80) == 0x80;
+	bool bit7 = bitTest(result, Bits::b7);
 
 	result <<= 1;
 
@@ -657,7 +690,7 @@ word Cpu::RLC(word address) {
 
 	memory.Write(address, result);
 
-	return 8;
+	return 16;
 }
 
 // rotate left through carry
@@ -665,11 +698,11 @@ word Cpu::RL(byte & reg) {
 
 	byte result = reg;
 
-	bool bit7 = (result & 0x80) == 0x80;
+	bool bit7 = bitTest(result, Bits::b7);
 
 	result <<= 1;
 	if (flagTest(flagType::carry) == true) {
-		result |= 0x1;
+		bitSet(result, Bits::b0);
 	}
 
 	zeroFlag(result);
@@ -687,11 +720,11 @@ word Cpu::RL(word address) {
 
 	byte result = memory.Read(address);
 
-	bool bit7 = (result & 0x80) == 0x80;
+	bool bit7 = bitTest(result, Bits::b7);
 
 	result <<= 1;
 	if (flagTest(flagType::carry) == true) {
-		result |= 0x1;
+		bitSet(result, Bits::b0);
 	}
 
 	zeroFlag(result);
@@ -701,7 +734,7 @@ word Cpu::RL(word address) {
 
 	memory.Write(address, result);
 
-	return 8;
+	return 16;
 }
 
 // rotate right bit 7 to carry
@@ -709,7 +742,7 @@ word Cpu::RRC(byte & reg) {
 
 	byte result = reg;
 
-	bool bit0 = (result & 0x1) == 0x1;
+	bool bit0 = bitTest(result, Bits::b0);
 
 	result >>= 1;
 
@@ -728,7 +761,7 @@ word Cpu::RRC(word address) {
 
 	byte result = memory.Read(address);
 
-	bool bit0 = (result & 0x1) == 0x1;
+	bool bit0 = bitTest(result, Bits::b0);
 
 	result >>= 1;
 
@@ -739,7 +772,7 @@ word Cpu::RRC(word address) {
 
 	memory.Write(address, result);
 
-	return 8;
+	return 16;
 }
 
 // rotate right through carry
@@ -747,11 +780,11 @@ word Cpu::RR(byte & reg) {
 
 	byte result = reg;
 
-	bool bit0 = (result & 0x1) == 0x1;
+	bool bit0 = bitTest(result, Bits::b0);
 
 	result >>= 1;
 	if (flagTest(flagType::carry) == true) {
-		result |= 0x80;
+		bitSet(result, Bits::b7);
 	}
 
 	zeroFlag(result);
@@ -769,7 +802,7 @@ word Cpu::RR(word address) {
 
 	byte result = memory.Read(address);
 
-	bool bit0 = (result & 0x1) == 0x1;
+	bool bit0 = bitTest(result, Bits::b0);
 
 	result >>= 1;
 	if (flagTest(flagType::carry) == true) {
@@ -783,7 +816,7 @@ word Cpu::RR(word address) {
 
 	memory.Write(address, result);
 
-	return 8;
+	return 16;
 }
 
 // shift left into carry lsb set to 0
@@ -791,10 +824,10 @@ word Cpu::SLA(byte & reg) {
 
 	byte result = reg;
 
-	bool bit7 = (result & 0x80) == 0x80;
+	bool bit7 = bitTest(result, Bits::b7);
 
 	result <<= 1;
-	result &= 0xFE; //LSB set to 0
+	bitReset(result, Bits::b0);
 
 	zeroFlag(result);
 	flagReset(flagType::negative);
@@ -811,10 +844,10 @@ word Cpu::SLA(word address) {
 
 	byte result = memory.Read(address);
 
-	bool bit7 = (result & 0x80) == 0x80;
+	bool bit7 = bitTest(result, Bits::b7);
 
 	result <<= 1;
-	result &= 0xFE; //LSB set to 0
+	bitReset(result, Bits::b0);
 
 	zeroFlag(result);
 	flagReset(flagType::negative);
@@ -831,12 +864,12 @@ word Cpu::SRA(byte & reg) {
 
 	byte result = reg;
 
-	bool bit7 = (result & 0x80) == 0x80;
-	bool bit0 = (result & 0x1) == 0x1;
+	bool bit7 = bitTest(result, Bits::b7);
+	bool bit0 = bitTest(result, Bits::b0);
 
 	result >>= 1;
 	if (bit7 == true) {
-		result |= 0x80; // keep MSB the same
+		bitSet(result, Bits::b7); // keep MSB the same
 	}
 
 	zeroFlag(result);
@@ -854,12 +887,12 @@ word Cpu::SRA(word address) {
 
 	byte result = memory.Read(address);
 
-	bool bit7 = (result & 0x80) == 0x80;
-	bool bit0 = (result & 0x1) == 0x1;
+	bool bit7 = bitTest(result, Bits::b7);
+	bool bit0 = bitTest(result, Bits::b0);
 
 	result >>= 1;
 	if (bit7 == true) {
-		result |= 0x80; // keep MSB the same
+		bitSet(result, Bits::b7); // keep MSB the same
 	}
 
 	zeroFlag(result);
@@ -877,10 +910,10 @@ word Cpu::SRL(byte & reg) {
 
 	byte result = reg;
 
-	bool bit0 = (result & 0x1) == 0x1;
+	bool bit0 = bitTest(result, Bits::b0);
 
 	result >>= 1;
-	result &= 0x7F;
+	bitReset(result, Bits::b7);
 
 	zeroFlag(result);
 	flagReset(flagType::negative);
@@ -897,10 +930,10 @@ word Cpu::SRL(word address) {
 
 	byte result = memory.Read(address);
 
-	bool bit0 = (result & 0x1) == 0x1;
+	bool bit0 = bitTest(result, Bits::b0);
 
 	result >>= 1;
-	result &= 0x7F;
+	bitReset(result, Bits::b7);
 
 	zeroFlag(result);
 	flagReset(flagType::negative);
@@ -1012,7 +1045,7 @@ word Cpu::JPHL() {
 // relative jump
 word Cpu::JR() {
 
-	signed char offset = memory.Read(registers.pc);
+	signed char offset = (signed char)memory.Read(registers.pc);
 	registers.pc++;
 	registers.pc += offset;
 
@@ -1022,7 +1055,7 @@ word Cpu::JR() {
 // conditional relative jump
 word Cpu::JRcc(condition cdn) {
 
-	signed char offset = memory.Read(registers.pc);
+	signed char offset = (signed char)memory.Read(registers.pc);
 	registers.pc++;
 
 	switch (cdn) {
@@ -1115,7 +1148,7 @@ word Cpu::RETcc(condition cdn) {
 	bool ret = false;
 	switch (cdn) {
 	case Cpu::NotZero:	if (flagTest(flagType::zero) == false)	ret = true; break;
-	case Cpu::Zero:		if (flagTest(flagType::zero) == true)		ret = true; break;
+	case Cpu::Zero:		if (flagTest(flagType::zero) == true)	ret = true; break;
 	case Cpu::NotCarry: if (flagTest(flagType::carry) == false)	ret = true; break;
 	case Cpu::Carry:	if (flagTest(flagType::carry) == true)	ret = true; break;
 	}
@@ -1204,4 +1237,162 @@ std::pair<byte, byte> Cpu::splitBytesR(word value) {
 	byte second = value & 0xFF;
 
 	return std::make_pair(first, second);
+}
+
+void Cpu::performInterupts() {
+
+	if (interuptEnable == true && interuptEnableInstructionCount == 0) {
+		// interupts enable is delayed by one instruction
+		interuptEnableInstructionCount++;
+	}
+	else if (interuptEnable == true && interuptEnableInstructionCount >= 1) {
+		interuptEnableInstructionCount = 0;
+		interuptEnable = false;
+		interupt = true;
+	}
+
+	if (interuptDisable == true && interuptDisableInstructionCount == 0) {
+		// interupts disable is delayed by one instruction
+		interuptDisableInstructionCount++;
+	}
+	else if (interuptDisable == true && interuptDisableInstructionCount >= 1) {
+		interuptDisableInstructionCount = 0;
+		interuptDisable = false;
+		interupt = false;
+	}
+
+	if (interupt == true) {
+
+		byte interuptFlags = memory.Read(Address::InteruptFlag);
+		byte interuptsEnabled = memory.Read(Address::InteruptEnable);
+
+		for (size_t i = 0; i < interruptFlags::END; i++) {
+
+			bool interuptFlag = (interuptFlags & (1 << i)) != 0;
+			bool interuptEnabled = (interuptsEnabled & (1 << i)) != 0;
+
+			if (interuptFlag == true && interuptEnabled == true) {
+
+				auto pair = splitBytes(registers.pc);
+				Push(pair.second, pair.first);
+
+				switch (i) {
+				case 0: registers.pc = 0x40; break;
+				case 1: registers.pc = 0x48; break;
+				case 2: registers.pc = 0x50; break;
+				case 3: registers.pc = 0x58; break;
+				case 4: registers.pc = 0x60; break;
+				}
+
+				interuptFlags &= ~(1 << i); // reset bit of interupt
+				memory.Write(Address::InteruptFlag, interuptFlags);
+				interupt = false;
+				halted = false;
+
+				break; // don't check interupts of lower prioriry
+			}
+		}
+	}
+}
+
+void Cpu::dividerRegisterINC(short cycles) {
+
+	dividerCycles += cycles;
+
+	if (dividerCycles > 256) { // incremented at rate of 16384Hz (4194304 Hz cpu / 16384Hz = 256)
+		dividerCycles -= 256;
+		memory.memorySpace[Address::DIVRegister]++;
+	}
+
+}
+
+void Cpu::TimerCounterINC(short cycles) {
+
+	if ((memory.Read(Address::TimerControl) & 0x4) != 0) {
+		return;
+	}
+
+	if (memory.timerFrequencyChange > 0) {
+		if (clockFrequency != memory.timerFrequencyChange) {
+
+			clockFrequency = memory.timerFrequencyChange;
+			timerCycles = 0;
+		}
+		memory.timerFrequencyChange = 0;
+	}
+
+	timerCycles += cycles;
+
+	if (timerCycles > clockFrequency) {
+
+		timerCycles -= clockFrequency;
+		byte TimerCounter = memory.Read(Address::Timer);
+
+		if (TimerCounter == 0xFF) {
+
+			TimerCounter = memory.Read(Address::TimerModulo);
+
+			
+			byte interuptFlags = memory.Read(Address::InteruptFlag);
+			interuptFlags |= (1 << interruptFlags::Timer);
+			memory.Write(Address::InteruptFlag, interuptFlags);
+		}
+		else {
+
+			TimerCounter++;
+		}
+
+		memory.Write(Address::Timer, TimerCounter);
+	}
+}
+
+void Cpu::LCDStatusRegister(short cyclesThisFrame) {
+
+	short cyclesThisLine = cyclesThisFrame % 456;
+	byte LY = memory.Read(Address::LY);
+	byte LCDCStatus = memory.Read(Address::LCDCStatus);
+	byte mode = LCDCStatus & 0x3;
+
+	if (LY >= 144 && mode != 0x1) { // mode 1
+
+		bitSet(LCDCStatus, Bits::b0);
+		bitReset(LCDCStatus, Bits::b1);
+		if (bitTest(LCDCStatus, Bits::b4) == true) {
+			setInterrupt(interruptFlags::LCDSTAT);
+		}
+	}
+	else if (cyclesThisFrame < 80 && mode != 0x2) { // mode 2
+
+		bitSet(LCDCStatus, Bits::b1);
+		bitReset(LCDCStatus, Bits::b0);
+		if (bitTest(LCDCStatus, Bits::b5) == true) {
+			setInterrupt(interruptFlags::LCDSTAT);
+		}
+	}
+	else if (cyclesThisFrame < 80 + 168 && mode != 0x3) { // mode 3
+
+		bitSet(LCDCStatus, Bits::b1);
+		bitSet(LCDCStatus, Bits::b0);
+	}
+	else if (mode != 0x0) { // mode 0
+
+		bitReset(LCDCStatus, Bits::b0);
+		bitReset(LCDCStatus, Bits::b1);
+		if (bitTest(LCDCStatus, Bits::b3) == true) {
+			setInterrupt(interruptFlags::LCDSTAT);
+		}
+	}
+
+	byte LYCompare = memory.Read(Address::LYCompare);
+	if (LY == LYCompare) {
+		bitSet(LCDCStatus, Bits::b2);
+		if (bitTest(LCDCStatus, Bits::b6) == true) {
+			setInterrupt(interruptFlags::LCDSTAT);
+		}
+	}
+	else {
+		bitReset(LCDCStatus, Bits::b2);
+	}
+
+	memory.Write(Address::LCDCStatus, LCDCStatus);
 }

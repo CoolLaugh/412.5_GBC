@@ -9,6 +9,7 @@ class Emulator {
 	Graphics graphics;
 
 	int elapsedFrames = 0;
+	int elapsedOpcodes = 0;
 
 
 public:
@@ -17,7 +18,5 @@ public:
 	~Emulator();
 	void Update();
 	void Loop();
-
-	void DumpMemory();
 };
 

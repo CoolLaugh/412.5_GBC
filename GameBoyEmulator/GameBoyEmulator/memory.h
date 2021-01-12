@@ -42,6 +42,7 @@ public:
 	int currentRamBank = 0;
 	int currentRomBank = 0;
 	int numberOfRamBanks = 0;
+	int timerFrequencyChange = 0; // if this is not 0 then the clock frequence in the cpu will change to this
 	bool ramBankEnabled;
 	std::vector<byte*> ramBank;
 	int mbc = 0;

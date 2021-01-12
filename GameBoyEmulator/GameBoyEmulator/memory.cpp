@@ -112,8 +112,6 @@ void Memory::CreateRamBanks() {
 		memset(bank, 0, sizeof(bank));
 		ramBank.push_back(bank);
 	}
-
-	// copy 0xA000-0xC000?
 }
 
 byte Memory::Read(word address) {
@@ -311,6 +309,12 @@ void Memory::Write(word address, byte data) {
 		}
 		else if(address == 0xFF07) { // timer control
 			memorySpace[address] = data;
+			switch (data & 0x3) {
+			case 0: timerFrequencyChange = 1024; break;
+			case 1: timerFrequencyChange = 16; break;
+			case 2: timerFrequencyChange = 64; break;
+			case 3: timerFrequencyChange = 256; break;
+			}
 		}
 		else if (address == 0xFF0F) { // interupt flag
 			memorySpace[address] = data;
@@ -334,7 +338,7 @@ void Memory::Write(word address, byte data) {
 			memorySpace[address] = 0;
 		}
 		else if (address == 0xFF45) {
-			memorySpace[0xFF45] = data;
+			memorySpace[address] = data;
 		}
 		else if (address == 0xFF46) { // DMA
 
@@ -344,6 +348,15 @@ void Memory::Write(word address, byte data) {
 			for (size_t i = 0; i < 0xA0; i++) {
 				memorySpace[0xFE00 + i] = Read(DMAAddress + i);
 			}
+		}
+		else if (address == 0xFF47) {
+			memorySpace[address] = data;
+		}
+		else if (address == 0xFF48) {
+			memorySpace[address] = data;
+		}
+		else if (address == 0xFF49) {
+			memorySpace[address] = data;
 		}
 	}
 	else if (address >= 0xFF80 && address <= 0xFFFE) { // High RAM (HRAM) 

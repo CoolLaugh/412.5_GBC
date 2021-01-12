@@ -13,8 +13,6 @@ word Cpu::ExecuteOpcode() {
 
 	switch (opcode) {
 
-	case 0x00: cycles = 4;  break;
-
 	// 8 bit loads (3.3.1)
 	// load value into register
 	case 0x06: cycles = LD(registers.b); break;
@@ -132,10 +130,10 @@ word Cpu::ExecuteOpcode() {
 
 	case 0xF8: cycles = LDHL(); break;
 
-	case 0x08: cycles = 20; memory.Write(memory.Read(registers.pc), registers.sp); registers.pc++; break;
+	case 0x08: cycles = WriteSP(); break;
 
 	// push register pairs onto the stack
-	case 0xF5: cycles = Push(registers.a, registers.f); break;
+	case 0xF5: cycles = Push(registers.a, registers.f); break; // may need to reverse the order of registers
 	case 0xC5: cycles = Push(registers.b, registers.c); break;
 	case 0xD5: cycles = Push(registers.d, registers.e); break;
 	case 0xE5: cycles = Push(registers.h, registers.l); break;
@@ -198,7 +196,7 @@ word Cpu::ExecuteOpcode() {
 	case 0xA3: cycles = AND(registers.e); break;
 	case 0xA4: cycles = AND(registers.h); break;
 	case 0xA5: cycles = AND(registers.l); break;
-	case 0xA6: cycles = 8; AND(Combinebytes(registers.l, registers.h)); break;
+	case 0xA6: cycles = 8; AND(memory.Read(Combinebytes(registers.l, registers.h))); break;
 	case 0xE6: cycles = 8; AND(memory.Read(registers.pc)); registers.pc++; break;
 
 	// OR
@@ -231,7 +229,7 @@ word Cpu::ExecuteOpcode() {
 	case 0xBB: cycles = CP(registers.e); break;
 	case 0xBC: cycles = CP(registers.h); break;
 	case 0xBD: cycles = CP(registers.l); break;
-	case 0xBE: cycles = 8; CP(Combinebytes(registers.l, registers.h)); break;
+	case 0xBE: cycles = 8; CP(memory.Read(Combinebytes(registers.l, registers.h))); break;
 	case 0xFE: cycles = 8; CP(memory.Read(registers.pc)); registers.pc++; break;
 
 	// INC
@@ -287,6 +285,8 @@ word Cpu::ExecuteOpcode() {
 	case 0x3F: cycles = CCF(); break;
 
 	case 0x37: cycles = SCF(); break;
+
+	case 0x00: cycles = NOP(); break;
 
 	case 0x76: cycles = HALT(); break;
 
@@ -654,100 +654,4 @@ word Cpu::ExecuteExtendedOpcode() {
 	default: throw "Unknown extended Opcode"; break;
 	}
 	return cycles;
-}
-
-void Cpu::performInterupts() {
-
-	if (interuptEnable == true && interuptEnableInstructionCount == 0) {
-		// interupts enable is delayed by one instruction
-		interuptEnableInstructionCount++;
-	}
-	else if (interuptEnable == true && interuptEnableInstructionCount >= 1) {
-		interuptEnableInstructionCount = 0;
-		interuptEnable = false;
-		interupt = true;
-	}
-
-	if (interuptDisable == true && interuptDisableInstructionCount == 0) {
-		// interupts disable is delayed by one instruction
-		interuptDisableInstructionCount++;
-	}
-	else if (interuptDisable == true && interuptDisableInstructionCount >= 1) {
-		interuptDisableInstructionCount = 0;
-		interuptDisable = false;
-		interupt = false;
-	}
-
-	if (interupt == true) {
-
-		byte interuptFlags = memory.Read(0xFF0F);
-		byte interuptsEnabled = memory.Read(0xFFFF);
-
-		for (size_t i = 0; i < interuptFlags::END; i++) {
-
-			bool interuptFlag = (interuptFlags & (1 << i)) != 0;
-			bool interuptEnabled = (interuptsEnabled & (1 << i)) != 0;
-
-			if (interuptFlag == true && interuptEnabled == true){
-
-				auto pair = splitBytes(registers.pc);
-				Push(pair.second, pair.first);
-
-				switch (i) {
-				case 0: registers.pc = 0x40; break;
-				case 1: registers.pc = 0x48; break;
-				case 2: registers.pc = 0x50; break;
-				case 3: registers.pc = 0x58; break;
-				case 4: registers.pc = 0x60; break;
-				}
-
-				interuptFlags &= ~(1 << i); // reset bit of interupt
-				memory.Write(0xFF0F, interuptFlags);
-				interupt = false;
-
-				break; // don't check interupts of lower prioriry
-			}
-		}
-	}
-}
-
-void Cpu::dividerRegisterINC(short cycles) {
-
-	dividerCycles += cycles;
-
-	if (dividerCycles > 256) { // incremented at rate of 16384Hz (4194304 Hz cpu / 16384Hz = 256)
-		dividerCycles -= 256;
-		memory.memorySpace[Address::DIVRegister]++;
-	}
-
-}
-
-void Cpu::TimerCounterINC(short cycles) {
-
-	if ((memory.Read(0xFF07) & 0x4) != 0) {
-		return;
-	}
-
-	timerCycles += cycles;
-
-	if (timerCycles > clockFrequency) {
-
-		timerCycles -= clockFrequency;
-		byte TimerCounter = memory.Read(0xFF05);
-
-		if (TimerCounter == 0xFF) {
-
-			TimerCounter = memory.Read(0xFF06);
-
-			byte interuptFlags = memory.Read(0xFF0F);
-			interuptFlags |= (1 << interuptFlags::Timer);
-			memory.Write(0xFF0F, interuptFlags);
-		}
-		else {
-
-			TimerCounter++;
-		}
-
-		memory.Write(0xFF05, TimerCounter);
-	}
 }
