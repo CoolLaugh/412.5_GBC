@@ -2,7 +2,7 @@
 
 Emulator::Emulator() {
 
-	cpu.memory.LoadRom("./gb/DrMario.gb");
+	cpu.memory.LoadRom("./gb/04-op r,imm.gb");
 	cpu.PowerUpSequence();
 	graphics.memory = &cpu.memory;
 }
@@ -35,6 +35,7 @@ void Emulator::Update() {
 		//										/*0xF0,*/   0xF2,       0xF4,             0xF7,            /*0xFA,*/    0xFC, 0xFD,/* 0xFE,*/0xFF };
 
 		byte nextOpcode = cpu.memory.Read(cpu.registers.pc);
+		byte nextData = cpu.memory.Read(cpu.registers.pc + 1);
 		//if (std::binary_search(uncheckedOpcodes.begin(), uncheckedOpcodes.end(), nextOpcode)) {
 		//	int a = 1;
 		//}
@@ -46,9 +47,18 @@ void Emulator::Update() {
 		//	int a = 1;
 		//}
 
+		if (nextOpcode == 0xDE && nextData == 0xFF && cpu.registers.a == 0x00) {
+			int a = cpu.memory.Read(cpu.registers.pc - 1);
+			int b = 1;
+		}
+
 		short cycles = 0;
 		if (cpu.halted == false) {
 			cycles = cpu.ExecuteOpcode();
+		}
+		if (nextOpcode == 0xDE) {
+			int a = cpu.memory.Read(cpu.registers.pc - 1);
+			int b = 1;
 		}
 		else {
 			cycles = 4;

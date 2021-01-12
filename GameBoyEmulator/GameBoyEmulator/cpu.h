@@ -101,12 +101,12 @@ public:
 	word Push(byte& reg1, byte& reg2);
 	word Pop(byte& reg1, byte& reg2);
 
-	void halfCarryFlag(byte value1, byte value2);
+	void halfCarryFlag(byte value1, byte value2, bool carry);
 	void halfCarryFlag16(word value1, word value2);
-	void carryFlag(byte value1, byte value2);
+	void carryFlag(byte value1, byte value2, bool carry);
 	void carryFlag16(word value1, word value2);
-	void halfNoBorrow(byte value1, byte value2);
-	void noBorrow(byte value1, byte value2);
+	void halfNoBorrow(byte value1, byte value2, bool carry);
+	void noBorrow(byte value1, byte value2, bool carry);
 	void zeroFlag(byte val);
 
 	// ALU

@@ -190,10 +190,12 @@ word Cpu::Pop(byte & reg1, byte & reg2) {
 }
 
 // indicates if the carry flag is set after addition from bit 3
-void Cpu::halfCarryFlag(byte value1, byte value2) {
+void Cpu::halfCarryFlag(byte value1, byte value2, bool carry) {
 
 	value1 &= 0xF;
 	value2 &= 0xF;
+
+	if (carry == true) value2++;
 
 	flagSet(flagType::halfCarry, (value1 + value2) > 0xF);
 }
@@ -208,12 +210,14 @@ void Cpu::halfCarryFlag16(word value1, word value2) {
 }
 
 // indicates if the carry flag is set after addition from bit 7
-void Cpu::carryFlag(byte value1, byte value2) {
+void Cpu::carryFlag(byte value1, byte value2, bool carry) {
 
-	word add = value1;
-	add += value2;
+	word Wvalue1 = value1;
+	word Wvalue2 = value2;
 
-	flagSet(flagType::carry, add > 0xFF);
+	if (carry == true) Wvalue2++;
+
+	flagSet(flagType::carry, (Wvalue1 + Wvalue2) > 0xFF);
 }
 
 // indicates if the carry flag is set after 16-bit addition from bit 15
@@ -226,18 +230,23 @@ void Cpu::carryFlag16(word value1, word value2) {
 }
 
 // indicates if a bit is borrowed from bit 4 after a subtraction
-void Cpu::halfNoBorrow(byte value1, byte value2) {
+void Cpu::halfNoBorrow(byte value1, byte value2, bool carry) {
 
 	value1 &= 0xF;
 	value2 &= 0xF;
+	if (carry == true) value2++;
 
 	flagSet(flagType::halfCarry, value1 < value2);
 }
 
 // indicates if a bit is borrowed after a subtraction
-void Cpu::noBorrow(byte value1, byte value2) {
+void Cpu::noBorrow(byte value1, byte value2, bool carry) {
 
-	flagSet(flagType::carry, value1 < value2);
+	word Wvalue1 = value1;
+	word Wvalue2 = value2;
+
+	if (carry == true) Wvalue2++;
+	flagSet(flagType::carry, Wvalue1 < Wvalue2);
 }
 
 void Cpu::zeroFlag(byte val) {
@@ -252,8 +261,8 @@ word Cpu::ADD(byte value) {
 	
 	zeroFlag(result);
 	flagReset(flagType::negative);
-	halfCarryFlag(registers.a, value);
-	carryFlag(registers.a, value);
+	halfCarryFlag(registers.a, value, false);
+	carryFlag(registers.a, value, false);
 
 	registers.a = result;
 
@@ -263,13 +272,20 @@ word Cpu::ADD(byte value) {
 // add value to a, include carry
 word Cpu::ADDC(byte value) {
 
-	if (flagTest(flagType::carry)) value++;
-	byte result = registers.a + value;
+	bool carry = flagTest(flagType::carry);
+
+	byte valueWithCarry = value;
+
+	if (carry == true) {
+		valueWithCarry = value + 1;
+	}
+
+	byte result = registers.a + valueWithCarry;
 
 	zeroFlag(result);
 	flagReset(flagType::negative);
-	halfCarryFlag(registers.a, value);
-	carryFlag(registers.a, value);
+	halfCarryFlag(registers.a, value, carry);
+	carryFlag(registers.a, value, carry);
 
 	registers.a = result;
 
@@ -283,8 +299,8 @@ word Cpu::SUB(byte value) {
 
 	zeroFlag(result);
 	flagSet(flagType::negative);
-	halfNoBorrow(registers.a, value);
-	noBorrow(registers.a, value);
+	halfNoBorrow(registers.a, value, false);
+	noBorrow(registers.a, value, false);
 
 	registers.a = result;
 
@@ -294,13 +310,20 @@ word Cpu::SUB(byte value) {
 // subtract value from a, include carry
 word Cpu::SUBC(byte value) {
 
-	if (flagTest(flagType::carry)) value++;
-	byte result = registers.a - value;
+	bool carry = flagTest(flagType::carry);
+
+	byte valueWithCarry = value;
+
+	if (carry == true) {
+		valueWithCarry = value + 1;
+	}
+
+	byte result = registers.a - valueWithCarry;
 
 	zeroFlag(result);
 	flagSet(flagType::negative);
-	halfNoBorrow(registers.a, value);
-	noBorrow(registers.a, value);
+	halfNoBorrow(registers.a, value, carry);
+	noBorrow(registers.a, value, carry);
 
 	registers.a = result;
 
@@ -359,8 +382,8 @@ word Cpu::CP(byte value) {
 
 	zeroFlag(result);
 	flagSet(flagType::negative);
-	halfNoBorrow(registers.a, value);
-	noBorrow(registers.a, value);
+	halfNoBorrow(registers.a, value, false);
+	noBorrow(registers.a, value, false);
 
 	return 4; // sometimes is 8 cycles, check the manual
 }
@@ -372,7 +395,7 @@ word Cpu::INC(byte& reg) {
 
 	zeroFlag(result);
 	flagReset(flagType::negative);
-	halfCarryFlag(reg, 1);
+	halfCarryFlag(reg, 1, false);
 
 	reg = result;
 
@@ -387,7 +410,7 @@ word Cpu::INCMemory(word address) {
 
 	zeroFlag(result);
 	flagReset(flagType::negative);
-	halfCarryFlag(value, 1);
+	halfCarryFlag(value, 1, false);
 
 	memory.Write(address, result);
 
@@ -401,7 +424,7 @@ word Cpu::DEC(byte& reg) {
 
 	zeroFlag(result);
 	flagSet(flagType::negative);
-	halfNoBorrow(reg, 1);
+	halfNoBorrow(reg, 1, false);
 
 	reg = result;
 
@@ -416,7 +439,7 @@ word Cpu::DECMemory(word address) {
 
 	zeroFlag(result);
 	flagSet(flagType::negative);
-	halfNoBorrow(value, 1);
+	halfNoBorrow(value, 1, false);
 
 	memory.Write(address, result);
 
