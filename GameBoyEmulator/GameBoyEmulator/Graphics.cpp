@@ -37,23 +37,23 @@ void Graphics::updateTileWindow() {
 	tileMemoryWindow->setView(*tileMemoryView);
 	byte BGP = memory->Read(Address::BGWPalette);
 
-	for (size_t y = 0; y < 24; y++) {
+	for (word y = 0; y < 24; y++) {
 
-		for (size_t x = 0; x < 16; x++) {
+		for (word x = 0; x < 16; x++) {
 
 			short memoryTile = Address::TilePattern0 + (y * 0x100) + (x * 0x10);
 
-			int tileX = x * 8;
-			int tileY = y * 8;
+			word tileX = x * 8;
+			word tileY = y * 8;
 
-			for (size_t i = 0; i < 8; i++) {
+			for (word i = 0; i < 8; i++) {
 
-				short address = memoryTile + i * 2;
+				word address = memoryTile + i * 2;
 
 				byte pixelDataLow = memory->Read(address);
 				byte pixelDataHigh = memory->Read(address + 1);
 
-				for (size_t j = 0; j < 8; j++) {
+				for (word j = 0; j < 8; j++) {
 
 					byte pixel = 0;
 					if ((pixelDataLow & (Bits::b7 >> j)) != 0) {
@@ -114,11 +114,11 @@ void Graphics::updateBGMapWindow() {
 	byte BGP = memory->Read(Address::BGWPalette);
 	byte LCDC = memory->Read(Address::LCDC);
 
-	for (size_t y = 0; y < 32; y++) {
+	for (word y = 0; y < 32; y++) {
 
-		for (size_t x = 0; x < 32; x++) {
+		for (word x = 0; x < 32; x++) {
 
-			short address = 0x9800 + y * 32 + x;
+			word address = 0x9800 + y * 32 + x;
 
 			short memoryTile = 0;
 			if ((LCDC & Bits::b4) == Bits::b4) {
@@ -132,17 +132,17 @@ void Graphics::updateBGMapWindow() {
 				memoryTile = Address::TilePattern1 + (tileNumber + 0x80) * 16;
 			}
 
-			int tileX = x * 8;
-			int tileY = y * 8;
+			word tileX = x * 8;
+			word tileY = y * 8;
 
-			for (size_t i = 0; i < 8; i++) {
+			for (word i = 0; i < 8; i++) {
 
-				short address = memoryTile + i * 2;
+				word address = memoryTile + i * 2;
 
 				byte pixelDataLow = memory->Read(address);
 				byte pixelDataHigh = memory->Read(address + 1);
 
-				for (size_t j = 0; j < 8; j++) {
+				for (word j = 0; j < 8; j++) {
 
 					byte pixel = 0;
 					if ((pixelDataLow & (Bits::b7 >> j)) != 0) {
@@ -232,7 +232,7 @@ void Graphics::drawBackground() {
 
 	if (windowEnabled) { // window is enabled
 
-		if (LCDC & 0x4 == 0x4) {
+		if ((LCDC & 0x4) == 0x4) {
 			backgroundMemory = Address::BGWTileInfo1;
 		}
 		else {
@@ -243,7 +243,7 @@ void Graphics::drawBackground() {
 	}
 	else {
 
-		if (LCDC & 0x20 == 0x20) {
+		if ((LCDC & 0x20) == 0x20) {
 			backgroundMemory = Address::BGWTileInfo1;
 		}
 		else {
@@ -255,7 +255,7 @@ void Graphics::drawBackground() {
 
 	word tileData = startY * 4;
 
-	for (size_t i = 0; i < ScreenWidth; i++) {
+	for (byte i = 0; i < ScreenWidth; i++) {
 
 		byte pixelX = i + startX;
 
@@ -294,7 +294,7 @@ void Graphics::drawBackground2() {
 	//scrollY += memory->Read(Address::LY);
 	byte BGP = memory->Read(Address::BGWPalette);
 
-	for (size_t i = 0; i < ScreenWidth; i++) {
+	for (byte i = 0; i < ScreenWidth; i++) {
 
 		byte startX = (scrollX + i) % ScreenWidth;
 
@@ -339,7 +339,7 @@ byte Graphics::bitData(byte val, byte bit) {
 	
 	byte testBit = Bits::b7 >> bit;
 	
-	if (val & testBit == 0) {
+	if ((val & testBit) == 0) {
 		return 0;
 	}
 	else {
@@ -353,7 +353,7 @@ void Graphics::drawSprites() {
 	word spriteAttributeTable = Address::SpriteAttributes;
 	byte OGP = memory->Read(Address::OBJPalette0);
 
-	for (size_t i = 0; i < 40; i++) {
+	for (word i = 0; i < 40; i++) {
 
 		byte positionY = memory->Read(spriteAttributeTable + (i * 4)) - 16;
 		byte positionX = memory->Read(spriteAttributeTable + (i * 4) + 1) - 8;
@@ -390,7 +390,7 @@ void Graphics::drawSprites() {
 			byte pixelDataLow = memory->Read(tileLocation + drawLine * 2);
 			byte pixelDataHigh = memory->Read(tileLocation + drawLine * 2 + 1);
 
-			for (size_t j = 0; j < 8; j++) {
+			for (int j = 0; j < 8; j++) {
 
 				byte pixel = 0;
 				if ((pixelDataLow & (Bits::b7 >> j)) != 0) {

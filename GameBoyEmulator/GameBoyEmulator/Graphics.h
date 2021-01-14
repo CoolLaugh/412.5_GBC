@@ -10,6 +10,8 @@ public:
 	sf::RenderWindow* tileMemoryWindow;
 	sf::RenderWindow* BGMapWindow;
 
+	short cyclesThisLine = 0;
+
 private:
 	sf::View* view;
 	sf::Image* background;
@@ -23,7 +25,6 @@ private:
 	const short cyclesPerLine = 456;
 
 
-	short cyclesThisLine = 0;
 
 	sf::Color BWPalette[4] = { sf::Color(0xFF,0xFF,0xFF),
 							sf::Color(0xAA,0xAA,0xAA), 

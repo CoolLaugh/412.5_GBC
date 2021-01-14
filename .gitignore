@@ -38,6 +38,12 @@ x64/
 
 # roms
 *.gb
+*/GameBoyEmulator/gb/
+*.sav
 
 # Library Folders
 */SFML-2.5.1/
+
+#log files
+*.txt
+*.dmp

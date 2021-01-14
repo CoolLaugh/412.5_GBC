@@ -1,5 +1,6 @@
 #pragma once
 #include <vector>
+#include <queue>
 #include "memory.h"
 
 typedef unsigned char byte;
@@ -63,6 +64,7 @@ public:
 	int dividerCycles = 0;
 	int clockFrequency = 1024;
 	int timerCycles = 0;
+	std::queue<word> programCounterTrace;
 
 	Memory memory;
 
@@ -83,15 +85,12 @@ public:
 	void performInterupts();
 	void dividerRegisterINC(short cycles);
 	void TimerCounterINC(short cycles);
-	void LCDStatusRegister(short cyclesThisFrame);
+	void LCDStatusRegister(short& cyclesThisLine);
 
 	word LD(byte& reg);
 	word LDreg(byte& reg1, byte& reg2);
 	word LDRegFromMemory(byte& reg, word address);
-	word LDRegFromMemory();
 	word LDregHL(byte& reg);
-	word LDmemfromreg(byte& reg);
-	word LDmem();
 	word LDHL();
 	word WriteSP();
 
@@ -103,8 +102,10 @@ public:
 
 	void halfCarryFlag(byte value1, byte value2, bool carry);
 	void halfCarryFlag16(word value1, word value2);
+	void halfCarryFlag16Hi(word value1, word value2);
 	void carryFlag(byte value1, byte value2, bool carry);
 	void carryFlag16(word value1, word value2);
+	void carryFlag16Hi(word value1, word value2);
 	void halfNoBorrow(byte value1, byte value2, bool carry);
 	void noBorrow(byte value1, byte value2, bool carry);
 	void zeroFlag(byte val);
@@ -146,13 +147,13 @@ public:
 	word EI();
 
 	// rotates and shifts
-	word RLC(byte& reg);
+	word RLC(byte& reg, bool isRegisterA = false);
 	word RLC(word address);
-	word RL(byte& reg);
+	word RL(byte& reg, bool isRegisterA = false);
 	word RL(word address);
-	word RRC(byte& reg);
+	word RRC(byte& reg, bool isRegisterA = false);
 	word RRC(word address);
-	word RR(byte& reg);
+	word RR(byte& reg, bool isRegisterA = false);
 	word RR(word address);
 	word SLA(byte& reg);
 	word SLA(word address);
@@ -197,4 +198,6 @@ public:
 	word CombinebytesR(byte value1, byte value2);
 	std::pair<byte, byte> splitBytesR(word value);
 
+	void outputState();
+	std::string outputStateBuffer;
 };

@@ -34,7 +34,7 @@ void Cpu::flagReset(flagType flag) {
 
 bool Cpu::bitTest(byte value, Bits bit) {
 
-	return value & bit != 0;
+	return (value & bit) != 0;
 }
 
 void Cpu::bitSet(byte& value, Bits bit) {
@@ -70,6 +70,7 @@ void Cpu::PowerUpSequence() {
 
 	memory.PowerUpSequence();
 
+	outputStateBuffer.reserve(11000000);
 }
 
 // load immediate value into register
@@ -96,28 +97,12 @@ word Cpu::LDRegFromMemory(byte & reg, word address) {
 	return 8; // cycles
 }
 
-// load 
-word Cpu::LDRegFromMemory() {
-
-	registers.a = Combinebytes(memory.Read(registers.pc), memory.Read(registers.pc + 1));
-	registers.pc += 2;
-	return 16; // cycles
-}
-
 word Cpu::LDregHL(byte & reg) {
 
 	word address = Combinebytes(registers.l, registers.h);
 	reg = memory.Read(address);
 
 	return 8; // cycles
-}
-
-word Cpu::LDmemfromreg(byte & reg) {
-	return 0;
-}
-
-word Cpu::LDmem() {
-	return 0;
 }
 
 // put stackpointer plus immediate value into hl
@@ -171,9 +156,9 @@ word Cpu::LD16(word & reg1) {
 word Cpu::Push(byte & reg1, byte & reg2) {
 
 	registers.sp--;
-	memory.Write(registers.sp, reg2);
-	registers.sp--;
 	memory.Write(registers.sp, reg1);
+	registers.sp--;
+	memory.Write(registers.sp, reg2);
 
 	return 16;
 }
@@ -181,9 +166,9 @@ word Cpu::Push(byte & reg1, byte & reg2) {
 // pop two bytes off the stack into a register pair
 word Cpu::Pop(byte & reg1, byte & reg2) {
 
-	reg1 = memory.Read(registers.sp);
-	registers.sp++;
 	reg2 = memory.Read(registers.sp);
+	registers.sp++;
+	reg1 = memory.Read(registers.sp);
 	registers.sp++;
 
 	return 12;
@@ -202,6 +187,14 @@ void Cpu::halfCarryFlag(byte value1, byte value2, bool carry) {
 
 // indicates if the carry flag is set after addition from bit 11
 void Cpu::halfCarryFlag16(word value1, word value2) {
+
+	value1 &= 0xF;
+	value2 &= 0xF;
+
+	flagSet(flagType::halfCarry, (value1 + value2) > 0xF);
+}
+
+void Cpu::halfCarryFlag16Hi(word value1, word value2) {
 
 	value1 &= 0xFFF;
 	value2 &= 0xFFF;
@@ -223,10 +216,18 @@ void Cpu::carryFlag(byte value1, byte value2, bool carry) {
 // indicates if the carry flag is set after 16-bit addition from bit 15
 void Cpu::carryFlag16(word value1, word value2) {
 
-	unsigned int add = value1;
-	add += value2;
+	value1 &= 0xFF;
+	value2 &= 0xFF;
 
-	flagSet(flagType::carry, add > 0xFFFF);
+	flagSet(flagType::carry, (value1 + value2) > 0xFF);
+}
+
+void Cpu::carryFlag16Hi(word value1, word value2) {
+
+	int result = value1;
+	result += value2;
+
+	flagSet(flagType::carry, result > 0xFFFF);
 }
 
 // indicates if a bit is borrowed from bit 4 after a subtraction
@@ -453,8 +454,8 @@ word Cpu::ADDHL(word value) {
 	word result = hl + value;
 
 	flagReset(flagType::negative);
-	halfCarryFlag16(hl, value);
-	carryFlag16(hl, value);
+	halfCarryFlag16Hi(hl, value);
+	carryFlag16Hi(hl, value);
 
 	auto pair = splitBytes(result);
 
@@ -588,27 +589,30 @@ word Cpu::SWAPMemory() {
 }
 
 // decimal adjust register A
-// copied
+// copied https://www.reddit.com/r/EmuDev/comments/cdtuyw/gameboy_emulator_fails_blargg_daa_test/etwcyvy/
 word Cpu::DAA() {
 
-	if (flagTest(flagType::negative)) {
-		if ((registers.a & 0x0F) > 0x09 || flagTest(flagType::halfCarry)) {
-			registers.a -= 0x06; //Half borrow: (0-1) = (0xF-0x6) = 9
-			if ((registers.a & 0xF0) == 0xF0) flagSet(flagType::carry); else flagReset(flagType::carry);
+	if (flagTest(flagType::negative) == false) {  // after an addition, adjust if (half-)carry occurred or if result is out of bounds
+		if (flagTest(flagType::carry) || registers.a > 0x99) {
+			registers.a += 0x60;
+			flagSet(flagType::carry);
 		}
-
-		if ((registers.a & 0xF0) > 0x90 || flagTest(flagType::carry) == true) registers.a -= 0x60;
-	}
-	else {
-		if ((registers.a & 0x0F) > 9 || flagTest(flagType::halfCarry)) {
-			registers.a += 0x06; //Half carry: (9+1) = (0xA+0x6) = 10
-			if ((registers.a & 0xF0) == 0) flagSet(flagType::carry); else flagReset(flagType::carry);
+		if (flagTest(flagType::halfCarry) || (registers.a & 0x0f) > 0x09) {
+			registers.a += 0x6;
 		}
-
-		if ((registers.a & 0xF0) > 0x90 || flagTest(flagType::carry) == true) registers.a += 0x60;
 	}
-
-	if (registers.a == 0) flagSet(flagType::zero); else flagReset(flagType::zero);
+	else {  // after a subtraction, only adjust if (half-)carry occurred
+		if (flagTest(flagType::carry)) {
+			registers.a -= 0x60;
+			flagSet(flagType::carry);
+		}
+		if (flagTest(flagType::halfCarry)) {
+			registers.a -= 0x6;
+		}
+	}
+	// these flags are always updated
+	zeroFlag(registers.a);
+	flagReset(flagType::halfCarry);
 
 	return 4; // cycles
 }
@@ -679,15 +683,24 @@ word Cpu::EI() {
 }
 
 // rotate left bit 7 to carry
-word Cpu::RLC(byte& reg) {
+word Cpu::RLC(byte& reg, bool isRegisterA) {
 
 	byte result = reg;
 
 	bool bit7 = bitTest(result, Bits::b7);
 
 	result <<= 1;
+	if (bit7 == true) {
+		bitSet(result, Bits::b0);
+	}
 
-	zeroFlag(result);
+	if (isRegisterA == true) {
+		flagReset(flagType::zero);
+	}
+	else {
+		zeroFlag(result);
+	}
+
 	flagReset(flagType::negative);
 	flagReset(flagType::halfCarry);
 	flagSet(flagType::carry, bit7);
@@ -705,6 +718,9 @@ word Cpu::RLC(word address) {
 	bool bit7 = bitTest(result, Bits::b7);
 
 	result <<= 1;
+	if (bit7 == true) {
+		bitSet(result, Bits::b0);
+	}
 
 	zeroFlag(result);
 	flagReset(flagType::negative);
@@ -717,7 +733,7 @@ word Cpu::RLC(word address) {
 }
 
 // rotate left through carry
-word Cpu::RL(byte & reg) {
+word Cpu::RL(byte & reg, bool isRegisterA) {
 
 	byte result = reg;
 
@@ -728,7 +744,13 @@ word Cpu::RL(byte & reg) {
 		bitSet(result, Bits::b0);
 	}
 
-	zeroFlag(result);
+	if (isRegisterA == true) {
+		flagReset(flagType::zero);
+	}
+	else {
+		zeroFlag(result);
+	}
+
 	flagReset(flagType::negative);
 	flagReset(flagType::halfCarry);
 	flagSet(flagType::carry, bit7);
@@ -761,15 +783,24 @@ word Cpu::RL(word address) {
 }
 
 // rotate right bit 7 to carry
-word Cpu::RRC(byte & reg) {
+word Cpu::RRC(byte & reg, bool isRegisterA) {
 
 	byte result = reg;
 
 	bool bit0 = bitTest(result, Bits::b0);
 
 	result >>= 1;
+	if (bit0 == true) {
+		bitSet(result, Bits::b7);
+	}
 
-	zeroFlag(result);
+	if (isRegisterA == true) {
+		flagReset(flagType::zero);
+	}
+	else {
+		zeroFlag(result);
+	}
+
 	flagReset(flagType::negative);
 	flagReset(flagType::halfCarry);
 	flagSet(flagType::carry, bit0);
@@ -787,6 +818,9 @@ word Cpu::RRC(word address) {
 	bool bit0 = bitTest(result, Bits::b0);
 
 	result >>= 1;
+	if (bit0 == true) {
+		bitSet(result, Bits::b7);
+	}
 
 	zeroFlag(result);
 	flagReset(flagType::negative);
@@ -799,7 +833,7 @@ word Cpu::RRC(word address) {
 }
 
 // rotate right through carry
-word Cpu::RR(byte & reg) {
+word Cpu::RR(byte & reg, bool isRegisterA) {
 
 	byte result = reg;
 
@@ -810,7 +844,13 @@ word Cpu::RR(byte & reg) {
 		bitSet(result, Bits::b7);
 	}
 
-	zeroFlag(result);
+	if (isRegisterA == true) {
+		flagReset(flagType::zero);
+	}
+	else {
+		zeroFlag(result);
+	}
+
 	flagReset(flagType::negative);
 	flagReset(flagType::halfCarry);
 	flagSet(flagType::carry, bit0);
@@ -1037,7 +1077,7 @@ word Cpu::JP() {
 	word address = Combinebytes(memory.Read(registers.pc), memory.Read(registers.pc + 1));
 	registers.pc = address;
 
-	return 12;
+	return 16;
 }
 
 // conditional jump
@@ -1046,14 +1086,16 @@ word Cpu::JPcc(condition cdn) {
 	word address = Combinebytes(memory.Read(registers.pc), memory.Read(registers.pc + 1));
 	registers.pc += 2;
 
+	word cycles = 12;
+
 	switch (cdn) {
-	case Cpu::NotZero:	if (flagTest(flagType::zero) == false)	registers.pc = address; break;
-	case Cpu::Zero:		if (flagTest(flagType::zero) == true)	registers.pc = address; break;
-	case Cpu::NotCarry: if (flagTest(flagType::carry) == false)	registers.pc = address; break;
-	case Cpu::Carry:	if (flagTest(flagType::carry) == true)	registers.pc = address; break;
+	case Cpu::NotZero:	if (flagTest(flagType::zero) == false)	registers.pc = address; cycles = 16; break;
+	case Cpu::Zero:		if (flagTest(flagType::zero) == true)	registers.pc = address; cycles = 16; break;
+	case Cpu::NotCarry: if (flagTest(flagType::carry) == false)	registers.pc = address; cycles = 16; break;
+	case Cpu::Carry:	if (flagTest(flagType::carry) == true)	registers.pc = address; cycles = 16; break;
 	}
 
-	return 12;
+	return cycles;
 }
 
 // jump to hl
@@ -1072,7 +1114,7 @@ word Cpu::JR() {
 	registers.pc++;
 	registers.pc += offset;
 
-	return 8;
+	return 12;
 }
 
 // conditional relative jump
@@ -1081,14 +1123,16 @@ word Cpu::JRcc(condition cdn) {
 	signed char offset = (signed char)memory.Read(registers.pc);
 	registers.pc++;
 
+	word cycles = 8;
+
 	switch (cdn) {
-	case Cpu::NotZero:	if (flagTest(flagType::zero) == false)	registers.pc += offset; break;
-	case Cpu::Zero:		if (flagTest(flagType::zero) == true)	registers.pc += offset; break;
-	case Cpu::NotCarry: if (flagTest(flagType::carry) == false)	registers.pc += offset; break;
-	case Cpu::Carry:	if (flagTest(flagType::carry) == true)	registers.pc += offset; break;
+	case Cpu::NotZero:	if (flagTest(flagType::zero) == false)	registers.pc += offset; cycles = 12; break;
+	case Cpu::Zero:		if (flagTest(flagType::zero) == true)	registers.pc += offset; cycles = 12; break;
+	case Cpu::NotCarry: if (flagTest(flagType::carry) == false)	registers.pc += offset; cycles = 12; break;
+	case Cpu::Carry:	if (flagTest(flagType::carry) == true)	registers.pc += offset; cycles = 12; break;
 	}
 
-	return 8;
+	return cycles;
 }
 
 // call
@@ -1098,19 +1142,21 @@ word Cpu::CALL() {
 
 	auto pair = splitBytes(registers.pc + 2);
 	registers.sp--;
-	memory.Write(registers.sp, pair.first);
-	registers.sp--;
 	memory.Write(registers.sp, pair.second);
+	registers.sp--;
+	memory.Write(registers.sp, pair.first);
 
 	registers.pc = address;
 
-	return 12;
+	return 24;
 }
 
 // conditional call
 word Cpu::CALLcc(condition cdn) {
 
 	word address = Combinebytes(memory.Read(registers.pc), memory.Read(registers.pc + 1));
+
+	word cycles = 12;
 
 	bool call = false;
 	switch (cdn) {
@@ -1124,11 +1170,12 @@ word Cpu::CALLcc(condition cdn) {
 
 		auto pair = splitBytes(registers.pc + 2);
 		registers.sp--;
-		memory.Write(registers.sp, pair.first);
-		registers.sp--;
 		memory.Write(registers.sp, pair.second);
+		registers.sp--;
+		memory.Write(registers.sp, pair.first);
 
 		registers.pc = address;
+		cycles = 24;
 	}
 	else {
 		registers.pc += 2;
@@ -1142,31 +1189,32 @@ word Cpu::RST(short offset) {
 
 	auto pair = splitBytes(registers.pc);
 	registers.sp--;
-	memory.Write(registers.sp, pair.first);
-	registers.sp--;
 	memory.Write(registers.sp, pair.second);
+	registers.sp--;
+	memory.Write(registers.sp, pair.first);
 
 	registers.pc = offset;
 
-	return 32;
+	return 16;
 }
 
 // return
 word Cpu::RET() {
 
-	byte second = memory.Read(registers.sp);
-	registers.sp++;
 	byte first = memory.Read(registers.sp);
+	registers.sp++;
+	byte second = memory.Read(registers.sp);
 	registers.sp++;
 
 	registers.pc = Combinebytes(first, second);
 
-	return 8;
+	return 16;
 }
 
 // conditional return
 word Cpu::RETcc(condition cdn) {
 
+	word cycles = 8;
 
 	bool ret = false;
 	switch (cdn) {
@@ -1178,30 +1226,31 @@ word Cpu::RETcc(condition cdn) {
 
 	if (ret == true) {
 
-		byte second = memory.Read(registers.sp);
-		registers.sp++;
 		byte first = memory.Read(registers.sp);
+		registers.sp++;
+		byte second = memory.Read(registers.sp);
 		registers.sp++;
 
 		registers.pc = Combinebytes(first, second);
+		cycles = 20;
 	}
 
-	return 8;
+	return cycles;
 }
 
 // return and enable interrupts
 word Cpu::RETI() {
 
-	byte second = memory.Read(registers.sp);
-	registers.sp++;
 	byte first = memory.Read(registers.sp);
+	registers.sp++;
+	byte second = memory.Read(registers.sp);
 	registers.sp++;
 
 	registers.pc = Combinebytes(first, second);
 
 	interuptEnable = true;
 
-	return 8;
+	return 16;
 }
 
 // decrement two registers as one 16 bit registers
@@ -1262,6 +1311,46 @@ std::pair<byte, byte> Cpu::splitBytesR(word value) {
 	return std::make_pair(first, second);
 }
 
+void Cpu::outputState() {
+
+	std::string hex[16] = { "0", "1", "2", "3", "4", "5", "6", "7", "8", "9", "A", "B", "C", "D", "E", "F" };
+
+	outputStateBuffer += "A: " + hex[(registers.a & 0xF0) >> 4] + hex[(registers.a & 0x0F)] + " ";
+	outputStateBuffer += "F: " + hex[(registers.f & 0xF0) >> 4] + hex[(registers.f & 0x0F)] + " ";
+	outputStateBuffer += "B: " + hex[(registers.b & 0xF0) >> 4] + hex[(registers.b & 0x0F)] + " ";
+	outputStateBuffer += "C: " + hex[(registers.c & 0xF0) >> 4] + hex[(registers.c & 0x0F)] + " ";
+	outputStateBuffer += "D: " + hex[(registers.d & 0xF0) >> 4] + hex[(registers.d & 0x0F)] + " ";
+	outputStateBuffer += "E: " + hex[(registers.e & 0xF0) >> 4] + hex[(registers.e & 0x0F)] + " ";
+	outputStateBuffer += "H: " + hex[(registers.h & 0xF0) >> 4] + hex[(registers.h & 0x0F)] + " ";
+	outputStateBuffer += "L: " + hex[(registers.l & 0xF0) >> 4] + hex[(registers.l & 0x0F)] + " ";
+
+	outputStateBuffer += "SP: " + hex[(registers.sp & 0xF000) >> 12] + hex[(registers.sp & 0x0F00) >> 8];
+	outputStateBuffer += hex[(registers.sp & 0x00F0) >> 4] + hex[(registers.sp & 0x000F)] + " ";
+	
+	outputStateBuffer += "PC: 00:" + hex[(registers.pc & 0xF000) >> 12] + hex[(registers.pc & 0x0F00) >> 8];
+	outputStateBuffer += hex[(registers.pc & 0x00F0) >> 4] + hex[(registers.pc & 0x000F)] + " ";
+
+	outputStateBuffer += "(";
+	outputStateBuffer += hex[(memory.Read(registers.pc) & 0xF0) >> 4] + hex[(memory.Read(registers.pc) & 0x0F)];
+	outputStateBuffer += " ";
+	outputStateBuffer += hex[(memory.Read(registers.pc + 1) & 0xF0) >> 4] + hex[(memory.Read(registers.pc + 1) & 0x0F)];
+	outputStateBuffer += " ";
+	outputStateBuffer += hex[(memory.Read(registers.pc + 2) & 0xF0) >> 4] + hex[(memory.Read(registers.pc + 2) & 0x0F)];
+	outputStateBuffer += " ";
+	outputStateBuffer += hex[(memory.Read(registers.pc + 3) & 0xF0) >> 4] + hex[(memory.Read(registers.pc + 3) & 0x0F)];
+	outputStateBuffer += ")\n";
+
+	if (outputStateBuffer.size() > 10000000) {
+
+		std::ofstream out;
+		out.open("CPUStateLog.txt", std::ios::out | std::ios::app);
+		out << outputStateBuffer.c_str();
+		outputStateBuffer.clear();
+		out.close();
+	}
+
+}
+
 void Cpu::performInterupts() {
 
 	if (interuptEnable == true && interuptEnableInstructionCount == 0) {
@@ -1284,10 +1373,14 @@ void Cpu::performInterupts() {
 		interupt = false;
 	}
 
-	if (interupt == true) {
+	byte interuptFlags = memory.Read(Address::InteruptFlag);
+	byte interuptsEnabled = memory.Read(Address::InteruptEnable);
 
-		byte interuptFlags = memory.Read(Address::InteruptFlag);
-		byte interuptsEnabled = memory.Read(Address::InteruptEnable);
+	if (interuptFlags != 0 && interuptsEnabled != 0) {
+		halted = false;
+	}
+
+	if (interupt == true) {
 
 		for (size_t i = 0; i < interruptFlags::END; i++) {
 
@@ -1331,22 +1424,32 @@ void Cpu::dividerRegisterINC(short cycles) {
 
 void Cpu::TimerCounterINC(short cycles) {
 
-	if ((memory.Read(Address::TimerControl) & 0x4) != 0) {
+
+	byte TimerControl = memory.Read(Address::TimerControl);
+	
+	if (bitTest(TimerControl, Bits::b2) == false) {
 		return;
 	}
 
-	if (memory.timerFrequencyChange > 0) {
-		if (clockFrequency != memory.timerFrequencyChange) {
-
-			clockFrequency = memory.timerFrequencyChange;
-			timerCycles = 0;
-		}
-		memory.timerFrequencyChange = 0;
+	switch (TimerControl & 0x3) {
+	case 0: clockFrequency = 1024; break;
+	case 1: clockFrequency = 16; break;
+	case 2: clockFrequency = 64; break;
+	case 3: clockFrequency = 256; break;
 	}
+
+	//if (memory.timerFrequencyChange > 0) {
+	//	if (clockFrequency != memory.timerFrequencyChange) {
+
+	//		clockFrequency = memory.timerFrequencyChange;
+	//		timerCycles = 0;
+	//	}
+	//	memory.timerFrequencyChange = 0;
+	//}
 
 	timerCycles += cycles;
 
-	if (timerCycles > clockFrequency) {
+	while(timerCycles >= clockFrequency) {
 
 		timerCycles -= clockFrequency;
 		byte TimerCounter = memory.Read(Address::Timer);
@@ -1369,52 +1472,63 @@ void Cpu::TimerCounterINC(short cycles) {
 	}
 }
 
-void Cpu::LCDStatusRegister(short cyclesThisFrame) {
+void Cpu::LCDStatusRegister(short& cyclesThisLine) {
 
-	short cyclesThisLine = cyclesThisFrame % 456;
-	byte LY = memory.Read(Address::LY);
+	byte LCDC = memory.Read(Address::LCDC);
 	byte LCDCStatus = memory.Read(Address::LCDCStatus);
-	byte mode = LCDCStatus & 0x3;
 
-	if (LY >= 144 && mode != 0x1) { // mode 1
+	if (bitTest(LCDC, Bits::b7) == false) {
 
+		memory.memorySpace[Address::LY] = 0;
+		cyclesThisLine = 0;
+		LCDCStatus &= ~0x03;
 		bitSet(LCDCStatus, Bits::b0);
-		bitReset(LCDCStatus, Bits::b1);
-		if (bitTest(LCDCStatus, Bits::b4) == true) {
-			setInterrupt(interruptFlags::LCDSTAT);
-		}
-	}
-	else if (cyclesThisFrame < 80 && mode != 0x2) { // mode 2
-
-		bitSet(LCDCStatus, Bits::b1);
-		bitReset(LCDCStatus, Bits::b0);
-		if (bitTest(LCDCStatus, Bits::b5) == true) {
-			setInterrupt(interruptFlags::LCDSTAT);
-		}
-	}
-	else if (cyclesThisFrame < 80 + 168 && mode != 0x3) { // mode 3
-
-		bitSet(LCDCStatus, Bits::b1);
-		bitSet(LCDCStatus, Bits::b0);
-	}
-	else if (mode != 0x0) { // mode 0
-
-		bitReset(LCDCStatus, Bits::b0);
-		bitReset(LCDCStatus, Bits::b1);
-		if (bitTest(LCDCStatus, Bits::b3) == true) {
-			setInterrupt(interruptFlags::LCDSTAT);
-		}
-	}
-
-	byte LYCompare = memory.Read(Address::LYCompare);
-	if (LY == LYCompare) {
-		bitSet(LCDCStatus, Bits::b2);
-		if (bitTest(LCDCStatus, Bits::b6) == true) {
-			setInterrupt(interruptFlags::LCDSTAT);
-		}
 	}
 	else {
-		bitReset(LCDCStatus, Bits::b2);
+
+		byte LY = memory.Read(Address::LY);
+		byte mode = LCDCStatus & 0x3;
+
+		if (LY >= 144 && mode != 0x1) { // mode 1
+
+			bitSet(LCDCStatus, Bits::b0);
+			bitReset(LCDCStatus, Bits::b1);
+			if (bitTest(LCDCStatus, Bits::b4) == true) {
+				setInterrupt(interruptFlags::LCDSTAT);
+			}
+		}
+		else if ((cyclesThisLine < 80) && mode != 0x2) { // mode 2
+
+			bitReset(LCDCStatus, Bits::b0);
+			bitSet(LCDCStatus, Bits::b1);
+			if (bitTest(LCDCStatus, Bits::b5) == true) {
+				setInterrupt(interruptFlags::LCDSTAT);
+			}
+		}
+		else if ((cyclesThisLine < (80 + 168)) && mode != 0x3) { // mode 3
+
+			bitSet(LCDCStatus, Bits::b0);
+			bitSet(LCDCStatus, Bits::b1);
+		}
+		else if (mode != 0x0) { // mode 0
+
+			bitReset(LCDCStatus, Bits::b0);
+			bitReset(LCDCStatus, Bits::b1);
+			if (bitTest(LCDCStatus, Bits::b3) == true) {
+				setInterrupt(interruptFlags::LCDSTAT);
+			}
+		}
+
+		byte LYCompare = memory.Read(Address::LYCompare);
+		if (LY == LYCompare) {
+			bitSet(LCDCStatus, Bits::b2);
+			if (bitTest(LCDCStatus, Bits::b6) == true) {
+				setInterrupt(interruptFlags::LCDSTAT);
+			}
+		}
+		else {
+			bitReset(LCDCStatus, Bits::b2);
+		}
 	}
 
 	memory.Write(Address::LCDCStatus, LCDCStatus);

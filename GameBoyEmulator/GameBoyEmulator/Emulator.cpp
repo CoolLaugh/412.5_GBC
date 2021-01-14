@@ -2,7 +2,7 @@
 
 Emulator::Emulator() {
 
-	cpu.memory.LoadRom("./gb/04-op r,imm.gb");
+	cpu.memory.LoadRom("./gb/mooneye-gb_hwtests/emulator-only/mbc1/ram_64kb.gb");
 	cpu.PowerUpSequence();
 	graphics.memory = &cpu.memory;
 }
@@ -35,37 +35,23 @@ void Emulator::Update() {
 		//										/*0xF0,*/   0xF2,       0xF4,             0xF7,            /*0xFA,*/    0xFC, 0xFD,/* 0xFE,*/0xFF };
 
 		byte nextOpcode = cpu.memory.Read(cpu.registers.pc);
-		byte nextData = cpu.memory.Read(cpu.registers.pc + 1);
+		byte nextData1 = cpu.memory.Read(cpu.registers.pc + 1);
+		byte nextData2 = cpu.memory.Read(cpu.registers.pc + 2);
+		byte nextData3 = cpu.memory.Read(cpu.registers.pc + 3);
 		//if (std::binary_search(uncheckedOpcodes.begin(), uncheckedOpcodes.end(), nextOpcode)) {
 		//	int a = 1;
 		//}
 
-		//if((elapsedOpcodes % 100) == 0){
-		//	int a = 1;
-		//}
-		//if (cpu.registers.pc == 0x289F) {
-		//	int a = 1;
-		//}
-
-		if (nextOpcode == 0xDE && nextData == 0xFF && cpu.registers.a == 0x00) {
-			int a = cpu.memory.Read(cpu.registers.pc - 1);
-			int b = 1;
-		}
-
 		short cycles = 0;
 		if (cpu.halted == false) {
 			cycles = cpu.ExecuteOpcode();
-		}
-		if (nextOpcode == 0xDE) {
-			int a = cpu.memory.Read(cpu.registers.pc - 1);
-			int b = 1;
 		}
 		else {
 			cycles = 4;
 		}
 
 		totalCycles += cycles;
-		cpu.LCDStatusRegister(totalCycles);
+		cpu.LCDStatusRegister(graphics.cyclesThisLine);
 		graphics.update(cycles);
 		cpu.performInterupts();
 		cpu.dividerRegisterINC(cycles);
