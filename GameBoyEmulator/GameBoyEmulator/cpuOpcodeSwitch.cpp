@@ -6,6 +6,11 @@ word Cpu::ExecuteOpcode() {
 
 	word cycles = 0;
 
+	//programCounterTrace.push(registers.pc);
+	//while (programCounterTrace.size() > 100) {
+	//	programCounterTrace.pop();
+	//}
+
 	byte opcode = memory.Read(registers.pc);
 	registers.pc++;
 
@@ -21,6 +26,7 @@ word Cpu::ExecuteOpcode() {
 	case 0x1E: cycles = LD(registers.e); break;
 	case 0x26: cycles = LD(registers.h); break;
 	case 0x2E: cycles = LD(registers.l); break;
+	case 0x3E: cycles = LD(registers.a); break;
 
 	// load register into another register
 	case 0x7F: cycles = LDreg(registers.a, registers.a); break;
@@ -91,7 +97,6 @@ word Cpu::ExecuteOpcode() {
 	case 0x0A: cycles = LDRegFromMemory(registers.a, Combinebytes(registers.c, registers.b)); break;
 	case 0x1A: cycles = LDRegFromMemory(registers.a, Combinebytes(registers.e, registers.d)); break;
 	case 0xFA: cycles = 16; LDRegFromMemory(registers.a, Combinebytes(memory.Read(registers.pc), memory.Read(registers.pc + 1))); registers.pc += 2; break;
-	case 0x3E: cycles = 8; registers.a = memory.Read(registers.pc); registers.pc++; break;
 
 	case 0x47: cycles = LDreg(registers.b, registers.a); break;
 	case 0x4F: cycles = LDreg(registers.c, registers.a); break;
@@ -139,7 +144,7 @@ word Cpu::ExecuteOpcode() {
 	case 0xE5: cycles = Push(registers.h, registers.l); break;
 
 	// pop register pairs off of the stack
-	case 0xF1: cycles = Pop(registers.a, registers.f); break;
+	case 0xF1: cycles = Pop(registers.a, registers.f); registers.f &= 0xF0; break;
 	case 0xC1: cycles = Pop(registers.b, registers.c); break;
 	case 0xD1: cycles = Pop(registers.d, registers.e); break;
 	case 0xE1: cycles = Pop(registers.h, registers.l); break;
@@ -297,10 +302,10 @@ word Cpu::ExecuteOpcode() {
 	case 0xFB: cycles = EI(); break;
 
 	// rotates and shifts
-	case 0x07: cycles = 4; RLC(registers.a); break;
-	case 0x17: cycles = 4; RL(registers.a); break;
-	case 0x0F: cycles = 4; RRC(registers.a); break;
-	case 0x1F: cycles = 4; RR(registers.a); break;
+	case 0x07: cycles = 4; RLC(registers.a, true); break;
+	case 0x17: cycles = 4; RL(registers.a, true); break;
+	case 0x0F: cycles = 4; RRC(registers.a, true); break;
+	case 0x1F: cycles = 4; RR(registers.a, true); break;
 
 	// jump
 	case 0xC3: cycles = JP(); break;
@@ -460,7 +465,7 @@ word Cpu::ExecuteExtendedOpcode() {
 	case 0x43: cycles = BIT(registers.e, 0); break;
 	case 0x44: cycles = BIT(registers.h, 0); break;
 	case 0x45: cycles = BIT(registers.l, 0); break;
-	case 0x46: cycles = 16; BIT(memory.Read(Combinebytes(registers.l, registers.h)), 0); break;
+	case 0x46: cycles = 12; BIT(memory.Read(Combinebytes(registers.l, registers.h)), 0); break;
 	case 0x47: cycles = BIT(registers.a, 0); break;
 	case 0x48: cycles = BIT(registers.b, 1); break;
 	case 0x49: cycles = BIT(registers.c, 1); break;
@@ -468,7 +473,7 @@ word Cpu::ExecuteExtendedOpcode() {
 	case 0x4B: cycles = BIT(registers.e, 1); break;
 	case 0x4C: cycles = BIT(registers.h, 1); break;
 	case 0x4D: cycles = BIT(registers.l, 1); break;
-	case 0x4E: cycles = 16; BIT(memory.Read(Combinebytes(registers.l, registers.h)), 1); break;
+	case 0x4E: cycles = 12; BIT(memory.Read(Combinebytes(registers.l, registers.h)), 1); break;
 	case 0x4F: cycles = BIT(registers.a, 1); break;
 	case 0x50: cycles = BIT(registers.b, 2); break;
 	case 0x51: cycles = BIT(registers.c, 2); break;
@@ -476,7 +481,7 @@ word Cpu::ExecuteExtendedOpcode() {
 	case 0x53: cycles = BIT(registers.e, 2); break;
 	case 0x54: cycles = BIT(registers.h, 2); break;
 	case 0x55: cycles = BIT(registers.l, 2); break;
-	case 0x56: cycles = 16; BIT(memory.Read(Combinebytes(registers.l, registers.h)), 2); break;
+	case 0x56: cycles = 12; BIT(memory.Read(Combinebytes(registers.l, registers.h)), 2); break;
 	case 0x57: cycles = BIT(registers.a, 2); break;
 	case 0x58: cycles = BIT(registers.b, 3); break;
 	case 0x59: cycles = BIT(registers.c, 3); break;
@@ -484,7 +489,7 @@ word Cpu::ExecuteExtendedOpcode() {
 	case 0x5B: cycles = BIT(registers.e, 3); break;
 	case 0x5C: cycles = BIT(registers.h, 3); break;
 	case 0x5D: cycles = BIT(registers.l, 3); break;
-	case 0x5E: cycles = 16; BIT(memory.Read(Combinebytes(registers.l, registers.h)), 3); break;
+	case 0x5E: cycles = 12; BIT(memory.Read(Combinebytes(registers.l, registers.h)), 3); break;
 	case 0x5F: cycles = BIT(registers.a, 3); break;
 	case 0x60: cycles = BIT(registers.b, 4); break;
 	case 0x61: cycles = BIT(registers.c, 4); break;
@@ -492,7 +497,7 @@ word Cpu::ExecuteExtendedOpcode() {
 	case 0x63: cycles = BIT(registers.e, 4); break;
 	case 0x64: cycles = BIT(registers.h, 4); break;
 	case 0x65: cycles = BIT(registers.l, 4); break;
-	case 0x66: cycles = 16; BIT(memory.Read(Combinebytes(registers.l, registers.h)), 4); break;
+	case 0x66: cycles = 12; BIT(memory.Read(Combinebytes(registers.l, registers.h)), 4); break;
 	case 0x67: cycles = BIT(registers.a, 4); break;
 	case 0x68: cycles = BIT(registers.b, 5); break;
 	case 0x69: cycles = BIT(registers.c, 5); break;
@@ -500,7 +505,7 @@ word Cpu::ExecuteExtendedOpcode() {
 	case 0x6B: cycles = BIT(registers.e, 5); break;
 	case 0x6C: cycles = BIT(registers.h, 5); break;
 	case 0x6D: cycles = BIT(registers.l, 5); break;
-	case 0x6E: cycles = 16; BIT(memory.Read(Combinebytes(registers.l, registers.h)), 5); break;
+	case 0x6E: cycles = 12; BIT(memory.Read(Combinebytes(registers.l, registers.h)), 5); break;
 	case 0x6F: cycles = BIT(registers.a, 5); break;
 	case 0x70: cycles = BIT(registers.b, 6); break;
 	case 0x71: cycles = BIT(registers.c, 6); break;
@@ -508,7 +513,7 @@ word Cpu::ExecuteExtendedOpcode() {
 	case 0x73: cycles = BIT(registers.e, 6); break;
 	case 0x74: cycles = BIT(registers.h, 6); break;
 	case 0x75: cycles = BIT(registers.l, 6); break;
-	case 0x76: cycles = 16; BIT(memory.Read(Combinebytes(registers.l, registers.h)), 6); break;
+	case 0x76: cycles = 12; BIT(memory.Read(Combinebytes(registers.l, registers.h)), 6); break;
 	case 0x77: cycles = BIT(registers.a, 6); break;
 	case 0x78: cycles = BIT(registers.b, 7); break;
 	case 0x79: cycles = BIT(registers.c, 7); break;
@@ -516,7 +521,7 @@ word Cpu::ExecuteExtendedOpcode() {
 	case 0x7B: cycles = BIT(registers.e, 7); break;
 	case 0x7C: cycles = BIT(registers.h, 7); break;
 	case 0x7D: cycles = BIT(registers.l, 7); break;
-	case 0x7E: cycles = 16; BIT(memory.Read(Combinebytes(registers.l, registers.h)), 7); break;
+	case 0x7E: cycles = 12; BIT(memory.Read(Combinebytes(registers.l, registers.h)), 7); break;
 	case 0x7F: cycles = BIT(registers.a, 7); break;
 
 	// set bit
@@ -525,7 +530,7 @@ word Cpu::ExecuteExtendedOpcode() {
 	case 0xC2: cycles = SET(registers.d, 0); break;
 	case 0xC3: cycles = SET(registers.e, 0); break;
 	case 0xC4: cycles = SET(registers.h, 0); break;
-	case 0xC5: cycles = SET(registers.b, 0); break;
+	case 0xC5: cycles = SET(registers.l, 0); break;
 	case 0xC6: cycles = SET(Combinebytes(registers.l, registers.h), 0); break;
 	case 0xC7: cycles = SET(registers.a, 0); break;
 	case 0xC8: cycles = SET(registers.b, 1); break;
@@ -533,7 +538,7 @@ word Cpu::ExecuteExtendedOpcode() {
 	case 0xCA: cycles = SET(registers.d, 1); break;
 	case 0xCB: cycles = SET(registers.e, 1); break;
 	case 0xCC: cycles = SET(registers.h, 1); break;
-	case 0xCD: cycles = SET(registers.b, 1); break;
+	case 0xCD: cycles = SET(registers.l, 1); break;
 	case 0xCE: cycles = SET(Combinebytes(registers.l, registers.h), 1); break;
 	case 0xCF: cycles = SET(registers.a, 1); break;
 	case 0xD0: cycles = SET(registers.b, 2); break;
@@ -541,7 +546,7 @@ word Cpu::ExecuteExtendedOpcode() {
 	case 0xD2: cycles = SET(registers.d, 2); break;
 	case 0xD3: cycles = SET(registers.e, 2); break;
 	case 0xD4: cycles = SET(registers.h, 2); break;
-	case 0xD5: cycles = SET(registers.b, 2); break;
+	case 0xD5: cycles = SET(registers.l, 2); break;
 	case 0xD6: cycles = SET(Combinebytes(registers.l, registers.h), 2); break;
 	case 0xD7: cycles = SET(registers.a, 2); break;
 	case 0xD8: cycles = SET(registers.b, 3); break;
@@ -549,7 +554,7 @@ word Cpu::ExecuteExtendedOpcode() {
 	case 0xDA: cycles = SET(registers.d, 3); break;
 	case 0xDB: cycles = SET(registers.e, 3); break;
 	case 0xDC: cycles = SET(registers.h, 3); break;
-	case 0xDD: cycles = SET(registers.b, 3); break;
+	case 0xDD: cycles = SET(registers.l, 3); break;
 	case 0xDE: cycles = SET(Combinebytes(registers.l, registers.h), 3); break;
 	case 0xDF: cycles = SET(registers.a, 3); break;
 	case 0xE0: cycles = SET(registers.b, 4); break;
@@ -557,7 +562,7 @@ word Cpu::ExecuteExtendedOpcode() {
 	case 0xE2: cycles = SET(registers.d, 4); break;
 	case 0xE3: cycles = SET(registers.e, 4); break;
 	case 0xE4: cycles = SET(registers.h, 4); break;
-	case 0xE5: cycles = SET(registers.b, 4); break;
+	case 0xE5: cycles = SET(registers.l, 4); break;
 	case 0xE6: cycles = SET(Combinebytes(registers.l, registers.h), 4); break;
 	case 0xE7: cycles = SET(registers.a, 4); break;
 	case 0xE8: cycles = SET(registers.b, 5); break;
@@ -565,7 +570,7 @@ word Cpu::ExecuteExtendedOpcode() {
 	case 0xEA: cycles = SET(registers.d, 5); break;
 	case 0xEB: cycles = SET(registers.e, 5); break;
 	case 0xEC: cycles = SET(registers.h, 5); break;
-	case 0xED: cycles = SET(registers.b, 5); break;
+	case 0xED: cycles = SET(registers.l, 5); break;
 	case 0xEE: cycles = SET(Combinebytes(registers.l, registers.h), 5); break;
 	case 0xEF: cycles = SET(registers.a, 5); break;
 	case 0xF0: cycles = SET(registers.b, 6); break;
@@ -573,7 +578,7 @@ word Cpu::ExecuteExtendedOpcode() {
 	case 0xF2: cycles = SET(registers.d, 6); break;
 	case 0xF3: cycles = SET(registers.e, 6); break;
 	case 0xF4: cycles = SET(registers.h, 6); break;
-	case 0xF5: cycles = SET(registers.b, 6); break;
+	case 0xF5: cycles = SET(registers.l, 6); break;
 	case 0xF6: cycles = SET(Combinebytes(registers.l, registers.h), 6); break;
 	case 0xF7: cycles = SET(registers.a, 6); break;
 	case 0xF8: cycles = SET(registers.b, 7); break;
@@ -581,7 +586,7 @@ word Cpu::ExecuteExtendedOpcode() {
 	case 0xFA: cycles = SET(registers.d, 7); break;
 	case 0xFB: cycles = SET(registers.e, 7); break;
 	case 0xFC: cycles = SET(registers.h, 7); break;
-	case 0xFD: cycles = SET(registers.b, 7); break;
+	case 0xFD: cycles = SET(registers.l, 7); break;
 	case 0xFE: cycles = SET(Combinebytes(registers.l, registers.h), 7); break;
 	case 0xFF: cycles = SET(registers.a, 7); break;
 
