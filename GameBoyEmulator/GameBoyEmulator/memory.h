@@ -52,6 +52,7 @@ public:
 	bool LoadRom(const std::string fileName);
 	void CreateRamBanks();
 	byte Read(word address);
+	void WriteOld(word address, byte data);
 	void Write(word address, byte data);
 	byte GetJoypadState();
 	void DumpMemory(std::string fileName = "MemoryDump");
