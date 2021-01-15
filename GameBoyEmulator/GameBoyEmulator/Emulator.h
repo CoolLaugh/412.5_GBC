@@ -18,5 +18,8 @@ public:
 	~Emulator();
 	void Update();
 	void Loop();
+
+	void saveState();
+	void loadState();
 };
 

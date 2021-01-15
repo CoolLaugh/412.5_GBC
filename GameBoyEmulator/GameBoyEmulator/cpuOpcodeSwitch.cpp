@@ -10,7 +10,7 @@ word Cpu::ExecuteOpcode() {
 	//while (programCounterTrace.size() > 100) {
 	//	programCounterTrace.pop();
 	//}
-
+	outputState();
 	byte opcode = memory.Read(registers.pc);
 	registers.pc++;
 

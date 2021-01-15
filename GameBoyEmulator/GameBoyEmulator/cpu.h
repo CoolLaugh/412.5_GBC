@@ -58,14 +58,15 @@ public:
 
 	bool interupt = false;
 	bool interuptEnable = false;
-	int interuptEnableInstructionCount = 0;
+	byte interuptEnableInstructionCount = 0;
 	bool interuptDisable = false;
-	int interuptDisableInstructionCount = 0;
-	int dividerCycles = 0;
-	int clockFrequency = 1024;
-	int timerCycles = 0;
-	std::queue<word> programCounterTrace;
+	byte interuptDisableInstructionCount = 0;
+	word dividerCycles = 0;
+	word clockFrequency = 1024;
+	word timerCycles = 0;
+	bool timerOverflow = false;
 
+	bool logState = false;
 	Memory memory;
 
 	bool flagTest(flagType flag);
@@ -85,7 +86,7 @@ public:
 	void performInterupts();
 	void dividerRegisterINC(short cycles);
 	void TimerCounterINC(short cycles);
-	void LCDStatusRegister(short& cyclesThisLine);
+	void LCDStatusRegister(word& cyclesThisLine);
 
 	word LD(byte& reg);
 	word LDreg(byte& reg1, byte& reg2);

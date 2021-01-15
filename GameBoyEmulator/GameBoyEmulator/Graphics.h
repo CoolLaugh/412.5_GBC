@@ -10,7 +10,7 @@ public:
 	sf::RenderWindow* tileMemoryWindow;
 	sf::RenderWindow* BGMapWindow;
 
-	short cyclesThisLine = 0;
+	word cyclesThisLine = 0;
 
 private:
 	sf::View* view;

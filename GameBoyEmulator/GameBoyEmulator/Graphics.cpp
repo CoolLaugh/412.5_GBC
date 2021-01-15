@@ -3,7 +3,7 @@
 Graphics::Graphics() {
 
 	window = new sf::RenderWindow(sf::VideoMode(ScreenWidth * DisplayScale, ScreenHeight * DisplayScale), "Gameboy Emulator");
-	window->setPosition(sf::Vector2i(150, 150));
+	window->setPosition(sf::Vector2i(550, 150));
 	window->setVerticalSyncEnabled(false);
 	window->setFramerateLimit(60);
 
@@ -20,7 +20,7 @@ Graphics::Graphics() {
 void Graphics::setupTileWindow() {
 
 	tileMemoryWindow = new sf::RenderWindow(sf::VideoMode((128/* + 16*/) * DisplayScale, (192/* + 24*/) * DisplayScale), "VRAM Tiles");
-	tileMemoryWindow->setPosition(sf::Vector2i(650, 150));
+	tileMemoryWindow->setPosition(sf::Vector2i(550, 650));
 	tileMemoryWindow->setVerticalSyncEnabled(false);
 	tileMemoryWindow->setFramerateLimit(60);
 
@@ -96,7 +96,7 @@ void Graphics::updateTileWindow() {
 void Graphics::setupBGMapWindow() {
 
 	BGMapWindow = new sf::RenderWindow(sf::VideoMode(256 * DisplayScale, 256 * DisplayScale), "VRAM BGMap");
-	BGMapWindow->setPosition(sf::Vector2i(1150, 150));
+	BGMapWindow->setPosition(sf::Vector2i(1050, 150));
 	BGMapWindow->setVerticalSyncEnabled(false);
 	BGMapWindow->setFramerateLimit(60);
 
@@ -162,12 +162,37 @@ void Graphics::updateBGMapWindow() {
 		}
 	}
 
+	// draw gameboy screen outline
+	byte scrollX = memory->Read(Address::ScrollX);
+	byte scrollY = memory->Read(Address::ScrollY);
+
+	for (size_t i = 0; i < 2; i++) {
+
+		for (size_t xPos = 0; xPos < ScreenWidth; xPos++) {
+
+			int x = (scrollX + xPos) % 256;
+			int y = (scrollY + (i * ScreenHeight)) % 256;
+
+			BGMapBackground->setPixel(x, y, sf::Color::Red);
+		}
+	}
+	for (size_t i = 0; i < 2; i++) {
+
+		for (size_t yPos = 0; yPos < ScreenHeight; yPos++) {
+
+			int x = (scrollX + (ScreenWidth * i)) % 256;
+			int y = (scrollY + yPos) % 256;
+
+			BGMapBackground->setPixel(x, y, sf::Color::Red);
+		}
+	}
+
+
 	sf::Texture BGMapTexture;
 	BGMapTexture.loadFromImage(*BGMapBackground);
 	sf::Sprite BGMapSprite;
 	BGMapSprite.setTexture(BGMapTexture, true);
 	BGMapSprite.setPosition(0, 0);
-
 	BGMapWindow->draw(BGMapSprite);
 	BGMapWindow->display();
 }
@@ -401,9 +426,9 @@ void Graphics::drawSprites() {
 				}
 				int pixelOffsetX = j;
 				if (Xflip == true) {
-					pixelOffsetX -= 8;
+					pixelOffsetX -= 7;
 					pixelOffsetX *= -1;
-					pixelOffsetX += 8;
+					//pixelOffsetX += 8;
 				}
 
 				int pixelX = positionX + pixelOffsetX;

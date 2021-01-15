@@ -2,7 +2,7 @@
 
 Emulator::Emulator() {
 
-	cpu.memory.LoadRom("./gb/mooneye-gb_hwtests/emulator-only/mbc1/ram_64kb.gb");
+	cpu.memory.LoadRom("./gb/LOZLA.gb");
 	cpu.PowerUpSequence();
 	graphics.memory = &cpu.memory;
 }
@@ -101,6 +101,15 @@ void Emulator::Loop() {
 				else if (event.key.code == sf::Keyboard::V) {
 					cpu.memory.buttons.start = true;
 				}
+				else if (event.key.code == sf::Keyboard::F1) {
+					saveState();
+				}
+				else if (event.key.code == sf::Keyboard::F2) {
+					loadState();
+				}
+				else if (event.key.code == sf::Keyboard::F5) {
+					cpu.logState = !cpu.logState;
+				}
 			}
 			else if (event.type == sf::Event::KeyReleased) {
 
@@ -133,4 +142,158 @@ void Emulator::Loop() {
 
 		Update();
 	}
+}
+
+void Emulator::saveState() {
+
+	auto memory = cpu.memory;
+
+	int sizeOfVariables = 34;
+	int sizeOfMemorySpaceBeforeBank = 0xA000 - 0x8000;
+	int sizeOfMemorySpaceBank = memory.ramBank.size() * 0x2000;
+	int sizeOfMemorySpaceAfterBank = 0x10000 - 0xC000;
+
+	int fileSize = sizeOfVariables +
+					sizeOfMemorySpaceBeforeBank +
+					sizeOfMemorySpaceBank +
+					sizeOfMemorySpaceAfterBank;
+
+	byte* state = new byte[fileSize];
+	int index = 0;
+
+	state[index++] = cpu.registers.a;
+	state[index++] = cpu.registers.f;
+	state[index++] = cpu.registers.b;
+	state[index++] = cpu.registers.c;
+	state[index++] = cpu.registers.d;
+	state[index++] = cpu.registers.e;
+	state[index++] = cpu.registers.h;
+	state[index++] = cpu.registers.l;
+	state[index++] = cpu.splitBytes(cpu.registers.sp).first;
+	state[index++] = cpu.splitBytes(cpu.registers.sp).second;
+	state[index++] = cpu.splitBytes(cpu.registers.pc).first;
+	state[index++] = cpu.splitBytes(cpu.registers.pc).second;
+
+	state[index++] = cpu.halted;
+	state[index++] = cpu.stop;
+	state[index++] = cpu.interupt;
+	state[index++] = cpu.interuptEnable;
+	state[index++] = cpu.interuptEnableInstructionCount;
+	state[index++] = cpu.interuptDisable;
+	state[index++] = cpu.interuptDisableInstructionCount;
+	state[index++] = cpu.splitBytes(cpu.dividerCycles).first;
+	state[index++] = cpu.splitBytes(cpu.dividerCycles).second;
+	state[index++] = cpu.splitBytes(cpu.clockFrequency).first;
+	state[index++] = cpu.splitBytes(cpu.clockFrequency).second;
+	state[index++] = cpu.splitBytes(cpu.timerCycles).first;
+	state[index++] = cpu.splitBytes(cpu.timerCycles).second;
+	state[index++] = cpu.timerOverflow;
+
+	state[index++] = cpu.splitBytes(graphics.cyclesThisLine).first;
+	state[index++] = cpu.splitBytes(graphics.cyclesThisLine).second;
+
+	state[index++] = memory.currentRamBank;
+	state[index++] = memory.currentRomBank;
+	state[index++] = memory.numberOfRamBanks;
+	state[index++] = memory.ramBankEnabled;
+	state[index++] = memory.mbc;
+	state[index++] = memory.memoryModel;
+
+
+	for (size_t i = 0x8000; i <= 0x9FFF; i++) {
+		state[index++] = memory.memorySpace[i];
+	}
+
+	for (size_t i = 0; i < memory.ramBank.size(); i++) {
+		for (size_t j = 0; j < 0x2000; j++) {
+			state[index++] = memory.ramBank[i][j];
+		}
+	}
+
+	for (size_t i = 0xC000; i <= 0xFFFF; i++) {
+		state[index++] = memory.memorySpace[i];
+	}
+
+	std::ofstream stateFile("saveState", std::ofstream::binary);
+	stateFile.write((char *)state, fileSize);
+	stateFile.close();
+
+
+	cpu.outputStateBuffer += "SAVE STATE CREATED\n";
+}
+
+void Emulator::loadState() {
+
+	std::ifstream stateFile("saveState", std::ifstream::binary);
+
+	stateFile.seekg(0, std::ios::end);
+	int length = stateFile.tellg();
+	stateFile.seekg(0, std::ios::beg);
+
+	byte* state = new byte[length];
+	stateFile.read((char*)state, length);
+	stateFile.close();
+
+	int index = 0;
+
+	cpu.registers.a = state[index++];
+	cpu.registers.f = state[index++];
+	cpu.registers.b = state[index++];
+	cpu.registers.c = state[index++];
+	cpu.registers.d = state[index++];
+	cpu.registers.e = state[index++];
+	cpu.registers.h = state[index++];
+	cpu.registers.l = state[index++];
+
+	cpu.registers.sp = cpu.Combinebytes(state[index], state[index + 1]);
+	index += 2;
+	cpu.registers.pc = cpu.Combinebytes(state[index], state[index + 1]);
+	index += 2;
+
+	cpu.halted = state[index++];
+	cpu.stop = state[index++];
+	cpu.interupt = state[index++];
+	cpu.interuptEnable = state[index++];
+	cpu.interuptEnableInstructionCount = state[index++];
+	cpu.interuptDisable = state[index++];
+	cpu.interuptDisableInstructionCount = state[index++];
+
+
+	cpu.dividerCycles = cpu.Combinebytes(state[index], state[index + 1]);
+	index += 2;
+	cpu.clockFrequency = cpu.Combinebytes(state[index], state[index + 1]);
+	index += 2;
+	cpu.timerCycles = cpu.Combinebytes(state[index], state[index + 1]);
+	index += 2;
+
+	cpu.timerOverflow = state[index++];
+
+	graphics.cyclesThisLine = cpu.Combinebytes(state[index], state[index + 1]);
+	index += 2;
+
+	auto memory = cpu.memory;
+
+	memory.currentRamBank = state[index++];
+	memory.currentRomBank = state[index++];
+	memory.numberOfRamBanks = state[index++];
+	memory.ramBankEnabled = state[index++];
+	memory.mbc = state[index++];
+	memory.memoryModel = (Memory::MemoryModel)state[index++];
+
+
+	for (size_t i = 0x8000; i <= 0x9FFF; i++) {
+		memory.memorySpace[i] = state[index++];
+	}
+
+	for (size_t i = 0; i < memory.ramBank.size(); i++) {
+		for (size_t j = 0; j < 0x2000; j++) {
+			memory.ramBank[i][j] = state[index++];
+		}
+	}
+
+	for (size_t i = 0xC000; i <= 0xFFFF; i++) {
+		memory.memorySpace[i] = state[index++];
+	}
+
+	cpu.outputStateBuffer += "SAVE STATE lOADED\n";
 }

@@ -39,12 +39,12 @@ public:
 	byte* cartridge;
 	byte* memorySpace;
 
-	int currentRamBank = 0;
-	int currentRomBank = 0;
-	int numberOfRamBanks = 0;
+	byte currentRamBank = 0;
+	byte currentRomBank = 0;
+	byte numberOfRamBanks = 0;
 	bool ramBankEnabled;
 	std::vector<byte*> ramBank;
-	int mbc = 0;
+	byte mbc = 0;
 	MemoryModel memoryModel;
 
 	Memory(); 
@@ -52,7 +52,6 @@ public:
 	bool LoadRom(const std::string fileName);
 	void CreateRamBanks();
 	byte Read(word address);
-	void WriteOld(word address, byte data);
 	void Write(word address, byte data);
 	byte GetJoypadState();
 	void DumpMemory(std::string fileName = "MemoryDump");

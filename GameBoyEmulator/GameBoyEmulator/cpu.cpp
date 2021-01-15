@@ -73,6 +73,8 @@ void Cpu::PowerUpSequence() {
 	outputStateBuffer.reserve(11000000);
 }
 
+
+
 // load immediate value into register
 word Cpu::LD(byte & reg) {
 
@@ -1313,6 +1315,10 @@ std::pair<byte, byte> Cpu::splitBytesR(word value) {
 
 void Cpu::outputState() {
 
+	if (logState == false) {
+		return;
+	}
+
 	std::string hex[16] = { "0", "1", "2", "3", "4", "5", "6", "7", "8", "9", "A", "B", "C", "D", "E", "F" };
 
 	outputStateBuffer += "A: " + hex[(registers.a & 0xF0) >> 4] + hex[(registers.a & 0x0F)] + " ";
@@ -1454,10 +1460,15 @@ void Cpu::TimerCounterINC(short cycles) {
 		timerCycles -= clockFrequency;
 		byte TimerCounter = memory.Read(Address::Timer);
 
+
 		if (TimerCounter == 0xFF) {
+			timerOverflow = true; // timer isn't reset until one cycle after overflow
+		}
+
+		if (TimerCounter == 0x00 && timerOverflow == true) {
 
 			TimerCounter = memory.Read(Address::TimerModulo);
-
+			timerOverflow = false;
 			
 			byte interuptFlags = memory.Read(Address::InteruptFlag);
 			interuptFlags |= (1 << interruptFlags::Timer);
@@ -1472,7 +1483,7 @@ void Cpu::TimerCounterINC(short cycles) {
 	}
 }
 
-void Cpu::LCDStatusRegister(short& cyclesThisLine) {
+void Cpu::LCDStatusRegister(word& cyclesThisLine) {
 
 	byte LCDC = memory.Read(Address::LCDC);
 	byte LCDCStatus = memory.Read(Address::LCDCStatus);

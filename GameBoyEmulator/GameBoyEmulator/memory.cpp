@@ -122,7 +122,7 @@ byte Memory::Read(word address) {
 	if (address >= 0x4000 && address <= 0x7FFF) {
 
 		word offset = address - 0x4000;
-		word memoryBankOffset = 0x4000 * currentRomBank;
+		int memoryBankOffset = 0x4000 * currentRomBank;
 		return cartridge[memoryBankOffset + offset];
 	}
 	// Ram bank 0xA000 - 0xBFFF
@@ -174,14 +174,14 @@ void Memory::Write(word address, byte data) {
 
 		if (mbc == 1) {
 
-			data &= 31;
+			data &= 0x1F;
 
 			if (data == 0) { // values of 0 and 1 do the same thing
 				data = 1;
 			}
 
 			// top 3 bits must be preserved
-			currentRomBank &= 224;
+			currentRomBank &= 0xE0;
 			currentRomBank |= data;
 
 		}
