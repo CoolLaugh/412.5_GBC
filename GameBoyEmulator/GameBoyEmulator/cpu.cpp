@@ -57,7 +57,12 @@ void Cpu::setInterrupt(interruptFlags flag) {
 void Cpu::PowerUpSequence() {
 
 	// 2.7.1
-	registers.a = 0x01;
+	if (ColorGameBoyMode == false) {
+		registers.a = 0x01;
+	}
+	else {
+		registers.a = 0x11;
+	}
 	registers.f = 0xB0;
 	registers.b = 0x00;
 	registers.c = 0x13;
@@ -667,8 +672,29 @@ word Cpu::HALT() {
 // halt cpu and display until button push
 word Cpu::STOP() {
 
-	stop = true;
 	registers.pc++;
+
+	if (ColorGameBoyMode == true) {
+
+		byte speedSwitch = memory.Read(Address::PrepareSpeedSwitch);
+		if ((speedSwitch & Bits::b0) != 0) {
+			if (speedMode == 1) {
+				speedMode = 2;
+				bitSet(speedSwitch, Bits::b7);
+			}
+			else {
+				speedMode = 1;
+				bitReset(speedSwitch, Bits::b7);
+			}
+			speedSwitch &= ~Bits::b0;
+			memory.Write(Address::PrepareSpeedSwitch, speedSwitch);
+		}
+	}
+	else {
+
+		stop = true;
+	}
+
 	return 4;
 }
 
@@ -1419,7 +1445,7 @@ void Cpu::performInterupts() {
 
 void Cpu::dividerRegisterINC(short cycles) {
 
-	dividerCycles += cycles;
+	dividerCycles += cycles * speedMode;
 
 	if (dividerCycles > 256) { // incremented at rate of 16384Hz (4194304 Hz cpu / 16384Hz = 256)
 		dividerCycles -= 256;
@@ -1453,7 +1479,7 @@ void Cpu::TimerCounterINC(short cycles) {
 	//	memory.timerFrequencyChange = 0;
 	//}
 
-	timerCycles += cycles;
+	timerCycles += cycles * speedMode;
 
 	while(timerCycles >= clockFrequency) {
 

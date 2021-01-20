@@ -4,9 +4,6 @@
 #include <iostream>
 #include "CommonDefinitions.h"
 
-typedef unsigned char byte;
-typedef unsigned short word;
-
 class Memory {
 
 private:
@@ -38,12 +35,23 @@ public:
 
 	byte* cartridge;
 	byte* memorySpace;
+	byte* BGColorPalette;
+	byte* SpriteColorPalette;
+	bool stopHblankDMA = false;
+
+	bool TileChanged = false;
+
+	bool ColorGameBoyMode = false;
 
 	byte currentRamBank = 0;
+	byte currentWramBank = 1;
+	byte currentVramBank = 0;
 	byte currentRomBank = 0;
 	byte numberOfRamBanks = 0;
 	bool ramBankEnabled;
 	std::vector<byte*> ramBank;
+	std::vector<byte*> wramBank;
+	std::vector<byte*> vramBank;
 	byte mbc = 0;
 	MemoryModel memoryModel;
 
@@ -57,4 +65,9 @@ public:
 	void DumpMemory(std::string fileName = "MemoryDump");
 	void DumpStack(word spAddress, std::string fileName = "StackDump");
 
+	word vramDMATransferSource;
+	word vramDMATransferDestination;
+	word vramDMATransferLength;
+	word vramDMATransferProgress;
+	void HBlankDMA();
 };

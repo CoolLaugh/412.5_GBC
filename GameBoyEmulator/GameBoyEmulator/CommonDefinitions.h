@@ -1,20 +1,24 @@
 #pragma once
 
+typedef unsigned char byte;
+typedef unsigned short word;
+
 const int ScreenWidth = 160;
 const int ScreenHeight = 144;
 const int DisplayScale = 3;
 
 enum Address {
 
+	CGBFlag = 0x0143,
 	CartridgeType = 0x0147,
 	RomSize = 0x0148,
 	RamSize = 0x0149,
 
-	BGWTileInfo0 = 0x9800,
-	BGWTileInfo1 = 0x9C00,
-
 	TilePattern0 = 0x8000,
 	TilePattern1 = 0x8800,
+
+	BGWTileInfo0 = 0x9800,
+	BGWTileInfo1 = 0x9C00,
 
 	SpriteAttributes = 0xFE00,
 
@@ -38,6 +42,14 @@ enum Address {
 	OBJPalette1 = 0xFF49,
 	WindowY = 0xFF4A,
 	WindowX = 0xFF4B,
+	PrepareSpeedSwitch = 0xFF4D,
+	VRAMBank = 0xFF4F,
+	InfraredPort = 0xFF56,
+	GBColorBackgroundPaletteIndex = 0xFF68,
+	GBColorBackgroundPaletteData = 0xFF69,
+	GBColorSpritePaletteIndex = 0xFF68,
+	GBColorSpritePaletteData = 0xFF69,
+	WramBank = 0xFF70,
 	InteruptEnable = 0xFFFF
 
 };
@@ -52,3 +64,5 @@ enum Bits {
 	b6 = (1 << 6),
 	b7 = (1 << 7)
 };
+
+bool BitTest(byte value, int bit);

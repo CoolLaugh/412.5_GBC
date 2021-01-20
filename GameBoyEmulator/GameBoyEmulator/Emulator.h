@@ -10,7 +10,7 @@ class Emulator {
 
 	int elapsedFrames = 0;
 	int elapsedOpcodes = 0;
-
+	int totalCycles = 0;
 
 public:
 

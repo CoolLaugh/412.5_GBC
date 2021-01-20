@@ -128,6 +128,7 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="CommonDefinitions.cpp" />
     <ClCompile Include="cpu.cpp" />
     <ClCompile Include="cpuOpcodeSwitch.cpp" />
     <ClCompile Include="Emulator.cpp" />

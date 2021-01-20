@@ -65,6 +65,8 @@ public:
 	word clockFrequency = 1024;
 	word timerCycles = 0;
 	bool timerOverflow = false;
+	bool ColorGameBoyMode = false;
+	byte speedMode = 1;
 
 	bool logState = false;
 	Memory memory;

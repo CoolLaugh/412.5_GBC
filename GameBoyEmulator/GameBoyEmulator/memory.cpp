@@ -2,6 +2,7 @@
 #pragma warning(disable : 4996)
 
 
+
 Memory::Memory() {
 
 	memorySpace = new byte[memorySize];
@@ -42,9 +43,34 @@ void Memory::PowerUpSequence() {
 	memorySpace[0xFF4B] = 0x00;
 	memorySpace[0xFFFF] = 0x00;
 
-	// memory values not set by skipping the nintendo logo
-	//rom[0xFF44] = 0x3E;
+	
+	// 0xFFXX values not documented but set in other emulators
+	//if (ColorGameBoyMode == true) {
+	//	memorySpace[0xFF4D] = 0x7E;
+	//}
 
+	const byte ColorGameboyFFXXValues[256] = {
+		0xCF, 0x00, 0x7C, 0xFF, 0x44, 0x00, 0x00, 0xF8, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xE1,
+		0x80, 0xBF, 0xF3, 0xFF, 0xBF, 0xFF, 0x3F, 0x00, 0xFF, 0xBF, 0x7F, 0xFF, 0x9F, 0xFF, 0xBF, 0xFF,
+		0xFF, 0x00, 0x00, 0xBF, 0x77, 0xF3, 0xF1, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF,
+		0x00, 0xFF, 0x00, 0xFF, 0x00, 0xFF, 0x00, 0xFF, 0x00, 0xFF, 0x00, 0xFF, 0x00, 0xFF, 0x00, 0xFF,
+		0x91, 0x80, 0x00, 0x00, 0x00, 0x00, 0x00, 0xFC, 0x00, 0x00, 0x00, 0x00, 0xFF, 0x7E, 0xFF, 0xFE,
+		0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0x3E, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF,
+		0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xC0, 0xFF, 0xC1, 0x00, 0xFE, 0xFF, 0xFF, 0xFF,
+		0xF8, 0xFF, 0x00, 0x00, 0x00, 0x8F, 0x00, 0x00, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF,
+		0xCE, 0xED, 0x66, 0x66, 0xCC, 0x0D, 0x00, 0x0B, 0x03, 0x73, 0x00, 0x83, 0x00, 0x0C, 0x00, 0x0D,
+		0x00, 0x08, 0x11, 0x1F, 0x88, 0x89, 0x00, 0x0E, 0xDC, 0xCC, 0x6E, 0xE6, 0xDD, 0xDD, 0xD9, 0x99,
+		0xBB, 0xBB, 0x67, 0x63, 0x6E, 0x0E, 0xEC, 0xCC, 0xDD, 0xDC, 0x99, 0x9F, 0xBB, 0xB9, 0x33, 0x3E,
+		0x45, 0xEC, 0x42, 0xFA, 0x08, 0xB7, 0x07, 0x5D, 0x01, 0xF5, 0xC0, 0xFF, 0x08, 0xFC, 0x00, 0xE5,
+		0x0B, 0xF8, 0xC2, 0xCA, 0xF4, 0xF9, 0x0D, 0x7F, 0x44, 0x6D, 0x19, 0xFE, 0x46, 0x97, 0x33, 0x5E,
+		0x08, 0xFF, 0xD1, 0xFF, 0xC6, 0x8B, 0x24, 0x74, 0x12, 0xFC, 0x00, 0x9F, 0x94, 0xB7, 0x06, 0xD5,
+		0x40, 0x7A, 0x20, 0x9E, 0x04, 0x5F, 0x41, 0x2F, 0x3D, 0x77, 0x36, 0x75, 0x81, 0x8A, 0x70, 0x3A,
+		0x98, 0xD1, 0x71, 0x02, 0x4D, 0x01, 0xC1, 0xFF, 0x0D, 0x00, 0xD3, 0x05, 0xF9, 0x00, 0x0B, 0x00
+	};
+
+	if (ColorGameBoyMode == true) {
+		memcpy(&memorySpace[0xFF00], ColorGameboyFFXXValues, 256);
+	}
 }
 
 bool Memory::LoadRom(const std::string fileName) {
@@ -63,6 +89,16 @@ bool Memory::LoadRom(const std::string fileName) {
 
 	memcpy(memorySpace, cartridge, 0x8000);
 	currentRomBank = 1;
+
+	if (cartridge[Address::CGBFlag] == 0x80 || cartridge[Address::CGBFlag] == 0xC0) {
+		ColorGameBoyMode = true;
+	}
+
+	BGColorPalette = new byte[0x40]; // these exist in non color mode to make save states easier
+	memset(BGColorPalette, 0xFF, 0x40);
+
+	SpriteColorPalette = new byte[0x40];
+	memset(SpriteColorPalette, 0, 0x40);
 
 	CreateRamBanks();
 
@@ -109,14 +145,64 @@ void Memory::CreateRamBanks() {
 	case 5: numberOfRamBanks = 8; break;
 	}
 
+
+	for (size_t i = 0; i < ramBank.size(); i++) {
+		byte* ptr = ramBank[i];
+		delete[] ptr;
+	}
+	ramBank.clear();
 	for (size_t i = 0; i < numberOfRamBanks; i++) {
 		byte* bank = new byte[0x2000];
-		memset(bank, 0, sizeof(bank));
+		memset(bank, 0, 0x2000);
 		ramBank.push_back(bank);
+	}
+
+
+	int wramBankSize = 0;
+	if (ColorGameBoyMode == true) {
+		wramBankSize = 8;
+	}
+	else {
+		wramBankSize = 2;
+	}
+
+	for (size_t i = 0; i < wramBank.size(); i++) {
+		byte* ptr = wramBank[i];
+		delete[] ptr;
+	}
+	wramBank.clear();
+	for (size_t i = 0; i < wramBankSize; i++) {
+		byte* bank = new byte[0x1000];
+		memset(bank, 0, 0x1000);
+		wramBank.push_back(bank);
+	}
+
+
+	int vramBankSize = 0;
+	if (ColorGameBoyMode == true) {
+		vramBankSize = 2;
+	}
+	else {
+		vramBankSize = 1;
+	}
+
+	for (size_t i = 0; i < vramBank.size(); i++) {
+		byte* ptr = vramBank[i];
+		delete[] ptr;
+	}
+	vramBank.clear();
+	for (size_t i = 0; i < 2; i++) {
+		byte* bank = new byte[0x2000];
+		memset(bank, 0, 0x2000);
+		vramBank.push_back(bank);
 	}
 }
 
 byte Memory::Read(word address) {
+
+	if (address == 0xFF26) { // hack for no audio
+		return 0x00;
+	}
 
 	// rom bank 0x4000 - 0x7FFF
 	if (address >= 0x4000 && address <= 0x7FFF) {
@@ -125,9 +211,30 @@ byte Memory::Read(word address) {
 		int memoryBankOffset = 0x4000 * currentRomBank;
 		return cartridge[memoryBankOffset + offset];
 	}
+	else if (address >= 0x8000 && address <= 0x9FFF) {
+		return vramBank[currentVramBank][address - 0x8000];
+	}
 	// Ram bank 0xA000 - 0xBFFF
 	else if (address >= 0xA000 && address <= 0xBFFF) {
 		return ramBank[currentRamBank][address - 0xA000];
+	}
+	else if (address >= 0xC000 && address <= 0xCFFF) {
+		return wramBank[0][address - 0xC000];
+	}
+	else if (address >= 0xD000 && address <= 0xDFFF) {
+		return wramBank[currentWramBank][address - 0xD000];
+	}
+	else if (address == 0xFF55 && ColorGameBoyMode == true) {
+		if (vramDMATransferProgress == 0 && vramDMATransferLength == 0) {
+			return 0xFF;
+		}
+		else {
+			byte lengthRemaining = ((vramDMATransferLength - vramDMATransferProgress) / 10) - 1;
+			if (stopHblankDMA == true) {
+				lengthRemaining |= Bits::b7;
+			}
+			return lengthRemaining;
+		}
 	}
 	// controls 0xFF00
 	else if (address == Address::Joypad) {
@@ -231,12 +338,12 @@ void Memory::Write(word address, byte data) {
 		}
 		if (mbc == 5) {
 
-			data &= 15;
+			data &= 0x0F;
 			currentRamBank = data;
 		}
 	}
 	else if (address >= 0x6000 && address <= 0x7FFF) {
-		if (mbc = 1 || mbc == 3 || mbc == 5) {
+		if (mbc == 1 || mbc == 3 || mbc == 5) {
 			data &= 1;
 
 			if (data == 0) {
@@ -249,6 +356,10 @@ void Memory::Write(word address, byte data) {
 		}
 	}
 	// 0x8000 - 0x9FFF 8kb video ram (vram) (1 for gameboy, 2 switchable for gameboy color)
+	else if (address >= 0x8000 && address <= 0x9FFF) {
+		vramBank.at(currentVramBank)[address - 0x8000] = data;
+		TileChanged = true;
+	}
 	else if (address >= 0xA000 && address <= 0xBFFF) { // 8kb external ram
 		if (ramBankEnabled == true && mbc == 1 || mbc == 3 || mbc == 5) {
 			word newAddress = address - 0xA000;
@@ -260,7 +371,13 @@ void Memory::Write(word address, byte data) {
 		}
 	}
 	// 0xC000 - 0xCFFF 4KB Work RAM (WRAM) bank 0
+	else if (address >= 0xC000 && address <= 0xCFFF) {
+		wramBank.at(0)[address - 0xC000] = data;
+	}
 	// 0xD000 - 0xDFFF 4KB Work RAM (WRAM) bank 1~N (1 for gameboy, 1-7 for gameboy color)
+	else if (address >= 0xD000 && address <= 0xDFFF) {
+		wramBank.at(currentWramBank)[address - 0xD000] = data;
+	}
 	// 0xE000 - 0xFDFF Mirror of C000~DDFF (ECHO RAM) typically not used
 	// 0xFE00 - 0xFE9F Sprite attribute table
 	// 0xFEA0 - 0xFEFF Not Usable
@@ -291,10 +408,86 @@ void Memory::Write(word address, byte data) {
 			memorySpace[0xFE00 + i] = Read(DMAAddress + i);
 		}
 	}
+	else if (address == 0xFF4D) {
+		memorySpace[address] = data | 0x7E;
+	}
+	else if (address == 0xFF4F) {
+		if (ColorGameBoyMode == true) {
+			currentVramBank = data & Bits::b0;
+			memorySpace[address] = (~Bits::b0) | (data & Bits::b0);
+		}
+		else {
+			memorySpace[address] = data;
+		}
+	}
+	else if (address == 0xFF55) {
+		memorySpace[address] = data;
+		if (ColorGameBoyMode == true) {
+
+			if (vramDMATransferLength != 0 && (data & Bits::b7) == 0) {
+				vramDMATransferLength = 0;
+				vramDMATransferProgress = 0;
+				return;
+			}
+
+			vramDMATransferSource = (memorySpace[0xFF51] << 8) | (memorySpace[0xFF52] & 0xF0);
+			vramDMATransferDestination = (memorySpace[0xFF53] << 8) | (memorySpace[0xFF54] & 0xF0);
+			vramDMATransferLength = data & 0x7F;
+			vramDMATransferLength++;
+			vramDMATransferLength *= 10;
+
+			if ((data & Bits::b7) == 0) {
+				for (size_t i = 0; i < vramDMATransferLength; i++) {
+					Write(vramDMATransferDestination + i, Read(vramDMATransferSource + i));
+				}
+				vramDMATransferLength = 0;
+			}
+			else {
+				vramDMATransferProgress = 0;
+			}
+		}
+	}
+	else if (address == 0xFF69) {
+		if (ColorGameBoyMode == true) {
+			
+			byte index = memorySpace[0xFF68] & 0x3F;
+			BGColorPalette[index] = data;
+			
+			if ((memorySpace[0xFF68] & Bits::b7) != 0) {
+				memorySpace[0xFF68] = (memorySpace[0xFF68] + 1) & 0xBF;
+			}
+		}
+		else {
+			memorySpace[address] = data;
+		}
+	}
+	else if (address == 0xFF6B) {
+		if (ColorGameBoyMode == true) {
+
+			byte index = memorySpace[0xFF6A] & 0x3F;
+			SpriteColorPalette[index] = data;
+
+			if ((memorySpace[0xFF6A] & Bits::b7) != 0) {
+				memorySpace[0xFF6A] = (memorySpace[0xFF6A] + 1) & 0xBF;
+			}
+		}
+		else {
+			memorySpace[address] = data;
+		}
+	}
+	else if (address == 0xFF70) {
+		if (ColorGameBoyMode == true) {
+			currentWramBank = (data & 0x7);
+			if(currentWramBank == 0) currentWramBank = 1;
+			memorySpace[address] = data;
+		}
+		else {
+			memorySpace[address] = data;
+		}
+	}
 	else {
 		memorySpace[address] = data; // no special behaviour
 	}
-
 }
 
 byte Memory::GetJoypadState() {
@@ -374,4 +567,21 @@ void Memory::DumpStack(word spAddress, std::string fileName) {
 	out.close();
 
 
+}
+
+
+
+void Memory::HBlankDMA() {
+
+	if (vramDMATransferProgress < vramDMATransferLength) {
+		for (size_t i = 0; i < 0x10; i++) {
+			Write(vramDMATransferDestination + vramDMATransferProgress, Read(vramDMATransferSource + vramDMATransferProgress));
+			vramDMATransferProgress++;
+		}
+	}
+
+	if (vramDMATransferProgress >= vramDMATransferLength) {
+		vramDMATransferProgress = 0;
+		vramDMATransferLength = 0;
+	}
 }
