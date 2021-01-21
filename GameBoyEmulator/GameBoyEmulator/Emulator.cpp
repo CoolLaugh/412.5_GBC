@@ -36,9 +36,9 @@ void Emulator::Update() {
 	}
 	totalCycles -= 70224;
 	graphics.updateWindow();
-	graphics.updateTileWindow();
+	//graphics.updateTileWindow();
 	graphics.updateBGMapWindow2();
-	graphics.updateColorPaletteWindow();
+	//graphics.updateColorPaletteWindow();
 	elapsedFrames++;
 }
 
@@ -83,6 +83,9 @@ void Emulator::Loop() {
 				}
 				else if (event.key.code == sf::Keyboard::F2) {
 					loadState();
+				}
+				else if (event.key.code == sf::Keyboard::F3) {
+					cpu.memory.DumpMemory();
 				}
 				else if (event.key.code == sf::Keyboard::F5) {
 					cpu.logState = !cpu.logState;

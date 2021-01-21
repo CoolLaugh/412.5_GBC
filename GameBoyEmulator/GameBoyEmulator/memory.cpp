@@ -198,7 +198,7 @@ void Memory::CreateRamBanks() {
 	}
 }
 
-byte Memory::Read(word address) {
+byte Memory::Read(word address, int vRamBank) {
 
 	if (address == 0xFF26) { // hack for no audio
 		return 0x00;
@@ -212,7 +212,12 @@ byte Memory::Read(word address) {
 		return cartridge[memoryBankOffset + offset];
 	}
 	else if (address >= 0x8000 && address <= 0x9FFF) {
-		return vramBank[currentVramBank][address - 0x8000];
+		if (vRamBank == -1) {
+			return vramBank[currentVramBank][address - 0x8000];
+		}
+		else {
+			return vramBank[vRamBank][address - 0x8000];
+		}
 	}
 	// Ram bank 0xA000 - 0xBFFF
 	else if (address >= 0xA000 && address <= 0xBFFF) {
@@ -529,7 +534,7 @@ void Memory::DumpMemory(std::string fileName) {
 
 	for (size_t i = 0; i <= 0xFFFF; i++) {
 
-		byte value = memorySpace[i];
+		byte value = Read(i);
 		out << value;
 	}
 	out.close();

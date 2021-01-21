@@ -201,6 +201,7 @@ public:
 	word CombinebytesR(byte value1, byte value2);
 	std::pair<byte, byte> splitBytesR(word value);
 
+	void cleanOutputState();
 	void outputState();
 	std::string outputStateBuffer;
 };

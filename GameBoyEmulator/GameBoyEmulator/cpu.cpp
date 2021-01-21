@@ -75,6 +75,7 @@ void Cpu::PowerUpSequence() {
 
 	memory.PowerUpSequence();
 
+	cleanOutputState();
 	outputStateBuffer.reserve(11000000);
 }
 
@@ -1339,6 +1340,13 @@ std::pair<byte, byte> Cpu::splitBytesR(word value) {
 	return std::make_pair(first, second);
 }
 
+void Cpu::cleanOutputState() {
+
+	std::ofstream out;
+	out.open("CPUStateLog.txt", std::ios::out | std::ios::trunc);
+	out.close();
+}
+
 void Cpu::outputState() {
 
 	if (logState == false) {
@@ -1347,22 +1355,31 @@ void Cpu::outputState() {
 
 	std::string hex[16] = { "0", "1", "2", "3", "4", "5", "6", "7", "8", "9", "A", "B", "C", "D", "E", "F" };
 
-	outputStateBuffer += "A: " + hex[(registers.a & 0xF0) >> 4] + hex[(registers.a & 0x0F)] + " ";
-	outputStateBuffer += "F: " + hex[(registers.f & 0xF0) >> 4] + hex[(registers.f & 0x0F)] + " ";
-	outputStateBuffer += "B: " + hex[(registers.b & 0xF0) >> 4] + hex[(registers.b & 0x0F)] + " ";
-	outputStateBuffer += "C: " + hex[(registers.c & 0xF0) >> 4] + hex[(registers.c & 0x0F)] + " ";
-	outputStateBuffer += "D: " + hex[(registers.d & 0xF0) >> 4] + hex[(registers.d & 0x0F)] + " ";
-	outputStateBuffer += "E: " + hex[(registers.e & 0xF0) >> 4] + hex[(registers.e & 0x0F)] + " ";
-	outputStateBuffer += "H: " + hex[(registers.h & 0xF0) >> 4] + hex[(registers.h & 0x0F)] + " ";
-	outputStateBuffer += "L: " + hex[(registers.l & 0xF0) >> 4] + hex[(registers.l & 0x0F)] + " ";
+	outputStateBuffer += "AF: " + hex[(registers.a & 0xF0) >> 4] + hex[(registers.a & 0x0F)];
+	outputStateBuffer += hex[(registers.f & 0xF0) >> 4] + hex[(registers.f & 0x0F)] + " ";
+	outputStateBuffer += "BC: " + hex[(registers.b & 0xF0) >> 4] + hex[(registers.b & 0x0F)];
+	outputStateBuffer += hex[(registers.c & 0xF0) >> 4] + hex[(registers.c & 0x0F)] + " ";
+	outputStateBuffer += "DE: " + hex[(registers.d & 0xF0) >> 4] + hex[(registers.d & 0x0F)];
+	outputStateBuffer += hex[(registers.e & 0xF0) >> 4] + hex[(registers.e & 0x0F)] + " ";
+	outputStateBuffer += "HL: " + hex[(registers.h & 0xF0) >> 4] + hex[(registers.h & 0x0F)];
+	outputStateBuffer += hex[(registers.l & 0xF0) >> 4] + hex[(registers.l & 0x0F)] + " ";
+
+	word HLAddress = Combinebytes(registers.l, registers.h);
+	outputStateBuffer += "(HL): (";
+	outputStateBuffer += hex[(memory.Read(HLAddress - 1) & 0xF0) >> 4] + hex[(memory.Read(HLAddress - 1) & 0x0F)];
+	outputStateBuffer += " ";
+	outputStateBuffer += hex[(memory.Read(HLAddress) & 0xF0) >> 4] + hex[(memory.Read(HLAddress) & 0x0F)];
+	outputStateBuffer += " ";
+	outputStateBuffer += hex[(memory.Read(HLAddress + 1) & 0xF0) >> 4] + hex[(memory.Read(HLAddress + 1) & 0x0F)];
+	outputStateBuffer += ") ";
 
 	outputStateBuffer += "SP: " + hex[(registers.sp & 0xF000) >> 12] + hex[(registers.sp & 0x0F00) >> 8];
 	outputStateBuffer += hex[(registers.sp & 0x00F0) >> 4] + hex[(registers.sp & 0x000F)] + " ";
 	
-	outputStateBuffer += "PC: 00:" + hex[(registers.pc & 0xF000) >> 12] + hex[(registers.pc & 0x0F00) >> 8];
+	outputStateBuffer += "PC: " + hex[(registers.pc & 0xF000) >> 12] + hex[(registers.pc & 0x0F00) >> 8];
 	outputStateBuffer += hex[(registers.pc & 0x00F0) >> 4] + hex[(registers.pc & 0x000F)] + " ";
 
-	outputStateBuffer += "(";
+	outputStateBuffer += "(PC): (";
 	outputStateBuffer += hex[(memory.Read(registers.pc) & 0xF0) >> 4] + hex[(memory.Read(registers.pc) & 0x0F)];
 	outputStateBuffer += " ";
 	outputStateBuffer += hex[(memory.Read(registers.pc + 1) & 0xF0) >> 4] + hex[(memory.Read(registers.pc + 1) & 0x0F)];
@@ -1370,7 +1387,9 @@ void Cpu::outputState() {
 	outputStateBuffer += hex[(memory.Read(registers.pc + 2) & 0xF0) >> 4] + hex[(memory.Read(registers.pc + 2) & 0x0F)];
 	outputStateBuffer += " ";
 	outputStateBuffer += hex[(memory.Read(registers.pc + 3) & 0xF0) >> 4] + hex[(memory.Read(registers.pc + 3) & 0x0F)];
-	outputStateBuffer += ")\n";
+	outputStateBuffer += ") ";
+
+	outputStateBuffer += OpcodeNames[memory.Read(registers.pc)] + "\n";
 
 	if (outputStateBuffer.size() > 10000000) {
 

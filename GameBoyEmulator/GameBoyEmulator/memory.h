@@ -59,7 +59,7 @@ public:
 	void PowerUpSequence();
 	bool LoadRom(const std::string fileName);
 	void CreateRamBanks();
-	byte Read(word address);
+	byte Read(word address, int vRamBank = -1);
 	void Write(word address, byte data);
 	byte GetJoypadState();
 	void DumpMemory(std::string fileName = "MemoryDump");

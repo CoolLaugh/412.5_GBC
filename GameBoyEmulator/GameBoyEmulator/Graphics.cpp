@@ -13,6 +13,9 @@ Graphics::Graphics() {
 	background = new sf::Image();
 	background->create(ScreenWidth, ScreenHeight, sf::Color::White);
 
+	backgroundPixels = new sf::Uint8[ScreenWidth * ScreenHeight * 4];
+
+
 	setupTileWindow(); 
 	setupBGMapWindow();
 	setupColorPaletteWindow();
@@ -244,8 +247,44 @@ void Graphics::updateBGMapWindow2() {
 	BGMapWindow->setView(*BGMapView);
 
 	for (size_t i = 0; i < 256; i++) {
-
 		DrawBackgroundLine(0, i, i, 256, BGMapBackgroundPixels);
+	}	
+	
+	//draw gameboy screen outline
+	byte scrollX = memory->Read(Address::ScrollX);
+	byte scrollY = memory->Read(Address::ScrollY);
+
+	for (size_t i = 0; i < 2; i++) {
+
+		int y = (scrollY + (i * ScreenHeight)) % 256;
+
+		for (size_t xPos = 0; xPos < ScreenWidth; xPos++) {
+
+			int x = (scrollX + xPos) % 256;
+
+			int index = (y * 256 + x) * 4;
+
+			BGMapBackgroundPixels[index + 0] = 0xFF;
+			BGMapBackgroundPixels[index + 1] = 0x00;
+			BGMapBackgroundPixels[index + 2] = 0x00;
+			BGMapBackgroundPixels[index + 3] = 0xFF;
+		}
+	}
+	for (size_t i = 0; i < 2; i++) {
+
+		int x = (scrollX + (ScreenWidth * i)) % 256;
+
+		for (size_t yPos = 0; yPos < ScreenHeight; yPos++) {
+
+			int y = (scrollY + yPos) % 256;
+
+			int index = (y * 256 + x) * 4;
+
+			BGMapBackgroundPixels[index + 0] = 0xFF;
+			BGMapBackgroundPixels[index + 1] = 0x00;
+			BGMapBackgroundPixels[index + 2] = 0x00;
+			BGMapBackgroundPixels[index + 3] = 0xFF;
+		}
 	}
 
 	BGMapBackground->create(256, 256, BGMapBackgroundPixels);
@@ -333,6 +372,7 @@ void Graphics::updateWindow() {
 
 	window->clear();
 	window->setView(*view);
+	background->create(ScreenWidth, ScreenHeight, backgroundPixels);
 	sf::Texture backgroundTexture;
 	backgroundTexture.loadFromImage(*background);
 	sf::Sprite backgroundSprite;
@@ -370,7 +410,7 @@ void Graphics::drawScanLine() {
 
 	if (memory->Read(Address::LY) < ScreenHeight) {
 
-		drawBackground();
+		drawBackground2();
 		drawSprites();
 		memory->HBlankDMA();
 	}
@@ -507,6 +547,15 @@ void Graphics::drawBackground() {
 	}
 }
 
+void Graphics::drawBackground2() {
+
+	byte scrollY = memory->Read(Address::ScrollY);
+	byte scrollX = memory->Read(Address::ScrollX);
+	byte LY = memory->Read(Address::LY);
+
+	DrawBackgroundLine(scrollX, scrollY + LY, LY, ScreenWidth, backgroundPixels);
+}
+
 byte Graphics::bitData(byte val, byte bit) {
 	
 	byte testBit = Bits::b7 >> bit;
@@ -583,7 +632,13 @@ void Graphics::drawSprites() {
 				byte color = (OGP & (0x3 << offset)) >> offset;
 
 				if (LY < 144 && pixelX < 160 && pixel != 0) {
-					background->setPixel(pixelX, LY, BWPalette[color]);
+
+					int screenIndex = ((LY * ScreenWidth) + pixelX) * 4;
+
+					backgroundPixels[screenIndex + 0] = BWPalette[color].r;
+					backgroundPixels[screenIndex + 1] = BWPalette[color].g;
+					backgroundPixels[screenIndex + 2] = BWPalette[color].b;
+					backgroundPixels[screenIndex + 3] = 0xFF;
 				}
 			}
 		}
@@ -591,7 +646,7 @@ void Graphics::drawSprites() {
 
 }
 
-void Graphics::DrawBackgroundLine(int startX, int row, int screenY, int screenWidth, sf::Uint8* screen) {
+void Graphics::DrawBackgroundLine(int startX, int row, int screenY, int screenWidth, sf::Uint8* screen, bool drawWindow) {
 
 	byte LCDC = memory->Read(Address::LCDC);
 
@@ -615,12 +670,12 @@ void Graphics::DrawBackgroundLine(int startX, int row, int screenY, int screenWi
 		word memoryTileAddress = 0;
 		if (signedAddressingMode == false) {
 
-			byte tileNumber = memory->Read(backgroundMapAddress);
+			byte tileNumber = memory->Read(backgroundMapAddress, 0);
 			memoryTileAddress = Address::TilePattern0 + tileNumber * 16;
 		}
 		else {
 
-			signed char tileNumber = memory->Read(backgroundMapAddress);
+			signed char tileNumber = memory->Read(backgroundMapAddress, 0);
 			memoryTileAddress = Address::TilePattern1 + (tileNumber + 0x80) * 16;
 		}
 
@@ -630,8 +685,8 @@ void Graphics::DrawBackgroundLine(int startX, int row, int screenY, int screenWi
 		byte VramBank = 0;
 
 		if (ColorGameBoyMode == true) {
-
-			CGBAttributes = memory->vramBank[1][backgroundMapAddress - 0x8000];
+			
+			CGBAttributes = memory->Read(backgroundMapAddress, 1);
 
 			if (BitTest(CGBAttributes, 6) == true) {
 				yFlip = true;
@@ -653,8 +708,8 @@ void Graphics::DrawBackgroundLine(int startX, int row, int screenY, int screenWi
 
 		word address = memoryTileAddress + TilePixelY * 2;
 
-		byte pixelDataLow = memory->Read(address);
-		byte pixelDataHigh = memory->Read(address + 1);
+		byte pixelDataLow = memory->vramBank[VramBank][address - 0x8000];
+		byte pixelDataHigh = memory->vramBank[VramBank][(address + 1) - 0x8000];
 
 		do {
 

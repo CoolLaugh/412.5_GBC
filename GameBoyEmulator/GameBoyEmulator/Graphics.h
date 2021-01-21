@@ -16,6 +16,7 @@ public:
 private:
 	sf::View* view;
 	sf::Image* background;
+	sf::Uint8* backgroundPixels;
 
 	sf::View* tileMemoryView;
 	sf::Image* tileMemoryBackground;
@@ -61,10 +62,11 @@ public:
 	void update(short cyclesThisUpdate);
 	void drawScanLine();
 	void drawBackground();
+	void drawBackground2();
 	byte bitData(byte val, byte bit);
 	void drawSprites();
 
-	void DrawBackgroundLine(int startX, int row, int screenY, int screenWidth, sf::Uint8* screen);
+	void DrawBackgroundLine(int startX, int row, int screenY, int screenWidth, sf::Uint8* screen, bool drawWindow = false);
 
 	sf::Color* GetBGPalette(byte CGBMapAttributes);
 };

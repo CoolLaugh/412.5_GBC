@@ -1,4 +1,5 @@
 #pragma once
+#include <string>
 
 typedef unsigned char byte;
 typedef unsigned short word;
@@ -66,3 +67,21 @@ enum Bits {
 };
 
 bool BitTest(byte value, int bit);
+
+
+static std::string OpcodeNames[] = {	"NOP", "LD16 BC", "A->(BC)", "INC16 BC" , "INC B" , "DEC B" , "LD B" , "RLC A" , "SP->(NN)" , "ADDHL BC" , "(BC)->A" , "DEC16 BC" , "INC C" , "DEC C" , "LD C" , "RRC A", // 0
+										"STOP", "LD16 DE", "(DE)<-A" , "INC16 DE" , "INC D" , "DEC D" , "LD D" , "RL A" , "JR" , "ADDHL DE" , "A<-(HL)" , "DEC16 DE" , "INC E" , "DEC E" , "LD E" , "RR A",
+										"JRnz", "LD16 HL", "(HL)<-A INC HL" , "INC16 HL" , "INC H" , "DEC H" , "LD H" , "DAA" , "JRz" , "ADDHL HL" , "A<-(HL) INC HL" , "DEC16 HL" , "INC L" , "DEC L" , "LD L" , "CPL", // 2
+										"JRnc", "LD16 SP", "(HL)<-A DEC HL" , "INC16 SP" , "INC (HL)" , "DEC (HL)" , "(HL)<-N" , "SCF" , "JRc" , "ADDHL SP" , "A<-(HL) DEC HL" , "DEC16 SP" , "INC A" , "DEC A" , "LD A" , "CCF",
+										"LD B<-B", "LD B<-C", "LD B<-D" , "LD B<-E" , "LD B<-H" , "LD B<-L" , "LD B<-(HL)" , "LD B<-A" , "LD C<-B" , "LD C<-C" , "LD C<-D" , "LD C<-E" , "LD C<-H" , "LD C<-L" , "LD C<-(HL)" , "LD C<-A", // 4
+										"LD D<-B", "LD D<-C", "LD D<-D" , "LD D<-E" , "LD D<-H" , "LD D<-L" , "LD D<-(HL)" , "LD D<-A" , "LD E<-B" , "LD E<-C" , "LD E<-D" , "LD E<-E" , "LD E<-H" , "LD E<-L" , "LD E<-(HL)" , "LD E<-A",
+										"LD H<-B", "LD H<-C", "LD H<-D" , "LD H<-E" , "LD H<-H" , "LD H<-L" , "LD H<-(HL)" , "LD H<-A" , "LD L<-B" , "LD L<-C" , "LD L<-D" , "LD L<-E" , "LD L<-H" , "LD L<-L" , "LD L<-(HL)" , "LD L<-A", // 6
+										"(HL)<-B", "(HL)<-C", "(HL)<-D" , "(HL)<-E" , "(HL)<-H" , "(HL)<-L" , "HALT" , "(HL)<-A" , "LD A<-B" , "LD A<-C" , "LD A<-D" , "LD A<-E" , "LD A<-H" , "LD A<-L" , "LD A<-(HL)" , "LD A<-A",
+										"ADD B", "ADD C", "ADD D" , "ADD E" , "ADD H" , "ADD L" , "ADD (HL)" , "ADD A" , "ADDC B" , "ADDC C" , "ADDC D" , "ADDC E" , "ADDC H" , "ADDC L" , "ADDC (HL)" , "ADDC A", // 8
+										"SUB B", "SUB C", "SUB D" , "SUB E" , "SUB H" , "SUB L" , "SUB (HL)" , "SUB A" , "SUBC B" , "SUBC C" , "SUBC D" , "SUBC E" , "SUBC H" , "SUBC L" , "SUBC (HL)" , "SUBC A",
+										"AND B", "AND C", "AND D" , "AND E" , "AND H" , "AND L" , "AND (HL)" , "AND A" , "XOR B" , "XOR C" , "XOR D" , "XOR E" , "XOR H" , "XOR L" , "XOR (HL)" , "XOR A", // A
+										"OR B", "OR C", "OR D" , "OR E" , "OR H" , "OR L" , "OR (HL)" , "OR A" , "CP B" , "CP C" , "CP D" , "CP E" , "CP H" , "CP L" , "CP (HL)" , "CP A",
+										"RETnz", "POP BC", "JPnz" , "JP" , "CALLnz" , "PUSH BC" , "ADD N" , "RST00" , "RETz" , "RET" , "JPz" , "Extended: " , "CALLz" , "CALL" , "ADDC N" , "RST08", // C
+										"RETnc", "POP DE", "JPnc" , "missing opcode" , "CALLnc" , "PUSH DE" , "SUB N" , "RST10" , "RETc" , "RETI" , "JPc" , "missing opcode" , "CALLc" , "missing opcode" , "missing opcode" , "RST18",
+										"(0xFF00+N)<-A", "POP HL", "(0xFF00+C)<-A" , "missing opcode" , "missing opcode" , "PUSH HL" , "AND N" , "RST20" , "ADD SP sN" , "JPHL" , "(NN)<-A" , "missing opcode" , "missing opcode" , "missing opcode" , "XOR N" , "RST28", // E
+										"A<-(0xFF00+N)", "POP AF", "A<-(0xFF00+C)" , "DI" , "missing opcode" , "PUSH AF" , "missing opcode" , "RST30" , "HL<-SP+sN" , "SP<-HL" , "A<-(NN)" , "EI" , "missing opcode" , "missing opcode" , "CP N" , "RST38" };
