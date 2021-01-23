@@ -43,6 +43,13 @@ void Memory::PowerUpSequence() {
 	memorySpace[0xFF4B] = 0x00;
 	memorySpace[0xFFFF] = 0x00;
 
+	// cycle accurate docs initial value
+	if (ColorGameBoyMode == false) {
+		dividerRegister = 0xABCC;
+	}
+	else {
+		dividerRegister = 0x1EA0;
+	}
 	
 	// 0xFFXX values not documented but set in other emulators
 	//if (ColorGameBoyMode == true) {
@@ -229,6 +236,9 @@ byte Memory::Read(word address, int vRamBank) {
 	else if (address >= 0xD000 && address <= 0xDFFF) {
 		return wramBank[currentWramBank][address - 0xD000];
 	}
+	else if (address == 0xFF04) {
+		return (byte)((dividerRegister >> 8) & 0xFF);
+	}
 	else if (address == 0xFF55 && ColorGameBoyMode == true) {
 		if (vramDMATransferProgress == 0 && vramDMATransferLength == 0) {
 			return 0xFF;
@@ -245,7 +255,6 @@ byte Memory::Read(word address, int vRamBank) {
 	else if (address == Address::Joypad) {
 		return GetJoypadState();
 	}
-
 	return memorySpace[address];
 }
 
@@ -399,7 +408,7 @@ void Memory::Write(word address, byte data) {
 		}
 	}
 	else if (address == 0xFF04) { // DIV register
-		memorySpace[address] = 0;
+		dividerRegister = 0;
 	}
 	else if (address == 0xFF44) {
 		memorySpace[address] = 0;
@@ -526,6 +535,47 @@ byte Memory::GetJoypadState() {
 	return buttonsPressed;
 }
 
+
+
+// below replicates the exact hardware of the divider register and timer counter 
+// as described in section 5 of The Cycle-Accurate Game Boy Docs by Antonio Nino Diaz
+void Memory::IncrementDivAndTimerRegisters(byte clocks) {
+
+	if (timerOverflow == true) {
+		timerOverflow = false;
+
+		// if a value is written right after the timer overflows then timer isn't reset and the interupt flag register is unchanged
+		if (memorySpace[Address::Timer] == 0) { 
+			memorySpace[Address::Timer] = memorySpace[Address::TimerModulo];
+			BitSet(memorySpace[Address::InteruptFlag], 2);
+		}
+	}
+
+	for (size_t i = 0; i < clocks; i++) {
+
+		dividerRegister++;
+
+		bool newBit = false;
+		switch (memorySpace[Address::TimerControl] & 0x3) {
+		case 0: newBit = BitTest(dividerRegister, 9); break;
+		case 1: newBit = BitTest(dividerRegister, 3); break;
+		case 2: newBit = BitTest(dividerRegister, 5); break;
+		case 3: newBit = BitTest(dividerRegister, 7); break;
+		}
+
+		newBit &= BitTest(memorySpace[Address::TimerControl], 2);
+
+		if (!newBit & oldBit) {
+			if (memorySpace[Address::Timer] == 0xFF) { // about to overflow
+				timerOverflow = true;
+			}
+			memorySpace[Address::Timer]++;
+		}
+
+		oldBit = newBit;
+	}
+
+}
 
 void Memory::DumpMemory(std::string fileName) {
 

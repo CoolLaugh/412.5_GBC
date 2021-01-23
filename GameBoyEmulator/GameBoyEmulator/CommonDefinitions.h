@@ -67,6 +67,9 @@ enum Bits {
 };
 
 bool BitTest(byte value, int bit);
+void BitSet(byte& value, int bit);
+void BitReset(byte& value, int bit);
+bool BitTest(word value, int bit);
 
 
 static std::string OpcodeNames[] = {	"NOP", "LD16 BC", "A->(BC)", "INC16 BC" , "INC B" , "DEC B" , "LD B" , "RLC A" , "SP->(NN)" , "ADDHL BC" , "(BC)->A" , "DEC16 BC" , "INC C" , "DEC C" , "LD C" , "RRC A", // 0

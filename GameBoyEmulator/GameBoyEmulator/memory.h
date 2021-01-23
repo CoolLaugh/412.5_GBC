@@ -54,6 +54,9 @@ public:
 	std::vector<byte*> vramBank;
 	byte mbc = 0;
 	MemoryModel memoryModel;
+	word dividerRegister = 0;
+	bool timerOverflow = false;
+	bool oldBit = false;
 
 	Memory(); 
 	void PowerUpSequence();
@@ -62,6 +65,7 @@ public:
 	byte Read(word address, int vRamBank = -1);
 	void Write(word address, byte data);
 	byte GetJoypadState();
+	void IncrementDivAndTimerRegisters(byte clocks);
 	void DumpMemory(std::string fileName = "MemoryDump");
 	void DumpStack(word spAddress, std::string fileName = "StackDump");
 

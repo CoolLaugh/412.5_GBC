@@ -75,7 +75,6 @@ void Cpu::PowerUpSequence() {
 
 	memory.PowerUpSequence();
 
-	cleanOutputState();
 	outputStateBuffer.reserve(11000000);
 }
 
@@ -672,6 +671,8 @@ word Cpu::HALT() {
 
 // halt cpu and display until button push
 word Cpu::STOP() {
+
+	memory.dividerRegister = 0;
 
 	registers.pc++;
 
@@ -1462,71 +1463,7 @@ void Cpu::performInterupts() {
 	}
 }
 
-void Cpu::dividerRegisterINC(short cycles) {
 
-	dividerCycles += cycles * speedMode;
-
-	if (dividerCycles > 256) { // incremented at rate of 16384Hz (4194304 Hz cpu / 16384Hz = 256)
-		dividerCycles -= 256;
-		memory.memorySpace[Address::DIVRegister]++;
-	}
-
-}
-
-void Cpu::TimerCounterINC(short cycles) {
-
-
-	byte TimerControl = memory.Read(Address::TimerControl);
-	
-	if (bitTest(TimerControl, Bits::b2) == false) {
-		return;
-	}
-
-	switch (TimerControl & 0x3) {
-	case 0: clockFrequency = 1024; break;
-	case 1: clockFrequency = 16; break;
-	case 2: clockFrequency = 64; break;
-	case 3: clockFrequency = 256; break;
-	}
-
-	//if (memory.timerFrequencyChange > 0) {
-	//	if (clockFrequency != memory.timerFrequencyChange) {
-
-	//		clockFrequency = memory.timerFrequencyChange;
-	//		timerCycles = 0;
-	//	}
-	//	memory.timerFrequencyChange = 0;
-	//}
-
-	timerCycles += cycles * speedMode;
-
-	while(timerCycles >= clockFrequency) {
-
-		timerCycles -= clockFrequency;
-		byte TimerCounter = memory.Read(Address::Timer);
-
-
-		if (TimerCounter == 0xFF) {
-			timerOverflow = true; // timer isn't reset until one cycle after overflow
-		}
-
-		if (TimerCounter == 0x00 && timerOverflow == true) {
-
-			TimerCounter = memory.Read(Address::TimerModulo);
-			timerOverflow = false;
-			
-			byte interuptFlags = memory.Read(Address::InteruptFlag);
-			interuptFlags |= (1 << interruptFlags::Timer);
-			memory.Write(Address::InteruptFlag, interuptFlags);
-		}
-		else {
-
-			TimerCounter++;
-		}
-
-		memory.Write(Address::Timer, TimerCounter);
-	}
-}
 
 void Cpu::LCDStatusRegister(word& cyclesThisLine) {
 

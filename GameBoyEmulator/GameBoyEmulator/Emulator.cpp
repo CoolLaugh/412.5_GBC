@@ -2,7 +2,7 @@
 
 Emulator::Emulator() {
 
-	cpu.memory.LoadRom("./gb/LOZLADX.gbc");
+	cpu.memory.LoadRom("./gb/LOZLA.gb");
 	cpu.ColorGameBoyMode = cpu.memory.ColorGameBoyMode;
 	graphics.ColorGameBoyMode = cpu.memory.ColorGameBoyMode;
 	cpu.PowerUpSequence();
@@ -29,16 +29,15 @@ void Emulator::Update() {
 		cpu.LCDStatusRegister(graphics.cyclesThisLine);
 		graphics.update(cycles / cpu.speedMode);
 		cpu.performInterupts();
-		cpu.dividerRegisterINC(cycles);
-		cpu.TimerCounterINC(cycles);
+		cpu.memory.IncrementDivAndTimerRegisters(cycles);
 
 		elapsedOpcodes++;
 	}
 	totalCycles -= 70224;
 	graphics.updateWindow();
-	//graphics.updateTileWindow();
+	graphics.updateTileWindow();
 	graphics.updateBGMapWindow2();
-	//graphics.updateColorPaletteWindow();
+	graphics.updateColorPaletteWindow();
 	elapsedFrames++;
 }
 
@@ -89,6 +88,9 @@ void Emulator::Loop() {
 				}
 				else if (event.key.code == sf::Keyboard::F5) {
 					cpu.logState = !cpu.logState;
+					if (cpu.logState == true) {
+						cpu.cleanOutputState();
+					}
 				}
 			}
 			else if (event.type == sf::Event::KeyReleased) {
@@ -157,12 +159,8 @@ void Emulator::saveState() {
 	variablesState[variablesIndex++] = cpu.interuptDisable;
 	variablesState[variablesIndex++] = cpu.interuptDisableInstructionCount;
 
-	variablesState[variablesIndex++] = cpu.splitBytes(cpu.dividerCycles).first;
-	variablesState[variablesIndex++] = cpu.splitBytes(cpu.dividerCycles).second;
-	variablesState[variablesIndex++] = cpu.splitBytes(cpu.clockFrequency).first;
-	variablesState[variablesIndex++] = cpu.splitBytes(cpu.clockFrequency).second;
-	variablesState[variablesIndex++] = cpu.splitBytes(cpu.timerCycles).first;
-	variablesState[variablesIndex++] = cpu.splitBytes(cpu.timerCycles).second;
+	variablesState[variablesIndex++] = cpu.splitBytes(cpu.memory.dividerRegister).first;
+	variablesState[variablesIndex++] = cpu.splitBytes(cpu.memory.dividerRegister).second;
 
 	variablesState[variablesIndex++] = cpu.timerOverflow;
 	variablesState[variablesIndex++] = cpu.ColorGameBoyMode;
@@ -286,11 +284,7 @@ void Emulator::loadState() {
 	cpu.interuptDisable = state[index++];
 	cpu.interuptDisableInstructionCount = state[index++];
 
-	cpu.dividerCycles = cpu.Combinebytes(state[index], state[index + 1]);
-	index += 2;
-	cpu.clockFrequency = cpu.Combinebytes(state[index], state[index + 1]);
-	index += 2;
-	cpu.timerCycles = cpu.Combinebytes(state[index], state[index + 1]);
+	cpu.memory.dividerRegister = cpu.Combinebytes(state[index], state[index + 1]);
 	index += 2;
 
 	cpu.timerOverflow = state[index++];

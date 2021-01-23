@@ -409,7 +409,6 @@ void Graphics::update(short cyclesThisUpdate) {
 void Graphics::drawScanLine() {
 
 	if (memory->Read(Address::LY) < ScreenHeight) {
-
 		drawBackground2();
 		drawSprites();
 		memory->HBlankDMA();
@@ -553,7 +552,7 @@ void Graphics::drawBackground2() {
 	byte scrollX = memory->Read(Address::ScrollX);
 	byte LY = memory->Read(Address::LY);
 
-	DrawBackgroundLine(scrollX, scrollY + LY, LY, ScreenWidth, backgroundPixels);
+	DrawBackgroundLine(scrollX, (scrollY + LY) % 256, LY, ScreenWidth, backgroundPixels);
 }
 
 byte Graphics::bitData(byte val, byte bit) {
@@ -666,7 +665,7 @@ void Graphics::DrawBackgroundLine(int startX, int row, int screenY, int screenWi
 	int screenX = 0;
 	while (screenX < screenWidth) {
 
-		word backgroundMapAddress = backgroundMapAddressRowStart + ((screenX + startX) / 8);
+		word backgroundMapAddress = backgroundMapAddressRowStart + (((screenX + startX) % 256) / 8);
 		word memoryTileAddress = 0;
 		if (signedAddressingMode == false) {
 

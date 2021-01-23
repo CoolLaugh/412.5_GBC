@@ -61,9 +61,6 @@ public:
 	byte interuptEnableInstructionCount = 0;
 	bool interuptDisable = false;
 	byte interuptDisableInstructionCount = 0;
-	word dividerCycles = 0;
-	word clockFrequency = 1024;
-	word timerCycles = 0;
 	bool timerOverflow = false;
 	bool ColorGameBoyMode = false;
 	byte speedMode = 1;
@@ -86,8 +83,6 @@ public:
 	word ExecuteExtendedOpcode();
 
 	void performInterupts();
-	void dividerRegisterINC(short cycles);
-	void TimerCounterINC(short cycles);
 	void LCDStatusRegister(word& cyclesThisLine);
 
 	word LD(byte& reg);
