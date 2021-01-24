@@ -67,6 +67,7 @@ public:
 	void drawSprites();
 
 	void DrawBackgroundLine(int startX, int row, int screenY, int screenWidth, sf::Uint8* screen, bool drawWindow = false);
+	void DrawWindowLine();
 
 	sf::Color* GetBGPalette(byte CGBMapAttributes);
 };

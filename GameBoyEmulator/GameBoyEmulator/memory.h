@@ -37,12 +37,10 @@ public:
 	byte* memorySpace;
 	byte* BGColorPalette;
 	byte* SpriteColorPalette;
+
 	bool stopHblankDMA = false;
-
 	bool TileChanged = false;
-
 	bool ColorGameBoyMode = false;
-
 	byte currentRamBank = 0;
 	byte currentWramBank = 1;
 	byte currentVramBank = 0;

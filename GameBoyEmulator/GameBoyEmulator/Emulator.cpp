@@ -128,7 +128,7 @@ void Emulator::Loop() {
 
 void Emulator::saveState() {
 
-	auto memory = cpu.memory;
+	Memory& memory = cpu.memory;
 
 	byte* variablesState = new byte[0x100];
 	int variablesIndex = 0;
@@ -156,13 +156,6 @@ void Emulator::saveState() {
 	variablesState[variablesIndex++] = cpu.interupt;
 	variablesState[variablesIndex++] = cpu.interuptEnable;
 	variablesState[variablesIndex++] = cpu.interuptEnableInstructionCount;
-	variablesState[variablesIndex++] = cpu.interuptDisable;
-	variablesState[variablesIndex++] = cpu.interuptDisableInstructionCount;
-
-	variablesState[variablesIndex++] = cpu.splitBytes(cpu.memory.dividerRegister).first;
-	variablesState[variablesIndex++] = cpu.splitBytes(cpu.memory.dividerRegister).second;
-
-	variablesState[variablesIndex++] = cpu.timerOverflow;
 	variablesState[variablesIndex++] = cpu.ColorGameBoyMode;
 	variablesState[variablesIndex++] = cpu.speedMode;
 
@@ -171,6 +164,7 @@ void Emulator::saveState() {
 	variablesState[variablesIndex++] = cpu.splitBytes(graphics.cyclesThisLine).second;
 
 
+	variablesState[variablesIndex++] = memory.stopHblankDMA;
 	variablesState[variablesIndex++] = memory.currentRamBank;
 	variablesState[variablesIndex++] = memory.currentWramBank;
 	variablesState[variablesIndex++] = memory.currentVramBank;
@@ -179,19 +173,23 @@ void Emulator::saveState() {
 	variablesState[variablesIndex++] = memory.ramBankEnabled;
 	variablesState[variablesIndex++] = memory.mbc;
 	variablesState[variablesIndex++] = memory.memoryModel;
+	variablesState[variablesIndex++] = cpu.splitBytes(memory.dividerRegister).first;
+	variablesState[variablesIndex++] = cpu.splitBytes(memory.dividerRegister).second;
+	variablesState[variablesIndex++] = memory.timerOverflow;
+	variablesState[variablesIndex++] = memory.oldBit;
 
 	int sizeOfVariables = variablesIndex;
 	int sizeOfVram = memory.vramBank.size() * 0x2000;
 	int sizeOfMemorySpaceBank = memory.ramBank.size() * 0x2000;
 	int sizeOfWram = memory.wramBank.size() * 0x1000;
-	int sizeOfMemorySpaceAfterBank = 0x10000 - 0xE000;
+	int sizeOfMemorySpace = 0x10000;
 	int sizeOfColorPalette = 0x40 + 0x40;
 
 	int fileSize = sizeOfVariables +
 					sizeOfVram +
 					sizeOfMemorySpaceBank +
 					sizeOfWram +
-					sizeOfMemorySpaceAfterBank + 
+					sizeOfMemorySpace + 
 					sizeOfColorPalette;
 
 	byte* state = new byte[fileSize];
@@ -223,7 +221,7 @@ void Emulator::saveState() {
 		}
 	}
 
-	for (size_t i = 0xE000; i <= 0xFFFF; i++) {
+	for (size_t i = 0x0000; i <= 0xFFFF; i++) {
 		state[index++] = memory.memorySpace[i];
 	}
 
@@ -281,24 +279,15 @@ void Emulator::loadState() {
 	cpu.interupt = state[index++];
 	cpu.interuptEnable = state[index++];
 	cpu.interuptEnableInstructionCount = state[index++];
-	cpu.interuptDisable = state[index++];
-	cpu.interuptDisableInstructionCount = state[index++];
-
-	cpu.memory.dividerRegister = cpu.Combinebytes(state[index], state[index + 1]);
-	index += 2;
-
-	cpu.timerOverflow = state[index++];
 	cpu.ColorGameBoyMode = state[index++];
-	cpu.memory.ColorGameBoyMode = cpu.ColorGameBoyMode;
-	graphics.ColorGameBoyMode = cpu.ColorGameBoyMode;
 	cpu.speedMode = state[index++];
 
 
 	graphics.cyclesThisLine = cpu.Combinebytes(state[index], state[index + 1]);
 	index += 2;
 
-	auto memory = cpu.memory;
-
+	Memory& memory = cpu.memory;
+	memory.stopHblankDMA = state[index++];
 	memory.currentRamBank = state[index++];
 	memory.currentWramBank = state[index++];
 	memory.currentVramBank = state[index++];
@@ -307,6 +296,18 @@ void Emulator::loadState() {
 	memory.ramBankEnabled = state[index++];
 	memory.mbc = state[index++];
 	memory.memoryModel = (Memory::MemoryModel)state[index++];
+	cpu.memory.dividerRegister = cpu.Combinebytes(state[index], state[index + 1]);
+	index += 2;
+	memory.timerOverflow = state[index++];
+	memory.oldBit = state[index++];
+
+
+	cpu.memory.ColorGameBoyMode = cpu.ColorGameBoyMode;
+	graphics.ColorGameBoyMode = cpu.ColorGameBoyMode;
+
+
+
+
 
 	memory.CreateRamBanks();
 
@@ -334,7 +335,7 @@ void Emulator::loadState() {
 		}
 	}
 
-	for (size_t i = 0xE000; i <= 0xFFFF; i++) {
+	for (size_t i = 0x0000; i <= 0xFFFF; i++) {
 		memory.memorySpace[i] = state[index++];
 	}
 

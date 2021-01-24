@@ -118,7 +118,7 @@ word Cpu::LDHL() {
 	signed char n = memory.Read(registers.pc);
 	word hl = registers.sp + n;
 	registers.pc++;
-	auto pair = splitBytes(hl);
+	std::pair<byte, byte> pair = splitBytes(hl);
 	registers.l = pair.first;
 	registers.h = pair.second;
 
@@ -135,7 +135,7 @@ word Cpu::WriteSP() {
 	word address = Combinebytes(memory.Read(registers.pc), memory.Read(registers.pc + 1));
 	registers.pc += 2;
 
-	auto pair = splitBytes(registers.sp);
+	std::pair<byte, byte> pair = splitBytes(registers.sp);
 	memory.Write(address, pair.first);
 	memory.Write(address + 1, pair.second);
 
@@ -464,7 +464,7 @@ word Cpu::ADDHL(word value) {
 	halfCarryFlag16Hi(hl, value);
 	carryFlag16Hi(hl, value);
 
-	auto pair = splitBytes(result);
+	std::pair<byte, byte> pair = splitBytes(result);
 
 	registers.l = pair.first;
 	registers.h = pair.second;
@@ -497,7 +497,7 @@ word Cpu::INC16(byte & reg1, byte & reg2) {
 
 	combinedRegister++;
 
-	auto pair = splitBytes(combinedRegister);
+	std::pair<byte, byte> pair = splitBytes(combinedRegister);
 
 	reg1 = pair.first;
 	reg2 = pair.second;
@@ -520,7 +520,7 @@ word Cpu::DEC16(byte & reg1, byte & reg2) {
 
 	combinedRegister--;
 
-	auto pair = splitBytes(combinedRegister);
+	std::pair<byte, byte> pair = splitBytes(combinedRegister);
 
 	reg1 = pair.first;
 	reg2 = pair.second;
@@ -702,11 +702,13 @@ word Cpu::STOP() {
 
 // disable interupts
 word Cpu::DI() {
-	interuptDisable = true;
+	interupt = false;
+	interuptEnable = false;
 	return 4;
 }
 
 // enable interupts
+// EI has a one cycle delay but DI and RETI do not
 word Cpu::EI() {
 	interuptEnable = true;
 	return 4;
@@ -1170,7 +1172,7 @@ word Cpu::CALL() {
 
 	word address = Combinebytes(memory.Read(registers.pc), memory.Read(registers.pc + 1));
 
-	auto pair = splitBytes(registers.pc + 2);
+	std::pair<byte, byte> pair = splitBytes(registers.pc + 2);
 	registers.sp--;
 	memory.Write(registers.sp, pair.second);
 	registers.sp--;
@@ -1198,7 +1200,7 @@ word Cpu::CALLcc(condition cdn) {
 
 	if (call == true) {
 
-		auto pair = splitBytes(registers.pc + 2);
+		std::pair<byte, byte> pair = splitBytes(registers.pc + 2);
 		registers.sp--;
 		memory.Write(registers.sp, pair.second);
 		registers.sp--;
@@ -1217,7 +1219,7 @@ word Cpu::CALLcc(condition cdn) {
 // restart
 word Cpu::RST(short offset) {
 
-	auto pair = splitBytes(registers.pc);
+	std::pair<byte, byte> pair = splitBytes(registers.pc);
 	registers.sp--;
 	memory.Write(registers.sp, pair.second);
 	registers.sp--;
@@ -1278,31 +1280,27 @@ word Cpu::RETI() {
 
 	registers.pc = Combinebytes(first, second);
 
-	interuptEnable = true;
+	interupt = true;
 
 	return 16;
 }
 
 // decrement two registers as one 16 bit registers
-word Cpu::decrement16reg(byte & reg1, byte & reg2) {
+void Cpu::decrement16reg(byte & reg1, byte & reg2) {
 
 	word combined = Combinebytes(reg2, reg1);
 	combined--;
 	reg2 = (combined & 0xFF);
 	reg1 = (combined >> 8);
-
-	return 0;
 }
 
 // increment two registers as one 16 bit registers
-word Cpu::increment16reg(byte & reg1, byte & reg2) {
+void Cpu::increment16reg(byte & reg1, byte & reg2) {
 
 	word combined = Combinebytes(reg2, reg1);
 	combined++;
 	reg2 = (combined & 0xFF);
 	reg1 = (combined >> 8);
-
-	return 0;
 }
 
 // combine multiple registers into word
@@ -1390,7 +1388,12 @@ void Cpu::outputState() {
 	outputStateBuffer += hex[(memory.Read(registers.pc + 3) & 0xF0) >> 4] + hex[(memory.Read(registers.pc + 3) & 0x0F)];
 	outputStateBuffer += ") ";
 
-	outputStateBuffer += OpcodeNames[memory.Read(registers.pc)] + "\n";
+	outputStateBuffer += OpcodeNames[memory.Read(registers.pc)];
+
+	if (memory.Read(registers.pc) == 0xCB) {
+		outputStateBuffer += " " + OpcodeNames[memory.Read(registers.pc + 1)];
+	}
+	outputStateBuffer += "\n";
 
 	if (outputStateBuffer.size() > 10000000) {
 
@@ -1406,7 +1409,7 @@ void Cpu::outputState() {
 void Cpu::performInterupts() {
 
 	if (interuptEnable == true && interuptEnableInstructionCount == 0) {
-		// interupts enable is delayed by one instruction
+		// interupts enable is delayed by one instruction, DI and RETI are not
 		interuptEnableInstructionCount++;
 	}
 	else if (interuptEnable == true && interuptEnableInstructionCount >= 1) {
@@ -1415,15 +1418,6 @@ void Cpu::performInterupts() {
 		interupt = true;
 	}
 
-	if (interuptDisable == true && interuptDisableInstructionCount == 0) {
-		// interupts disable is delayed by one instruction
-		interuptDisableInstructionCount++;
-	}
-	else if (interuptDisable == true && interuptDisableInstructionCount >= 1) {
-		interuptDisableInstructionCount = 0;
-		interuptDisable = false;
-		interupt = false;
-	}
 
 	byte interuptFlags = memory.Read(Address::InteruptFlag);
 	byte interuptsEnabled = memory.Read(Address::InteruptEnable);
@@ -1441,7 +1435,7 @@ void Cpu::performInterupts() {
 
 			if (interuptFlag == true && interuptEnabled == true) {
 
-				auto pair = splitBytes(registers.pc);
+				std::pair<byte, byte> pair = splitBytes(registers.pc);
 				Push(pair.second, pair.first);
 
 				switch (i) {

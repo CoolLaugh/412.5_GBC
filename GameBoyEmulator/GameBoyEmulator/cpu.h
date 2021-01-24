@@ -59,9 +59,6 @@ public:
 	bool interupt = false;
 	bool interuptEnable = false;
 	byte interuptEnableInstructionCount = 0;
-	bool interuptDisable = false;
-	byte interuptDisableInstructionCount = 0;
-	bool timerOverflow = false;
 	bool ColorGameBoyMode = false;
 	byte speedMode = 1;
 
@@ -187,8 +184,8 @@ public:
 	word RETI();
 
 
-	word decrement16reg(byte& reg1, byte& reg2);
-	word increment16reg(byte& reg1, byte& reg2);
+	void decrement16reg(byte& reg1, byte& reg2);
+	void increment16reg(byte& reg1, byte& reg2);
 
 	word Combinebytes(byte value1, byte value2);
 	std::pair<byte, byte> splitBytes(word value);
