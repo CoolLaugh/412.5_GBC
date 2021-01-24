@@ -575,8 +575,16 @@ void Graphics::drawSprites() {
 
 	for (word i = 0; i < 40; i++) {
 
-		int positionY = memory->Read(spriteAttributeTable + (i * 4)) - 16;
-		int positionX = memory->Read(spriteAttributeTable + (i * 4) + 1) - 8;
+		int positionY = memory->Read(spriteAttributeTable + (i * 4));
+		if (positionY <= 0 || positionY >= 160) { // off-screen
+			continue;
+		}
+		int positionX = memory->Read(spriteAttributeTable + (i * 4) + 1);
+		if (positionX <= 0 || positionX >= 168) { // off-screen
+			continue;
+		}
+		positionY -= 16;
+		positionX -= 8;
 		byte patternNumber = memory->Read(spriteAttributeTable + (i * 4) + 2);
 		byte flags = memory->Read(spriteAttributeTable + (i * 4) + 3);
 
@@ -623,22 +631,34 @@ void Graphics::drawSprites() {
 				if (Xflip == true) {
 					pixelOffsetX -= 7;
 					pixelOffsetX *= -1;
-					//pixelOffsetX += 8;
 				}
 
 				int pixelX = positionX + pixelOffsetX;
 
-				byte offset = pixel * 2;
-				byte color = (OGP & (0x3 << offset)) >> offset;
-
 				if (LY < 144 && pixelX < 160 && pixel != 0) {
 
 					int screenIndex = ((LY * ScreenWidth) + pixelX) * 4;
+					if (ColorGameBoyMode == true) {
 
-					backgroundPixels[screenIndex + 0] = BWPalette[color].r;
-					backgroundPixels[screenIndex + 1] = BWPalette[color].g;
-					backgroundPixels[screenIndex + 2] = BWPalette[color].b;
-					backgroundPixels[screenIndex + 3] = 0xFF;
+						byte CGBPaletteNumber = flags & 0x7;
+						byte vRamBank = flags & Bits::b3;
+
+						sf::Color* palette = GetColorSpritePalette(CGBPaletteNumber);
+						backgroundPixels[screenIndex + 0] = palette[pixel].r;
+						backgroundPixels[screenIndex + 1] = palette[pixel].g;
+						backgroundPixels[screenIndex + 2] = palette[pixel].b;
+						backgroundPixels[screenIndex + 3] = 0xFF;
+					}
+					else {
+
+						byte offset = pixel * 2;
+						byte color = (OGP & (0x3 << offset)) >> offset;
+
+						backgroundPixels[screenIndex + 0] = BWPalette[color].r;
+						backgroundPixels[screenIndex + 1] = BWPalette[color].g;
+						backgroundPixels[screenIndex + 2] = BWPalette[color].b;
+						backgroundPixels[screenIndex + 3] = 0xFF;
+					}
 				}
 			}
 		}
@@ -711,6 +731,12 @@ void Graphics::DrawBackgroundLine(int startX, int row, int screenY, int screenWi
 		byte pixelDataLow = memory->vramBank[VramBank][address - 0x8000];
 		byte pixelDataHigh = memory->vramBank[VramBank][(address + 1) - 0x8000];
 
+		sf::Color* palette = nullptr;
+
+		if (ColorGameBoyMode) {
+			palette = GetBGPalette(CGBAttributes);
+		}
+
 		do {
 
 			int pixelX = (startX + screenX) % 8;
@@ -730,7 +756,6 @@ void Graphics::DrawBackgroundLine(int startX, int row, int screenY, int screenWi
 			int screenIndex = ((screenY * screenWidth) + screenX) * 4;
 			if (ColorGameBoyMode) {
 
-				sf::Color* palette = GetBGPalette(CGBAttributes);
 				screen[screenIndex + 0] = palette[pixel].r;
 				screen[screenIndex + 1] = palette[pixel].g;
 				screen[screenIndex + 2] = palette[pixel].b;
@@ -846,7 +871,7 @@ void Graphics::DrawWindowLine() {
 				pixel |= Bits::b1;
 			}
 
-			int screenIndex = ((LY * ScreenWidth) + (screenX - 8)) * 4;
+			int screenIndex = ((LY * ScreenWidth) + (screenX - 7)) * 4;
 			if (ColorGameBoyMode) {
 
 				sf::Color* palette = GetBGPalette(CGBAttributes);
@@ -901,4 +926,25 @@ sf::Color* Graphics::GetBGPalette(byte CGBMapAttributes) {
 	}
 
 	return CGBPalette;
+}
+
+sf::Color * Graphics::GetColorSpritePalette(int paletteNumber) {
+
+	for (size_t i = 0; i < 8; i += 2) {
+
+		byte low = memory->SpriteColorPalette[(paletteNumber * 8) + i];
+		byte high = memory->SpriteColorPalette[(paletteNumber * 8) + i + 1];
+
+		byte red = low & 0x1F;
+		byte green = ((low & 0xE0) >> 5) | ((high & 0x3) << 3);
+		byte blue = (high & 0x7C) >> 2;
+
+		red <<= 3;
+		green <<= 3;
+		blue <<= 3;
+
+		CGBSpritePalette[i / 2] = sf::Color(red, green, blue);
+	}
+
+	return CGBSpritePalette;
 }

@@ -12,6 +12,8 @@ class Emulator {
 	int elapsedOpcodes = 0;
 	int totalCycles = 0;
 
+	std::string Filename = "LOZLA";
+
 public:
 
 	Emulator();

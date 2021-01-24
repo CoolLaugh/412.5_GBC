@@ -2,7 +2,7 @@
 
 Emulator::Emulator() {
 
-	cpu.memory.LoadRom("./gb/LOZLA.gb");
+	cpu.memory.LoadRom("./gb/" + Filename + ".gb");
 	cpu.ColorGameBoyMode = cpu.memory.ColorGameBoyMode;
 	graphics.ColorGameBoyMode = cpu.memory.ColorGameBoyMode;
 	cpu.PowerUpSequence();
@@ -233,7 +233,7 @@ void Emulator::saveState() {
 		state[index++] = memory.SpriteColorPalette[i];
 	}
 
-	std::ofstream stateFile("saveState", std::ofstream::binary);
+	std::ofstream stateFile(Filename + "SaveState.ss", std::ofstream::binary);
 	stateFile.write((char *)state, fileSize);
 	stateFile.close();
 
@@ -243,7 +243,7 @@ void Emulator::saveState() {
 
 void Emulator::loadState() {
 
-	std::ifstream stateFile("saveState", std::ifstream::binary);
+	std::ifstream stateFile(Filename + "SaveState.ss", std::ifstream::binary);
 
 	stateFile.seekg(0, std::ios::end);
 	int length = stateFile.tellg();

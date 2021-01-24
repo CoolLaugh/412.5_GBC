@@ -40,6 +40,7 @@ private:
 							sf::Color(0x00,0x00,0x00)};
 
 	sf::Color CGBPalette[4];
+	sf::Color CGBSpritePalette[4];
 
 public:
 
@@ -70,5 +71,6 @@ public:
 	void DrawWindowLine();
 
 	sf::Color* GetBGPalette(byte CGBMapAttributes);
+	sf::Color* GetColorSpritePalette(int paletteNumber);
 };
 
