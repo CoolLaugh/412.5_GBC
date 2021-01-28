@@ -2,7 +2,7 @@
 
 Emulator::Emulator() {
 
-	cpu.memory.LoadRom("./gb/" + Filename + ".gb");
+	cpu.memory.LoadRom("./gb/" + Filename);
 	cpu.ColorGameBoyMode = cpu.memory.ColorGameBoyMode;
 	graphics.ColorGameBoyMode = cpu.memory.ColorGameBoyMode;
 	cpu.PowerUpSequence();
@@ -233,7 +233,8 @@ void Emulator::saveState() {
 		state[index++] = memory.SpriteColorPalette[i];
 	}
 
-	std::ofstream stateFile(Filename + "SaveState.ss", std::ofstream::binary);
+	std::string stateFilename = Filename.substr(0, Filename.find_last_of('.'));
+	std::ofstream stateFile(stateFilename + "SaveState.ss", std::ofstream::binary);
 	stateFile.write((char *)state, fileSize);
 	stateFile.close();
 
@@ -243,7 +244,9 @@ void Emulator::saveState() {
 
 void Emulator::loadState() {
 
-	std::ifstream stateFile(Filename + "SaveState.ss", std::ifstream::binary);
+	std::string stateFilename = Filename.substr(0, Filename.find_last_of('.'));
+
+	std::ifstream stateFile(stateFilename + "SaveState.ss", std::ifstream::binary);
 
 	stateFile.seekg(0, std::ios::end);
 	int length = stateFile.tellg();

@@ -1469,7 +1469,6 @@ void Cpu::LCDStatusRegister(word& cyclesThisLine) {
 		memory.memorySpace[Address::LY] = 0;
 		cyclesThisLine = 0;
 		LCDCStatus &= ~0x03;
-		bitSet(LCDCStatus, Bits::b0);
 	}
 	else {
 

@@ -14,7 +14,7 @@ Graphics::Graphics() {
 	background->create(ScreenWidth, ScreenHeight, sf::Color::White);
 
 	backgroundPixels = new sf::Uint8[ScreenWidth * ScreenHeight * 4];
-
+	backgroundPixelsColorIndex = new byte[ScreenWidth * ScreenHeight];
 
 	setupTileWindow(); 
 	setupBGMapWindow();
@@ -571,6 +571,9 @@ byte Graphics::bitData(byte val, byte bit) {
 void Graphics::drawSprites() {
 
 	byte LCDC = memory->Read(Address::LCDC);
+	if (BitTest(LCDC, 1) == false) {
+		return;
+	}
 	word spriteAttributeTable = Address::SpriteAttributes;
 
 	for (word i = 0; i < 40; i++) {
@@ -588,18 +591,17 @@ void Graphics::drawSprites() {
 		byte patternNumber = memory->Read(spriteAttributeTable + (i * 4) + 2);
 		byte flags = memory->Read(spriteAttributeTable + (i * 4) + 3);
 
-		bool Yflip = (flags & Bits::b6) != 0;
-		bool Xflip = (flags & Bits::b5) != 0;
+		bool Yflip = BitTest(flags, 6);
+		bool Xflip = BitTest(flags, 5);
 
 		byte spriteHeight = 8;
-
-		if ((LCDC & Bits::b2) != 0) {
+		if (BitTest(LCDC, 2)) {
 			spriteHeight = 16;
 			patternNumber &= ~Bits::b0;
 		}
 
 		byte OGP = memory->Read(Address::OBJPalette0);
-		if ((flags & Bits::b4) != 0) {
+		if (BitTest(flags, 4)) {
 			OGP = memory->Read(Address::OBJPalette1);
 		}
 
@@ -634,10 +636,15 @@ void Graphics::drawSprites() {
 				}
 
 				int pixelX = positionX + pixelOffsetX;
+				int screenIndex = ((LY * ScreenWidth) + pixelX) * 4;
+
+				bool BGPriority = BitTest(flags, 7);
+				if (BGPriority == false && backgroundPixels[screenIndex/4] == 1) {
+					continue;
+				}
 
 				if (LY < 144 && pixelX < 160 && pixel != 0) {
 
-					int screenIndex = ((LY * ScreenWidth) + pixelX) * 4;
 					if (ColorGameBoyMode == true) {
 
 						byte CGBPaletteNumber = flags & 0x7;
@@ -666,7 +673,7 @@ void Graphics::drawSprites() {
 
 }
 
-void Graphics::DrawBackgroundLine(int startX, int row, int screenY, int screenWidth, sf::Uint8* screen, bool drawWindow) {
+void Graphics::DrawBackgroundLine(int startX, int row, int screenY, int screenWidth, sf::Uint8* screen, bool mainScreen) {
 
 	byte LCDC = memory->Read(Address::LCDC);
 
@@ -760,6 +767,9 @@ void Graphics::DrawBackgroundLine(int startX, int row, int screenY, int screenWi
 				screen[screenIndex + 1] = palette[pixel].g;
 				screen[screenIndex + 2] = palette[pixel].b;
 				screen[screenIndex + 3] = 0xFF;
+				if (mainScreen == true) {
+					backgroundPixelsColorIndex[screenIndex / 4] = 0;
+				}
 			}
 			else {
 
@@ -770,6 +780,9 @@ void Graphics::DrawBackgroundLine(int startX, int row, int screenY, int screenWi
 				screen[screenIndex + 1] = BWPalette[color].g;
 				screen[screenIndex + 2] = BWPalette[color].b;
 				screen[screenIndex + 3] = 0xFF;
+				if (mainScreen == true) {
+					backgroundPixelsColorIndex[screenIndex / 4] = 0;
+				}
 			}
 
 			screenX++;
@@ -879,6 +892,8 @@ void Graphics::DrawWindowLine() {
 				backgroundPixels[screenIndex + 1] = palette[pixel].g;
 				backgroundPixels[screenIndex + 2] = palette[pixel].b;
 				backgroundPixels[screenIndex + 3] = 0xFF;
+				backgroundPixelsColorIndex[screenIndex / 4] = 1;
+				
 			}
 			else {
 
@@ -889,6 +904,7 @@ void Graphics::DrawWindowLine() {
 				backgroundPixels[screenIndex + 1] = BWPalette[color].g;
 				backgroundPixels[screenIndex + 2] = BWPalette[color].b;
 				backgroundPixels[screenIndex + 3] = 0xFF;
+				backgroundPixelsColorIndex[screenIndex / 4] = 1;
 			}
 
 			screenX++;

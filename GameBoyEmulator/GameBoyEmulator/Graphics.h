@@ -32,6 +32,7 @@ private:
 
 	const short cyclesPerLine = 456;
 
+	byte* backgroundPixelsColorIndex;
 
 
 	sf::Color BWPalette[4] = { sf::Color(0xFF,0xFF,0xFF),
@@ -67,7 +68,7 @@ public:
 	byte bitData(byte val, byte bit);
 	void drawSprites();
 
-	void DrawBackgroundLine(int startX, int row, int screenY, int screenWidth, sf::Uint8* screen, bool drawWindow = false);
+	void DrawBackgroundLine(int startX, int row, int screenY, int screenWidth, sf::Uint8* screen, bool mainScreen = false);
 	void DrawWindowLine();
 
 	sf::Color* GetBGPalette(byte CGBMapAttributes);

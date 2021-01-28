@@ -448,7 +448,7 @@ void Memory::Write(word address, byte data) {
 			vramDMATransferDestination = (memorySpace[0xFF53] << 8) | (memorySpace[0xFF54] & 0xF0);
 			vramDMATransferLength = data & 0x7F;
 			vramDMATransferLength++;
-			vramDMATransferLength *= 10;
+			vramDMATransferLength *= 0x10;
 
 			if ((data & Bits::b7) == 0) {
 				for (size_t i = 0; i < vramDMATransferLength; i++) {
