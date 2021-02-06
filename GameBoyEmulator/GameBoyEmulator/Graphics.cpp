@@ -125,126 +125,6 @@ void Graphics::updateBGMapWindow() {
 
 	BGMapWindow->clear();
 	BGMapWindow->setView(*BGMapView);
-	byte BGP = memory->Read(Address::BGWPalette);
-	byte LCDC = memory->Read(Address::LCDC);
-
-	if (/*memory->TileChanged == */true) {
-
-		for (word y = 0; y < 32; y++) {
-
-			for (word x = 0; x < 32; x++) {
-
-				word address = 0x9800 + y * 32 + x;
-				
-				if ((LCDC & Bits::b3) != 0) {
-					address += 0x0400;
-				}
-
-				byte CGBAttributes = memory->vramBank[1][address - 0x8000];
-				sf::Color* palette = GetBGPalette(CGBAttributes);
-
-				short memoryTile = 0;
-				if ((LCDC & Bits::b4) == Bits::b4) {
-
-					byte tileNumber = memory->Read(address);
-					memoryTile = Address::TilePattern0 + tileNumber * 16;
-				}
-				else {
-
-					signed char tileNumber = memory->Read(address);
-					memoryTile = Address::TilePattern1 + (tileNumber + 0x80) * 16;
-				}
-
-				word tileX = x * 8;
-				word tileY = y * 8;
-
-				for (word i = 0; i < 8; i++) {
-
-					int pixelY = i;
-					if (BitTest(CGBAttributes, 6) == true) { // y flip
-						pixelY -= 7;
-						pixelY *= -1;
-					}
-
-					word address = memoryTile + pixelY * 2;
-
-					byte pixelDataLow = memory->Read(address);
-					byte pixelDataHigh = memory->Read(address + 1);
-
-					for (word j = 0; j < 8; j++) {
-
-						int pixelX = j;
-						if (BitTest(CGBAttributes, 5) == true) { // x flip
-							pixelX -= 7;
-							pixelX *= -1;
-						}
-
-						byte pixel = 0;
-						if ((pixelDataLow & (Bits::b7 >> pixelX)) != 0) {
-							pixel |= Bits::b0;
-						}
-						if ((pixelDataHigh & (Bits::b7 >> pixelX)) != 0) {
-							pixel |= Bits::b1;
-						}
-						if (ColorGameBoyMode) {
-
-							BGMapBackground->setPixel(tileX + j, tileY + i, palette[pixel]);
-						}
-						else {
-
-							byte offset = pixel * 2;
-							byte color = (BGP & (0x3 << offset)) >> offset;
-
-							BGMapBackground->setPixel(tileX + j, tileY + i, BWPalette[color]);
-						}
-					}
-
-				}
-			}
-		}
-		memory->TileChanged = false;
-	}
-
-
-	// draw gameboy screen outline
-	//byte scrollX = memory->Read(Address::ScrollX);
-	//byte scrollY = memory->Read(Address::ScrollY);
-
-	//for (size_t i = 0; i < 2; i++) {
-
-	//	for (size_t xPos = 0; xPos < ScreenWidth; xPos++) {
-
-	//		int x = (scrollX + xPos) % 256;
-	//		int y = (scrollY + (i * ScreenHeight)) % 256;
-
-	//		BGMapBackground->setPixel(x, y, sf::Color::Red);
-	//	}
-	//}
-	//for (size_t i = 0; i < 2; i++) {
-
-	//	for (size_t yPos = 0; yPos < ScreenHeight; yPos++) {
-
-	//		int x = (scrollX + (ScreenWidth * i)) % 256;
-	//		int y = (scrollY + yPos) % 256;
-
-	//		BGMapBackground->setPixel(x, y, sf::Color::Red);
-	//	}
-	//}
-
-
-	sf::Texture BGMapTexture;
-	BGMapTexture.loadFromImage(*BGMapBackground);
-	sf::Sprite BGMapSprite;
-	BGMapSprite.setTexture(BGMapTexture, true);
-	BGMapSprite.setPosition(0, 0);
-	BGMapWindow->draw(BGMapSprite);
-	BGMapWindow->display();
-}
-
-void Graphics::updateBGMapWindow2() {
-
-	BGMapWindow->clear();
-	BGMapWindow->setView(*BGMapView);
 
 	for (size_t i = 0; i < 256; i++) {
 		DrawBackgroundLine(0, i, i, 256, BGMapBackgroundPixels);
@@ -262,14 +142,10 @@ void Graphics::updateBGMapWindow2() {
 
 			int x = (scrollX + xPos) % 256;
 
-			int index = (y * 256 + x) * 4;
-
-			BGMapBackgroundPixels[index + 0] = 0xFF;
-			BGMapBackgroundPixels[index + 1] = 0x00;
-			BGMapBackgroundPixels[index + 2] = 0x00;
-			BGMapBackgroundPixels[index + 3] = 0xFF;
+			SetPixel(BGMapBackgroundPixels, x, y, 256, { 0xFF, 0x00, 0x00 });
 		}
 	}
+
 	for (size_t i = 0; i < 2; i++) {
 
 		int x = (scrollX + (ScreenWidth * i)) % 256;
@@ -278,12 +154,7 @@ void Graphics::updateBGMapWindow2() {
 
 			int y = (scrollY + yPos) % 256;
 
-			int index = (y * 256 + x) * 4;
-
-			BGMapBackgroundPixels[index + 0] = 0xFF;
-			BGMapBackgroundPixels[index + 1] = 0x00;
-			BGMapBackgroundPixels[index + 2] = 0x00;
-			BGMapBackgroundPixels[index + 3] = 0xFF;
+			SetPixel(BGMapBackgroundPixels, x, y, 256, { 0xFF, 0x00, 0x00 });
 		}
 	}
 
@@ -382,13 +253,9 @@ void Graphics::updateWindow() {
 	window->display();
 }
 
-void Graphics::update(short cyclesThisUpdate) { 
+void Graphics::update(word cyclesThisUpdate, int speedMode) {
 
-	byte lcd = memory->Read(Address::LCDC);
-	if ((lcd & Bits::b7) == Bits::b7) { // lcd is running
-
-		cyclesThisLine += cyclesThisUpdate;
-	}
+	cyclesThisLine += cyclesThisUpdate;
 
 	if (memory->Read(Address::LY) == ScreenHeight) {
 		byte interuptFlags = memory->Read(Address::InteruptFlag);
@@ -400,19 +267,30 @@ void Graphics::update(short cyclesThisUpdate) {
 		memory->Write(Address::LY, 0);
 	}
 
-	if (cyclesThisLine >= cyclesPerLine) {
+	if (cyclesThisLine >= (cyclesPerLine * speedMode)) {
 		drawScanLine();
-		cyclesThisLine -= cyclesPerLine;
+		cyclesThisLine -= (cyclesPerLine * speedMode);
 	}
 }
 
 void Graphics::drawScanLine() {
 
 	if (memory->Read(Address::LY) < ScreenHeight) {
-		drawBackground2();
-		DrawWindowLine();
-		drawSprites();
+
+		byte lcd = memory->Read(Address::LCDC);
+		if (BitTest(lcd, 7) == false){
+			byte LY = memory->Read(Address::LY);
+			for (size_t i = 0; i < ScreenWidth; i++) {
+				SetPixel(backgroundPixels, i, LY, ScreenWidth, { 0xFF, 0xFF, 0xFF });
+			}
+		}
+		else {
+			drawBackground();
+			DrawWindowLine();
+			drawSprites();
+		}
 		memory->HBlankDMA();
+
 	}
 
 	memory->memorySpace[Address::LY]++;
@@ -420,140 +298,11 @@ void Graphics::drawScanLine() {
 
 void Graphics::drawBackground() {
 
-	byte LY = memory->Read(Address::LY);
 	byte scrollY = memory->Read(Address::ScrollY);
 	byte scrollX = memory->Read(Address::ScrollX);
-	byte windowY = memory->Read(Address::WindowY);
-	byte windowX = memory->Read(Address::WindowX);
-	byte LCDC = memory->Read(Address::LCDC);
+	byte LY = memory->Read(Address::LY); 
 
-
-	byte YLine = 0;
-	word backgroundMemory = 0;
-	bool window;
-	if ((LCDC & Bits::b5) == Bits::b5 && windowY <= LY) { // window enabled
-		YLine = LY - windowY;
-		window = true;
-		if ((LCDC & Bits::b6) != 0) {
-			backgroundMemory = Address::BGWTileInfo1;
-		}
-		else {
-			backgroundMemory = Address::BGWTileInfo0;
-		}
-	}
-	else {
-		YLine = LY + scrollY;
-		window = false;
-		if ((LCDC & Bits::b3) != 0) {
-			backgroundMemory = Address::BGWTileInfo1;
-		}
-		else {
-			backgroundMemory = Address::BGWTileInfo0;
-		}
-	}
-
-
-
-	for (byte i = 0; i < ScreenWidth; i++) {
-
-		if (window == true) {
-
-			byte TileY = (LY - windowY) / 8;
-			byte TileX = (i) / 8;
-
-			word tileLocation = 0;
-			if ((LCDC & Bits::b4) == Bits::b4) {
-
-				byte tileIndex = memory->Read(backgroundMemory + (TileY * 0x20) + (TileX));
-				tileLocation = Address::TilePattern0 + tileIndex * 16;
-			}
-			else {
-
-				signed char tileIndex = memory->Read(backgroundMemory + (TileY * 0x20) + (TileX));
-				tileLocation = Address::TilePattern1 + (tileIndex + 0x80) * 16;
-			}
-
-			byte tileLine = LY % 8;
-			tileLine *= 2;
-
-			byte pixelDataLow = memory->Read(tileLocation + tileLine);
-			byte pixelDataHigh = memory->Read(tileLocation + tileLine + 1);
-
-			byte pixel = 0;
-			byte bitMask = Bits::b7 >> (i % 8);
-			if ((pixelDataLow & bitMask) != 0) {
-				pixel |= Bits::b0;
-			}
-			if ((pixelDataHigh & bitMask) != 0) {
-				pixel |= Bits::b1;
-			}
-
-			byte offset = pixel * 2;
-			byte BGP = memory->Read(Address::BGWPalette);
-			byte color = (BGP & (0x3 << offset)) >> offset;
-
-			background->setPixel(i, LY, BWPalette[color]);
-		}
-		else {
-
-			byte backgroundY = (scrollY + LY) % 256;
-			byte backgroundX = (scrollX + i) % 256;
-
-			byte TileY = backgroundY / 8;
-			byte TileX = backgroundX / 8;
-
-
-			word tileLocation = 0;
-			if ((LCDC & Bits::b4) == Bits::b4) {
-
-				byte tileIndex = memory->Read(backgroundMemory + (TileY * 0x20) + (TileX));
-				tileLocation = Address::TilePattern0 + tileIndex * 16;
-			}
-			else {
-
-				signed char tileIndex = memory->Read(backgroundMemory + (TileY * 0x20) + (TileX));
-				tileLocation = Address::TilePattern1 + (tileIndex + 0x80) * 16;
-			}
-
-			byte tileLine = backgroundY % 8;
-			tileLine *= 2;
-
-			byte pixelDataLow = memory->Read(tileLocation + tileLine);
-			byte pixelDataHigh = memory->Read(tileLocation + tileLine + 1);
-
-			byte pixel = 0;
-			byte bitMask = Bits::b7 >> (backgroundX % 8);
-			if ((pixelDataLow & bitMask) != 0) {
-				pixel |= Bits::b0;
-			}
-			if ((pixelDataHigh & bitMask) != 0) {
-				pixel |= Bits::b1;
-			}
-
-			if (ColorGameBoyMode) {
-
-				sf::Color* palette = GetBGPalette(memory->vramBank[1][(backgroundMemory + (TileY * 0x20) + (TileX)) - 0x8000]);
-				background->setPixel(i, LY, palette[pixel]);
-			}
-			else {
-
-				byte offset = pixel * 2;
-				byte BGP = memory->Read(Address::BGWPalette);
-				byte color = (BGP & (0x3 << offset)) >> offset;
-
-				background->setPixel(i, LY, BWPalette[color]);
-			}
-		}
-	}
-}
-
-void Graphics::drawBackground2() {
-
-	byte scrollY = memory->Read(Address::ScrollY);
-	byte scrollX = memory->Read(Address::ScrollX);
-	byte LY = memory->Read(Address::LY);
-
-	DrawBackgroundLine(scrollX, (scrollY + LY) % 256, LY, ScreenWidth, backgroundPixels);
+	DrawBackgroundLine(scrollX, (scrollY + LY) % 256, LY, ScreenWidth, backgroundPixels, true);
 }
 
 byte Graphics::bitData(byte val, byte bit) {
@@ -622,13 +371,8 @@ void Graphics::drawSprites() {
 
 			for (int j = 0; j < 8; j++) {
 
-				byte pixel = 0;
-				if ((pixelDataLow & (Bits::b7 >> j)) != 0) {
-					pixel |= Bits::b0;
-				}
-				if ((pixelDataHigh & (Bits::b7 >> j)) != 0) {
-					pixel |= Bits::b1;
-				}
+				byte pixel = GetPixelIndex(pixelDataLow, pixelDataHigh, j);
+
 				int pixelOffsetX = j;
 				if (Xflip == true) {
 					pixelOffsetX -= 7;
@@ -643,7 +387,7 @@ void Graphics::drawSprites() {
 					continue;
 				}
 
-				if (LY < 144 && pixelX < 160 && pixel != 0) {
+				if (LY < 144 && pixelX < 160 && pixelX >= 0 && pixel != 0) {
 
 					if (ColorGameBoyMode == true) {
 
@@ -651,20 +395,14 @@ void Graphics::drawSprites() {
 						byte vRamBank = flags & Bits::b3;
 
 						sf::Color* palette = GetColorSpritePalette(CGBPaletteNumber);
-						backgroundPixels[screenIndex + 0] = palette[pixel].r;
-						backgroundPixels[screenIndex + 1] = palette[pixel].g;
-						backgroundPixels[screenIndex + 2] = palette[pixel].b;
-						backgroundPixels[screenIndex + 3] = 0xFF;
+						SetPixel(backgroundPixels, pixelX, LY, ScreenWidth, palette[pixel]);
 					}
 					else {
 
 						byte offset = pixel * 2;
 						byte color = (OGP & (0x3 << offset)) >> offset;
 
-						backgroundPixels[screenIndex + 0] = BWPalette[color].r;
-						backgroundPixels[screenIndex + 1] = BWPalette[color].g;
-						backgroundPixels[screenIndex + 2] = BWPalette[color].b;
-						backgroundPixels[screenIndex + 3] = 0xFF;
+						SetPixel(backgroundPixels, pixelX, LY, ScreenWidth, BWPalette[color]);
 					}
 				}
 			}
@@ -683,28 +421,14 @@ void Graphics::DrawBackgroundLine(int startX, int row, int screenY, int screenWi
 	}
 	backgroundMapAddressRowStart += (row / 8) * 32;
 
-	bool signedAddressingMode = false;
-	if (BitTest(LCDC, 4) == false) {
-		signedAddressingMode = true;
-	}
-
 	byte BGP = memory->Read(Address::BGWPalette);
 
 	int screenX = 0;
 	while (screenX < screenWidth) {
 
-		word backgroundMapAddress = backgroundMapAddressRowStart + (((screenX + startX) % 256) / 8);
-		word memoryTileAddress = 0;
-		if (signedAddressingMode == false) {
-
-			byte tileNumber = memory->Read(backgroundMapAddress, 0);
-			memoryTileAddress = Address::TilePattern0 + tileNumber * 16;
-		}
-		else {
-
-			signed char tileNumber = memory->Read(backgroundMapAddress, 0);
-			memoryTileAddress = Address::TilePattern1 + (tileNumber + 0x80) * 16;
-		}
+		int backgroundX = (screenX + startX) % 256;
+		word backgroundMapAddress = backgroundMapAddressRowStart + (backgroundX / 8);
+		word memoryTileAddress = GetTileDataAddress(LCDC, backgroundMapAddress);
 
 		bool yFlip = false;
 		bool xFlip = false;
@@ -752,21 +476,12 @@ void Graphics::DrawBackgroundLine(int startX, int row, int screenY, int screenWi
 				pixelX *= -1;
 			}
 
-			byte pixel = 0;
-			if ((pixelDataLow & (Bits::b7 >> pixelX)) != 0) {
-				pixel |= Bits::b0;
-			}
-			if ((pixelDataHigh & (Bits::b7 >> pixelX)) != 0) {
-				pixel |= Bits::b1;
-			}
+			byte pixel = GetPixelIndex(pixelDataLow, pixelDataHigh, pixelX);
 
 			int screenIndex = ((screenY * screenWidth) + screenX) * 4;
 			if (ColorGameBoyMode) {
 
-				screen[screenIndex + 0] = palette[pixel].r;
-				screen[screenIndex + 1] = palette[pixel].g;
-				screen[screenIndex + 2] = palette[pixel].b;
-				screen[screenIndex + 3] = 0xFF;
+				SetPixel(screen, screenX, screenY, screenWidth, palette[pixel]);
 				if (mainScreen == true) {
 					backgroundPixelsColorIndex[screenIndex / 4] = 0;
 				}
@@ -776,10 +491,7 @@ void Graphics::DrawBackgroundLine(int startX, int row, int screenY, int screenWi
 				byte offset = pixel * 2;
 				byte color = (BGP & (0x3 << offset)) >> offset;
 
-				screen[screenIndex + 0] = BWPalette[color].r;
-				screen[screenIndex + 1] = BWPalette[color].g;
-				screen[screenIndex + 2] = BWPalette[color].b;
-				screen[screenIndex + 3] = 0xFF;
+				SetPixel(screen, screenX, screenY, screenWidth, BWPalette[color]);
 				if (mainScreen == true) {
 					backgroundPixelsColorIndex[screenIndex / 4] = 0;
 				}
@@ -810,10 +522,6 @@ void Graphics::DrawWindowLine() {
 		windowTileMap = Address::BGWTileInfo1;
 	}
 
-	bool signedAddressingMode = false;
-	if (BitTest(LCDC, 4) == false) {
-		signedAddressingMode = true;
-	}
 	byte BGP = memory->Read(Address::BGWPalette);
 
 	byte windowX = memory->Read(Address::WindowX);
@@ -825,18 +533,7 @@ void Graphics::DrawWindowLine() {
 		byte yPosInWindow = LY - windowY;
 
 		word windowTileMapAddress = windowTileMap + ((yPosInWindow / 8) * 32) + ((xPosInWindow) / 8);
-		word memoryTileAddress = 0;
-
-		if (signedAddressingMode == false) {
-
-			byte tileNumber = memory->Read(windowTileMapAddress, 0);
-			memoryTileAddress = Address::TilePattern0 + tileNumber * 16;
-		}
-		else {
-
-			signed char tileNumber = memory->Read(windowTileMapAddress, 0);
-			memoryTileAddress = Address::TilePattern1 + (tileNumber + 0x80) * 16;
-		}
+		word memoryTileAddress = GetTileDataAddress(LCDC, windowTileMapAddress);
 
 		bool yFlip = false;
 		bool xFlip = false;
@@ -876,23 +573,13 @@ void Graphics::DrawWindowLine() {
 				pixelX *= -1;
 			}
 
-			byte pixel = 0;
-			if ((pixelDataLow & (Bits::b7 >> pixelX)) != 0) {
-				pixel |= Bits::b0;
-			}
-			if ((pixelDataHigh & (Bits::b7 >> pixelX)) != 0) {
-				pixel |= Bits::b1;
-			}
+			byte pixel = GetPixelIndex(pixelDataLow, pixelDataHigh, pixelX);
 
-			int screenIndex = ((LY * ScreenWidth) + (screenX - 7)) * 4;
 			if (ColorGameBoyMode) {
 
 				sf::Color* palette = GetBGPalette(CGBAttributes);
-				backgroundPixels[screenIndex + 0] = palette[pixel].r;
-				backgroundPixels[screenIndex + 1] = palette[pixel].g;
-				backgroundPixels[screenIndex + 2] = palette[pixel].b;
-				backgroundPixels[screenIndex + 3] = 0xFF;
-				backgroundPixelsColorIndex[screenIndex / 4] = 1;
+				SetPixel(backgroundPixels, screenX - 7, LY, ScreenWidth, palette[pixel]);
+				backgroundPixelsColorIndex[(LY * ScreenWidth) + (screenX - 7)] = 1;
 				
 			}
 			else {
@@ -900,16 +587,54 @@ void Graphics::DrawWindowLine() {
 				byte offset = pixel * 2;
 				byte color = (BGP & (0x3 << offset)) >> offset;
 
-				backgroundPixels[screenIndex + 0] = BWPalette[color].r;
-				backgroundPixels[screenIndex + 1] = BWPalette[color].g;
-				backgroundPixels[screenIndex + 2] = BWPalette[color].b;
-				backgroundPixels[screenIndex + 3] = 0xFF;
-				backgroundPixelsColorIndex[screenIndex / 4] = 1;
+				SetPixel(backgroundPixels, screenX - 7, LY, ScreenWidth, BWPalette[pixel]);
+				backgroundPixelsColorIndex[(LY * ScreenWidth) + (screenX - 7)] = 1;
 			}
 
 			screenX++;
 		} while ((xPosInWindow % 8) != 0);
 	}
+}
+
+void Graphics::SetPixel(sf::Uint8 * screen, int x, int y, int screenWidth, sf::Color color) {
+
+	int screenIndex = ((y * screenWidth) + x) * 4;
+	screen[screenIndex + 0] = color.r;
+	screen[screenIndex + 1] = color.g;
+	screen[screenIndex + 2] = color.b;
+	screen[screenIndex + 3] = 0xFF;
+}
+
+byte Graphics::GetPixelIndex(byte dataLow, byte dataHigh, byte pixelX) {
+
+	byte pixelIndex = 0;
+
+	if (BitTestReverse(dataLow, pixelX) == true) {
+		pixelIndex |= Bits::b0;
+	}
+	if (BitTestReverse(dataHigh, pixelX) == true) {
+		pixelIndex |= Bits::b1;
+	}
+
+	return pixelIndex;
+}
+
+word Graphics::GetTileDataAddress(byte LCDC, word address) {
+
+	word tileDataAddress = 0;
+
+	if (BitTest(LCDC, 4) == true) {
+
+		byte tileNumber = memory->Read(address, 0);
+		tileDataAddress = Address::TilePattern0 + tileNumber * 16;
+	}
+	else {
+
+		signed char tileNumber = memory->Read(address, 0);
+		tileDataAddress = Address::TilePattern1 + (tileNumber + 0x80) * 16;
+	}
+
+	return tileDataAddress;
 }
 
 sf::Color* Graphics::GetBGPalette(byte CGBMapAttributes) {

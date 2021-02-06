@@ -79,7 +79,7 @@ public:
 	word ExecuteOpcode();
 	word ExecuteExtendedOpcode();
 
-	void performInterupts();
+	int performInterupts();
 	void LCDStatusRegister(word& cyclesThisLine);
 
 	word LD(byte& reg);

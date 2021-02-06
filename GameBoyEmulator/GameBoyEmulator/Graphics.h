@@ -54,22 +54,24 @@ public:
 
 	void setupBGMapWindow();
 	void updateBGMapWindow();
-	void updateBGMapWindow2();
 
 	void setupColorPaletteWindow();
 	void updateColorPaletteWindow();
 
 	void updateWindow();
 
-	void update(short cyclesThisUpdate);
+	void update(word cyclesThisUpdate, int speedMode);
 	void drawScanLine();
 	void drawBackground();
-	void drawBackground2();
 	byte bitData(byte val, byte bit);
 	void drawSprites();
 
 	void DrawBackgroundLine(int startX, int row, int screenY, int screenWidth, sf::Uint8* screen, bool mainScreen = false);
 	void DrawWindowLine();
+
+	void SetPixel(sf::Uint8* screen, int x, int y, int screenWidth, sf::Color color);
+	byte GetPixelIndex(byte dataLow, byte dataHigh, byte pixelX);
+	word GetTileDataAddress(byte LCDC, word address);
 
 	sf::Color* GetBGPalette(byte CGBMapAttributes);
 	sf::Color* GetColorSpritePalette(int paletteNumber);

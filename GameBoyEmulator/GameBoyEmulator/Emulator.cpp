@@ -17,28 +17,34 @@ void Emulator::Update() {
 
 	while (totalCycles <= 70224 * cpu.speedMode) {
 		
-		short cycles = 0;
+		word cycles = 0;
 		if (cpu.halted == false) {
-			cycles = cpu.ExecuteOpcode();
+			cycles += cpu.ExecuteOpcode();
 		}
 		else {
-			cycles = 4;
+			cycles += 4;
 		}
 
 		totalCycles += cycles;
 		cpu.LCDStatusRegister(graphics.cyclesThisLine);
-		graphics.update(cycles / cpu.speedMode);
+		graphics.update(cycles, cpu.speedMode);
 		cpu.performInterupts();
 		cpu.memory.IncrementDivAndTimerRegisters(cycles);
 
 		elapsedOpcodes++;
+		byte ly = cpu.memory.Read(Address::LY);
+		if (ly == 144 && LastLY == 143) {
+			graphics.updateWindow();
+			if ((elapsedFrames % 15) == 0) {
+				graphics.updateTileWindow();
+				graphics.updateBGMapWindow();
+				graphics.updateColorPaletteWindow();
+			}
+			elapsedFrames++;
+		}
+		LastLY = ly;
 	}
-	totalCycles -= 70224;
-	graphics.updateWindow();
-	graphics.updateTileWindow();
-	graphics.updateBGMapWindow2();
-	graphics.updateColorPaletteWindow();
-	elapsedFrames++;
+	totalCycles -= 70224 * cpu.speedMode;
 }
 
 void Emulator::Loop() {
@@ -119,6 +125,15 @@ void Emulator::Loop() {
 				else if (event.key.code == sf::Keyboard::V) {
 					cpu.memory.buttons.start = false;
 				}
+			}
+			else if (event.type == sf::Event::GainedFocus || event.type == sf::Event::LostFocus) {
+				cpu.memory.buttons.up = false;
+				cpu.memory.buttons.down = false;
+				cpu.memory.buttons.left = false;
+				cpu.memory.buttons.buttonB = false;
+				cpu.memory.buttons.buttonA = false;
+				cpu.memory.buttons.select = false;
+				cpu.memory.buttons.start = false;
 			}
 		}
 

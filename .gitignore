@@ -40,6 +40,7 @@ x64/
 *.gb
 */GameBoyEmulator/gb/
 *.sav
+*.ss
 
 # Library Folders
 */SFML-2.5.1/

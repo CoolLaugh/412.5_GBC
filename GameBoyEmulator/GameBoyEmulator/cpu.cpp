@@ -1391,7 +1391,7 @@ void Cpu::outputState() {
 	outputStateBuffer += OpcodeNames[memory.Read(registers.pc)];
 
 	if (memory.Read(registers.pc) == 0xCB) {
-		outputStateBuffer += " " + OpcodeNames[memory.Read(registers.pc + 1)];
+		outputStateBuffer += ExtendedOpcodeNames[memory.Read(registers.pc + 1)];
 	}
 	outputStateBuffer += "\n";
 
@@ -1406,7 +1406,9 @@ void Cpu::outputState() {
 
 }
 
-void Cpu::performInterupts() {
+int Cpu::performInterupts() {
+
+	int clocks = 0;
 
 	if (interuptEnable == true && interuptEnableInstructionCount == 0) {
 		// interupts enable is delayed by one instruction, DI and RETI are not
@@ -1446,6 +1448,11 @@ void Cpu::performInterupts() {
 				case 4: registers.pc = 0x60; break;
 				}
 
+				clocks = 20;
+				if (halted == true) {
+					clocks += 4;
+				}
+
 				interuptFlags &= ~(1 << i); // reset bit of interupt
 				memory.Write(Address::InteruptFlag, interuptFlags);
 				interupt = false;
@@ -1455,6 +1462,7 @@ void Cpu::performInterupts() {
 			}
 		}
 	}
+	return clocks;
 }
 
 

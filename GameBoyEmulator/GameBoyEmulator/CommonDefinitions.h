@@ -68,6 +68,7 @@ enum Bits {
 };
 
 bool BitTest(byte value, int bit);
+bool BitTestReverse(byte value, int bit); // order of bits is reversed
 void BitSet(byte& value, int bit);
 void BitReset(byte& value, int bit);
 

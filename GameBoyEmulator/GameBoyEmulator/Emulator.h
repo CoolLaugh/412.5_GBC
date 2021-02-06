@@ -11,8 +11,9 @@ class Emulator {
 	int elapsedFrames = 0;
 	int elapsedOpcodes = 0;
 	int totalCycles = 0;
+	byte LastLY = 0;
 
-	std::string Filename = "DrMario.gb";
+	std::string Filename = "LOZLA.gb";
 
 public:
 

@@ -9,8 +9,6 @@ class Memory {
 private:
 
 	const int memorySize = 0x10000;
-	const int romSize = 0x10000;
-	const int gameBankSize = 0x200000;
 
 	struct Buttons {
 		bool down = false;

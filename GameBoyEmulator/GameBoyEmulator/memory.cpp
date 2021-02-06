@@ -565,7 +565,7 @@ void Memory::IncrementDivAndTimerRegisters(byte clocks) {
 
 		newBit &= BitTest(memorySpace[Address::TimerControl], 2);
 
-		if (!newBit & oldBit) {
+		if ((!newBit) & oldBit) {
 			if (memorySpace[Address::Timer] == 0xFF) { // about to overflow
 				timerOverflow = true;
 			}
