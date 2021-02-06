@@ -13,7 +13,7 @@ class Emulator {
 	int totalCycles = 0;
 	byte LastLY = 0;
 
-	std::string Filename = "mooneye-gb_hwtests/acceptance/timer/rapid_toggle.gb";
+	std::string Filename = "LOZLA.gb";
 
 public:
 

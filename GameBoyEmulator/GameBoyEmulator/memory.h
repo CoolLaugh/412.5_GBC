@@ -3,12 +3,18 @@
 #include <fstream>
 #include <iostream>
 #include "CommonDefinitions.h"
+#include <filesystem>
+
+
+namespace fs = std::experimental::filesystem;
 
 class Memory {
 
 private:
 
+
 	const int memorySize = 0x10000;
+	const int RamBankSize = 0x2000;
 
 	struct Buttons {
 		bool down = false;
@@ -38,6 +44,7 @@ public:
 
 	bool stopHblankDMA = false;
 	bool TileChanged = false;
+	bool externalRamChanged = false;
 	bool ColorGameBoyMode = false;
 	byte currentRamBank = 0;
 	byte currentWramBank = 1;
@@ -65,6 +72,9 @@ public:
 	void IncrementDivAndTimerRegisters(byte clocks);
 	void DumpMemory(std::string fileName = "MemoryDump");
 	void DumpStack(word spAddress, std::string fileName = "StackDump");
+
+	void SaveExternalRam(std::string fileName);
+	void LoadExternalRam(std::string fileName);
 
 	word vramDMATransferSource;
 	word vramDMATransferDestination;

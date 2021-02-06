@@ -104,6 +104,8 @@ bool Memory::LoadRom(const std::string fileName) {
 
 	CreateRamBanks();
 
+	LoadExternalRam(fileName);
+
 	return true;
 }
 
@@ -154,8 +156,8 @@ void Memory::CreateRamBanks() {
 	}
 	ramBank.clear();
 	for (size_t i = 0; i < numberOfRamBanks; i++) {
-		byte* bank = new byte[0x2000];
-		memset(bank, 0, 0x2000);
+		byte* bank = new byte[RamBankSize];
+		memset(bank, 0, RamBankSize);
 		ramBank.push_back(bank);
 	}
 
@@ -370,6 +372,7 @@ void Memory::Write(word address, byte data) {
 		TileChanged = true;
 	}
 	else if (address >= 0xA000 && address <= 0xBFFF) { // 8kb external ram
+		externalRamChanged = true;
 		if (ramBankEnabled == true && mbc == 1 || mbc == 3 || mbc == 5) {
 			word newAddress = address - 0xA000;
 			ramBank.at(currentRamBank)[newAddress] = data;
@@ -631,6 +634,50 @@ void Memory::DumpStack(word spAddress, std::string fileName) {
 	out.close();
 
 
+}
+
+void Memory::SaveExternalRam(std::string fileName) {
+
+	std::string saveFile = fileName.substr(0, fileName.find_last_of('.')) + ".sav";
+
+	std::ofstream saveFileStream(saveFile, std::ios::out | std::ios::binary | std::ios::trunc);
+
+	for (size_t i = 0; i < ramBank.size(); i++) {
+		for (size_t j = 0; j < RamBankSize; j++) {
+			saveFileStream << ramBank[i][j];
+		}
+	}
+	saveFileStream.close();
+
+	externalRamChanged = false;
+}
+
+void Memory::LoadExternalRam(std::string fileName) {
+
+	std::string saveFileName = fileName.substr(0, fileName.find_last_of('.')) + ".sav";
+
+	if (fs::exists(saveFileName)) {
+
+		int saveFileSize = fs::file_size(saveFileName);
+
+		std::ifstream saveFileStream(saveFileName, std::ios::in | std::ios::binary);
+
+		byte* SaveFileData = new byte[saveFileSize];
+		memset(SaveFileData, 0, saveFileSize);
+
+		saveFileStream.read((char*)SaveFileData, saveFileSize);
+		saveFileStream.close();
+
+		for (size_t i = 0; i < saveFileSize; i++) {
+
+			int ramBankIndex = i / RamBankSize;
+			int index = i % RamBankSize;
+
+			ramBank[ramBankIndex][index] = SaveFileData[i];
+		}
+
+		delete SaveFileData;
+	}
 }
 
 

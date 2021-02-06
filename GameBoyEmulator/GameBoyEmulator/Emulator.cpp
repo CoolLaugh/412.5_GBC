@@ -45,6 +45,9 @@ void Emulator::Update() {
 		LastLY = ly;
 	}
 	totalCycles -= 70224 * cpu.speedMode;
+	if (cpu.memory.externalRamChanged == true) {
+		cpu.memory.SaveExternalRam("./gb/" + Filename);
+	}
 }
 
 void Emulator::Loop() {
