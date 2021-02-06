@@ -380,10 +380,8 @@ void Graphics::drawSprites() {
 				}
 
 				int pixelX = positionX + pixelOffsetX;
-				int screenIndex = ((LY * ScreenWidth) + pixelX) * 4;
 
-				bool BGPriority = BitTest(flags, 7);
-				if (BGPriority == false && backgroundPixels[screenIndex/4] == 1) {
+				if (BitTest(flags, 7) == true && backgroundPixelsColorIndex[(LY * ScreenWidth) + pixelX] > 0) {
 					continue;
 				}
 
@@ -483,7 +481,7 @@ void Graphics::DrawBackgroundLine(int startX, int row, int screenY, int screenWi
 
 				SetPixel(screen, screenX, screenY, screenWidth, palette[pixel]);
 				if (mainScreen == true) {
-					backgroundPixelsColorIndex[screenIndex / 4] = 0;
+					backgroundPixelsColorIndex[screenIndex / 4] = pixel;
 				}
 			}
 			else {
@@ -493,7 +491,7 @@ void Graphics::DrawBackgroundLine(int startX, int row, int screenY, int screenWi
 
 				SetPixel(screen, screenX, screenY, screenWidth, BWPalette[color]);
 				if (mainScreen == true) {
-					backgroundPixelsColorIndex[screenIndex / 4] = 0;
+					backgroundPixelsColorIndex[screenIndex / 4] = color;
 				}
 			}
 
@@ -526,10 +524,16 @@ void Graphics::DrawWindowLine() {
 
 	byte windowX = memory->Read(Address::WindowX);
 
-	int screenX = windowX;
+	int screenX = windowX - 7;
+	byte xPosInWindow = 0;
+
 	while (screenX < ScreenWidth) {
 
-		byte xPosInWindow = screenX - windowX;
+		if (screenX < 0) {
+			screenX++;
+			xPosInWindow++;
+			continue;
+		}
 		byte yPosInWindow = LY - windowY;
 
 		word windowTileMapAddress = windowTileMap + ((yPosInWindow / 8) * 32) + ((xPosInWindow) / 8);
@@ -566,8 +570,8 @@ void Graphics::DrawWindowLine() {
 		byte pixelDataHigh = memory->vramBank[VramBank][(address + 1) - 0x8000];
 
 		do {
-			xPosInWindow = screenX - windowX;
-			int pixelX = (xPosInWindow - 1) % 8;
+
+			int pixelX = (xPosInWindow) % 8;
 			if (xFlip == true) { // x flip
 				pixelX -= 7;
 				pixelX *= -1;
@@ -578,20 +582,18 @@ void Graphics::DrawWindowLine() {
 			if (ColorGameBoyMode) {
 
 				sf::Color* palette = GetBGPalette(CGBAttributes);
-				SetPixel(backgroundPixels, screenX - 7, LY, ScreenWidth, palette[pixel]);
-				backgroundPixelsColorIndex[(LY * ScreenWidth) + (screenX - 7)] = 1;
-				
+				SetPixel(backgroundPixels, screenX, LY, ScreenWidth, palette[pixel]);
 			}
 			else {
 
 				byte offset = pixel * 2;
 				byte color = (BGP & (0x3 << offset)) >> offset;
 
-				SetPixel(backgroundPixels, screenX - 7, LY, ScreenWidth, BWPalette[pixel]);
-				backgroundPixelsColorIndex[(LY * ScreenWidth) + (screenX - 7)] = 1;
+				SetPixel(backgroundPixels, screenX, LY, ScreenWidth, BWPalette[pixel]);
 			}
 
 			screenX++;
+			xPosInWindow++;
 		} while ((xPosInWindow % 8) != 0);
 	}
 }

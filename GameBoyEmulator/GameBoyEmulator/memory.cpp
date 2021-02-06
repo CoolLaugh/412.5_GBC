@@ -51,11 +51,6 @@ void Memory::PowerUpSequence() {
 		dividerRegister = 0x1EA0;
 	}
 	
-	// 0xFFXX values not documented but set in other emulators
-	//if (ColorGameBoyMode == true) {
-	//	memorySpace[0xFF4D] = 0x7E;
-	//}
-
 	const byte ColorGameboyFFXXValues[256] = {
 		0xCF, 0x00, 0x7C, 0xFF, 0x44, 0x00, 0x00, 0xF8, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xE1,
 		0x80, 0xBF, 0xF3, 0xFF, 0xBF, 0xFF, 0x3F, 0x00, 0xFF, 0xBF, 0x7F, 0xFF, 0x9F, 0xFF, 0xBF, 0xFF,
@@ -410,6 +405,17 @@ void Memory::Write(word address, byte data) {
 	else if (address == 0xFF04) { // DIV register
 		dividerRegister = 0;
 	}
+	else if (address == 0xFF05) { // TIMA 
+		if (writingToTIMA == false) { // writing will fail when TMA is being written to TIMA
+			memorySpace[address] = data;
+		}
+	}
+	else if (address == 0xFF06) { // TMA / Timer Module
+		memorySpace[address] = data;
+		if (writingToTIMA == true) { // writing to TMA in the same cycle as TMA is being loaded into TIMA causes the same value to be written to TIMA
+			memorySpace[Address::Timer] = data;
+		}
+	}
 	else if (address == 0xFF44) {
 		memorySpace[address] = 0;
 	}
@@ -541,6 +547,8 @@ byte Memory::GetJoypadState() {
 // as described in section 5 of The Cycle-Accurate Game Boy Docs by Antonio Nino Diaz
 void Memory::IncrementDivAndTimerRegisters(byte clocks) {
 
+	writingToTIMA = false;
+
 	if (timerOverflow == true) {
 		timerOverflow = false;
 
@@ -549,6 +557,7 @@ void Memory::IncrementDivAndTimerRegisters(byte clocks) {
 			memorySpace[Address::Timer] = memorySpace[Address::TimerModulo];
 			BitSet(memorySpace[Address::InteruptFlag], 2);
 		}
+		writingToTIMA = true; // writing will fail when TMA is being written to TIMA
 	}
 
 	for (size_t i = 0; i < clocks; i++) {

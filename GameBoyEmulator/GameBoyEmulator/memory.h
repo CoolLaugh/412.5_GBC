@@ -52,6 +52,7 @@ public:
 	MemoryModel memoryModel;
 	word dividerRegister = 0;
 	bool timerOverflow = false;
+	bool writingToTIMA = false;
 	bool oldBit = false;
 
 	Memory(); 
