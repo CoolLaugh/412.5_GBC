@@ -196,4 +196,5 @@ public:
 	void cleanOutputState();
 	void outputState();
 	std::string outputStateBuffer;
+	std::string outputStateBufferOpcodesOnly;
 };

@@ -13,7 +13,8 @@ class Emulator {
 	int totalCycles = 0;
 	byte LastLY = 0;
 
-	std::string Filename = "LOZLA.gb";
+	std::string Filename = "instr_timing.gb";
+	//std::string Filename = "mooneye-gb_hwtests/acceptance/ret_timing.gb";
 
 public:
 

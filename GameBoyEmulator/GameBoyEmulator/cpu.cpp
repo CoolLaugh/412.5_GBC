@@ -1121,10 +1121,10 @@ word Cpu::JPcc(condition cdn) {
 	word cycles = 12;
 
 	switch (cdn) {
-	case Cpu::NotZero:	if (flagTest(flagType::zero) == false)	registers.pc = address; cycles = 16; break;
-	case Cpu::Zero:		if (flagTest(flagType::zero) == true)	registers.pc = address; cycles = 16; break;
-	case Cpu::NotCarry: if (flagTest(flagType::carry) == false)	registers.pc = address; cycles = 16; break;
-	case Cpu::Carry:	if (flagTest(flagType::carry) == true)	registers.pc = address; cycles = 16; break;
+	case Cpu::NotZero:	if (flagTest(flagType::zero) == false) { registers.pc = address; cycles = 16; } break;
+	case Cpu::Zero:		if (flagTest(flagType::zero) == true) { registers.pc = address; cycles = 16; } break;
+	case Cpu::NotCarry: if (flagTest(flagType::carry) == false) { registers.pc = address; cycles = 16; } break;
+	case Cpu::Carry:	if (flagTest(flagType::carry) == true) { registers.pc = address; cycles = 16; } break;
 	}
 
 	return cycles;
@@ -1158,10 +1158,10 @@ word Cpu::JRcc(condition cdn) {
 	word cycles = 8;
 
 	switch (cdn) {
-	case Cpu::NotZero:	if (flagTest(flagType::zero) == false)	registers.pc += offset; cycles = 12; break;
-	case Cpu::Zero:		if (flagTest(flagType::zero) == true)	registers.pc += offset; cycles = 12; break;
-	case Cpu::NotCarry: if (flagTest(flagType::carry) == false)	registers.pc += offset; cycles = 12; break;
-	case Cpu::Carry:	if (flagTest(flagType::carry) == true)	registers.pc += offset; cycles = 12; break;
+	case Cpu::NotZero:	if (flagTest(flagType::zero) == false) { registers.pc += offset; cycles = 12; } break;
+	case Cpu::Zero:		if (flagTest(flagType::zero) == true) { registers.pc += offset; cycles = 12; } break;
+	case Cpu::NotCarry: if (flagTest(flagType::carry) == false) { registers.pc += offset; cycles = 12; } break;
+	case Cpu::Carry:	if (flagTest(flagType::carry) == true) { registers.pc += offset; cycles = 12; } break;
 	}
 
 	return cycles;
@@ -1213,7 +1213,7 @@ word Cpu::CALLcc(condition cdn) {
 		registers.pc += 2;
 	}
 
-	return 12;
+	return cycles;
 }
 
 // restart
@@ -1364,7 +1364,7 @@ void Cpu::outputState() {
 	outputStateBuffer += hex[(registers.l & 0xF0) >> 4] + hex[(registers.l & 0x0F)] + " ";
 
 	word HLAddress = Combinebytes(registers.l, registers.h);
-	outputStateBuffer += "(HL): (";
+	outputStateBuffer += "(HL+-1): (";
 	outputStateBuffer += hex[(memory.Read(HLAddress - 1) & 0xF0) >> 4] + hex[(memory.Read(HLAddress - 1) & 0x0F)];
 	outputStateBuffer += " ";
 	outputStateBuffer += hex[(memory.Read(HLAddress) & 0xF0) >> 4] + hex[(memory.Read(HLAddress) & 0x0F)];
@@ -1374,7 +1374,12 @@ void Cpu::outputState() {
 
 	outputStateBuffer += "SP: " + hex[(registers.sp & 0xF000) >> 12] + hex[(registers.sp & 0x0F00) >> 8];
 	outputStateBuffer += hex[(registers.sp & 0x00F0) >> 4] + hex[(registers.sp & 0x000F)] + " ";
-	
+
+	outputStateBuffer += "DIV: " + hex[(memory.dividerRegister & 0xF000) >> 12] + hex[(memory.dividerRegister & 0x0F00) >> 8];
+	outputStateBuffer += hex[(memory.dividerRegister & 0x00F0) >> 4] + hex[(memory.dividerRegister & 0x000F)] + " ";
+
+	outputStateBuffer += "TIMA: " + hex[(memory.Read(Address::Timer) & 0xF0) >> 4] + hex[(memory.Read(Address::Timer) & 0x0F)] + " ";
+
 	outputStateBuffer += "PC: " + hex[(registers.pc & 0xF000) >> 12] + hex[(registers.pc & 0x0F00) >> 8];
 	outputStateBuffer += hex[(registers.pc & 0x00F0) >> 4] + hex[(registers.pc & 0x000F)] + " ";
 
@@ -1389,11 +1394,14 @@ void Cpu::outputState() {
 	outputStateBuffer += ") ";
 
 	outputStateBuffer += OpcodeNames[memory.Read(registers.pc)];
+	outputStateBufferOpcodesOnly += OpcodeNames[memory.Read(registers.pc)];
 
 	if (memory.Read(registers.pc) == 0xCB) {
 		outputStateBuffer += ExtendedOpcodeNames[memory.Read(registers.pc + 1)];
+		outputStateBufferOpcodesOnly += ExtendedOpcodeNames[memory.Read(registers.pc + 1)];
 	}
 	outputStateBuffer += "\n";
+	outputStateBufferOpcodesOnly += "\n";
 
 	if (outputStateBuffer.size() > 10000000) {
 
@@ -1402,6 +1410,12 @@ void Cpu::outputState() {
 		out << outputStateBuffer.c_str();
 		outputStateBuffer.clear();
 		out.close();
+
+		std::ofstream out2;
+		out2.open("CPUStateLogOpcodesOnly.txt", std::ios::out | std::ios::app);
+		out2 << outputStateBufferOpcodesOnly.c_str();
+		outputStateBufferOpcodesOnly.clear();
+		out2.close();
 	}
 
 }

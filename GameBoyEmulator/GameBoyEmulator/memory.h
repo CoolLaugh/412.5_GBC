@@ -59,7 +59,9 @@ public:
 	MemoryModel memoryModel;
 	word dividerRegister = 0;
 	bool timerOverflow = false;
+	int timerOverflowCounter = 0;
 	bool writingToTIMA = false;
+	int writingToTIMACounter = 0;
 	bool oldBit = false;
 
 	Memory(); 

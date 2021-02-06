@@ -550,20 +550,14 @@ byte Memory::GetJoypadState() {
 // as described in section 5 of The Cycle-Accurate Game Boy Docs by Antonio Nino Diaz
 void Memory::IncrementDivAndTimerRegisters(byte clocks) {
 
-	writingToTIMA = false;
-
-	if (timerOverflow == true) {
-		timerOverflow = false;
-
-		// if a value is written right after the timer overflows then timer isn't reset and the interupt flag register is unchanged
-		if (memorySpace[Address::Timer] == 0) { 
-			memorySpace[Address::Timer] = memorySpace[Address::TimerModulo];
-			BitSet(memorySpace[Address::InteruptFlag], 2);
-		}
-		writingToTIMA = true; // writing will fail when TMA is being written to TIMA
-	}
-
 	for (size_t i = 0; i < clocks; i++) {
+
+		if (writingToTIMA == true) {
+			writingToTIMACounter++;
+			if (writingToTIMACounter > 4) {
+				writingToTIMA = false;
+			}
+		}
 
 		dividerRegister++;
 
@@ -582,6 +576,22 @@ void Memory::IncrementDivAndTimerRegisters(byte clocks) {
 				timerOverflow = true;
 			}
 			memorySpace[Address::Timer]++;
+		}
+
+		if (timerOverflow == true) {
+			timerOverflowCounter++;
+			if (timerOverflowCounter > 4) {
+
+				timerOverflow = false;
+
+				// if a value is written right after the timer overflows then timer isn't reset and the interupt flag register is unchanged
+				if (memorySpace[Address::Timer] == 0) {
+
+					memorySpace[Address::Timer] = memorySpace[Address::TimerModulo];
+					BitSet(memorySpace[Address::InteruptFlag], 2);
+				}
+				writingToTIMA = true; // writing will fail when TMA is being written to TIMA
+			}
 		}
 
 		oldBit = newBit;
