@@ -33,3 +33,5 @@ This is a gameboy and gameboy color emulator written in C++ using SFML for graph
 [The Ultimate Game Boy Talk (33c3)](https://www.youtube.com/watch?v=HyzD8pNlpwI)
 
 [How Graphics worked on the Nintendo Game Boy | MVG](https://www.youtube.com/watch?v=zQE1K074v3s)
+
+[Game Boy: Complete Technical Reference](https://gekkio.fi/files/gb-docs/gbctr.pdf)
