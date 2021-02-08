@@ -85,6 +85,7 @@ word Cpu::LD(byte & reg) {
 
 	reg = memory.Read(registers.pc);
 	registers.pc++;
+	AdvanceClocks(8);
 	return 8; // cycles
 }
 
@@ -93,6 +94,7 @@ word Cpu::LDreg(byte & reg1, byte & reg2) {
 
 	reg1 = reg2;
 
+	AdvanceClocks(4);
 	return 4; // cycles
 }
 
@@ -101,6 +103,7 @@ word Cpu::LDRegFromMemory(byte & reg, word address) {
 
 	reg = memory.Read(address);
 
+	AdvanceClocks(8);
 	return 8; // cycles
 }
 
@@ -109,6 +112,7 @@ word Cpu::LDregHL(byte & reg) {
 	word address = Combinebytes(registers.l, registers.h);
 	reg = memory.Read(address);
 
+	AdvanceClocks(8);
 	return 8; // cycles
 }
 
@@ -127,6 +131,7 @@ word Cpu::LDHL() {
 	halfCarryFlag16(registers.sp, (word)n);
 	carryFlag16(registers.sp, (word)n);
 
+	AdvanceClocks(12);
 	return 12; // cycles
 }
 
@@ -139,6 +144,7 @@ word Cpu::WriteSP() {
 	memory.Write(address, pair.first);
 	memory.Write(address + 1, pair.second);
 
+	AdvanceClocks(20);
 	return 20;
 }
 
@@ -148,6 +154,7 @@ word Cpu::LD16(byte & reg1, byte & reg2) {
 	reg1 = memory.Read(registers.pc + 1);
 	reg2 = memory.Read(registers.pc);
 	registers.pc += 2;
+	AdvanceClocks(12);
 	return 12;
 }
 
@@ -156,6 +163,7 @@ word Cpu::LD16(word & reg1) {
 	reg1 = Combinebytes(memory.Read(registers.pc), memory.Read(registers.pc + 1));
 	registers.pc += 2;
 
+	AdvanceClocks(12);
 	return 12;
 }
 
@@ -167,6 +175,7 @@ word Cpu::Push(byte & reg1, byte & reg2) {
 	registers.sp--;
 	memory.Write(registers.sp, reg2);
 
+	AdvanceClocks(16);
 	return 16;
 }
 
@@ -178,6 +187,7 @@ word Cpu::Pop(byte & reg1, byte & reg2) {
 	reg1 = memory.Read(registers.sp);
 	registers.sp++;
 
+	AdvanceClocks(12);
 	return 12;
 }
 
@@ -263,7 +273,7 @@ void Cpu::zeroFlag(byte val) {
 }
 
 // add value to a, ignore carry
-word Cpu::ADD(byte value) {
+word Cpu::ADD(byte value, int clocks) {
 
 	byte result = registers.a + value;
 	
@@ -274,11 +284,12 @@ word Cpu::ADD(byte value) {
 
 	registers.a = result;
 
-	return 4; // sometimes add is 8 cycles, check the manual
+	AdvanceClocks(clocks);
+	return clocks; // sometimes add is 8 cycles, check the manual
 }
 
 // add value to a, include carry
-word Cpu::ADDC(byte value) {
+word Cpu::ADDC(byte value, int clocks) {
 
 	bool carry = flagTest(flagType::carry);
 
@@ -297,11 +308,12 @@ word Cpu::ADDC(byte value) {
 
 	registers.a = result;
 
-	return 4; // sometimes add is 8 cycles, check the manual
+	AdvanceClocks(clocks);
+	return clocks;
 }
 
 // subtract value from a, ignore carry
-word Cpu::SUB(byte value) {
+word Cpu::SUB(byte value, int clocks) {
 
 	byte result = registers.a - value;
 
@@ -312,11 +324,12 @@ word Cpu::SUB(byte value) {
 
 	registers.a = result;
 
-	return 4; // sometimes sub is 8 cycles, check the manual
+	AdvanceClocks(clocks);
+	return clocks;
 }
 
 // subtract value from a, include carry
-word Cpu::SUBC(byte value) {
+word Cpu::SUBC(byte value, int clocks) {
 
 	bool carry = flagTest(flagType::carry);
 
@@ -335,11 +348,12 @@ word Cpu::SUBC(byte value) {
 
 	registers.a = result;
 
-	return 4; // sometimes sub is 8 cycles, check the manual
+	AdvanceClocks(clocks);
+	return clocks;
 }
 
 // and value with register a
-word Cpu::AND(byte value) {
+word Cpu::AND(byte value, int clocks) {
 
 	byte result = registers.a & value;
 
@@ -350,11 +364,12 @@ word Cpu::AND(byte value) {
 
 	registers.a = result;
 
-	return 4; // sometimes is 8 cycles, check the manual
+	AdvanceClocks(clocks);
+	return clocks;
 }
 
 // or value with register a
-word Cpu::OR(byte value) {
+word Cpu::OR(byte value, int clocks) {
 
 	byte result = registers.a | value;
 
@@ -365,11 +380,12 @@ word Cpu::OR(byte value) {
 
 	registers.a = result;
 
-	return 4; // sometimes is 8 cycles, check the manual
+	AdvanceClocks(clocks);
+	return clocks;
 }
 
 // xor value with register a
-word Cpu::XOR(byte value) {
+word Cpu::XOR(byte value, int clocks) {
 
 	byte result = registers.a ^ value;
 
@@ -380,11 +396,12 @@ word Cpu::XOR(byte value) {
 
 	registers.a = result;
 
-	return 4; // sometimes is 8 cycles, check the manual
+	AdvanceClocks(clocks);
+	return clocks;
 }
 
 // compare value to register a and set flags accordingly
-word Cpu::CP(byte value) {
+word Cpu::CP(byte value, int clocks) {
 
 	byte result = registers.a - value;
 
@@ -393,7 +410,8 @@ word Cpu::CP(byte value) {
 	halfNoBorrow(registers.a, value, false);
 	noBorrow(registers.a, value, false);
 
-	return 4; // sometimes is 8 cycles, check the manual
+	AdvanceClocks(clocks);
+	return clocks;
 }
 
 // increment register
@@ -407,13 +425,15 @@ word Cpu::INC(byte& reg) {
 
 	reg = result;
 
-	return 4; // sometimes is 12 cycles, check the manual
+	AdvanceClocks(4);
+	return 4;
 }
 
 // increment memory location pointed to by register hl
 word Cpu::INCMemory(word address) {
 
 	byte value = memory.Read(address);
+	AdvanceClocks(4);
 	byte result = value + 1;
 
 	zeroFlag(result);
@@ -422,7 +442,8 @@ word Cpu::INCMemory(word address) {
 
 	memory.Write(address, result);
 
-	return 12; // sometimes is 12 cycles, check the manual
+	AdvanceClocks(8);
+	return 12;
 }
 
 // decrement register
@@ -436,13 +457,15 @@ word Cpu::DEC(byte& reg) {
 
 	reg = result;
 
-	return 4; // sometimes is 12 cycles, check the manual
+	AdvanceClocks(4);
+	return 4;
 }
 
 // decrement memory location pointed to by register hl
 word Cpu::DECMemory(word address) {
 
 	byte value = memory.Read(address);
+	AdvanceClocks(4);
 	byte result = value - 1;
 
 	zeroFlag(result);
@@ -451,6 +474,7 @@ word Cpu::DECMemory(word address) {
 
 	memory.Write(address, result);
 
+	AdvanceClocks(8);
 	return 12; 
 }
 
@@ -469,6 +493,7 @@ word Cpu::ADDHL(word value) {
 	registers.l = pair.first;
 	registers.h = pair.second;
 
+	AdvanceClocks(8);
 	return 8;
 }
 
@@ -486,7 +511,8 @@ word Cpu::ADDSP() {
 	carryFlag16(registers.sp, n);;
 
 	registers.sp = result;
-	
+
+	AdvanceClocks(16);
 	return 16;
 }
 
@@ -502,6 +528,7 @@ word Cpu::INC16(byte & reg1, byte & reg2) {
 	reg1 = pair.first;
 	reg2 = pair.second;
 
+	AdvanceClocks(8);
 	return 8;
 }
 
@@ -510,6 +537,7 @@ word Cpu::INC16(word & reg) {
 
 	reg++;
 
+	AdvanceClocks(8);
 	return 8;
 }
 
@@ -525,6 +553,7 @@ word Cpu::DEC16(byte & reg1, byte & reg2) {
 	reg1 = pair.first;
 	reg2 = pair.second;
 
+	AdvanceClocks(8);
 	return 8;
 }
 
@@ -534,6 +563,7 @@ word Cpu::DEC16(word & reg) {
 
 	reg--;
 
+	AdvanceClocks(8);
 	return 8;
 }
 
@@ -555,13 +585,16 @@ word Cpu::SWAP(byte & reg) {
 
 	reg = result;
 
+	AdvanceClocks(8);
 	return 8;
 }
 
 // swap the lower and upper nibbles (for memory)
 word Cpu::SWAP(word address) {
 
+	AdvanceClocks(4);
 	byte data = memory.Read(address);
+	AdvanceClocks(4);
 
 	byte upper = data & 0xF0;
 	byte lower = data & 0x0F;
@@ -578,6 +611,7 @@ word Cpu::SWAP(word address) {
 
 	memory.Write(address, result);
 
+	AdvanceClocks(8);
 	return 16;
 }
 
@@ -592,6 +626,7 @@ word Cpu::SWAPMemory() {
 
 	memory.Write(address, data);
 
+	AdvanceClocks(16);
 	return 16;
 }
 
@@ -621,6 +656,7 @@ word Cpu::DAA() {
 	zeroFlag(registers.a);
 	flagReset(flagType::halfCarry);
 
+	AdvanceClocks(4);
 	return 4; // cycles
 }
 
@@ -632,6 +668,7 @@ word Cpu::CPL() {
 	flagSet(flagType::negative);
 	flagSet(flagType::halfCarry);
 
+	AdvanceClocks(4);
 	return 4;
 }
 
@@ -642,7 +679,8 @@ word Cpu::CCF() {
 	flagReset(flagType::halfCarry);
 
 	flagSet(flagType::carry, !flagTest(flagType::carry));
-	
+
+	AdvanceClocks(4);
 	return 4;
 }
 
@@ -653,12 +691,14 @@ word Cpu::SCF() {
 	flagReset(flagType::halfCarry);
 	flagSet(flagType::carry);
 
+	AdvanceClocks(4);
 	return 4;
 }
 
 // no operation
 word Cpu::NOP() {
 	// does nothing
+	AdvanceClocks(4);
 	return 4;
 }
 
@@ -666,6 +706,7 @@ word Cpu::NOP() {
 word Cpu::HALT() {
 
 	halted = true;
+	AdvanceClocks(4);
 	return 4;
 }
 
@@ -697,6 +738,7 @@ word Cpu::STOP() {
 		stop = true;
 	}
 
+	AdvanceClocks(4);
 	return 4;
 }
 
@@ -704,6 +746,7 @@ word Cpu::STOP() {
 word Cpu::DI() {
 	interupt = false;
 	interuptEnable = false;
+	AdvanceClocks(4);
 	return 4;
 }
 
@@ -711,11 +754,12 @@ word Cpu::DI() {
 // EI has a one cycle delay but DI and RETI do not
 word Cpu::EI() {
 	interuptEnable = true;
+	AdvanceClocks(4);
 	return 4;
 }
 
 // rotate left bit 7 to carry
-word Cpu::RLC(byte& reg, bool isRegisterA) {
+word Cpu::RLC(byte& reg, bool isRegisterA, int clocks) {
 
 	byte result = reg;
 
@@ -739,13 +783,16 @@ word Cpu::RLC(byte& reg, bool isRegisterA) {
 
 	reg = result;
 
-	return 8;
+	AdvanceClocks(clocks);
+	return clocks;
 }
 
 // rotate left bit 7 to carry (for memory)
 word Cpu::RLC(word address) {
 
+	AdvanceClocks(4);
 	byte result = memory.Read(address);
+	AdvanceClocks(4);
 
 	bool bit7 = bitTest(result, Bits::b7);
 
@@ -761,11 +808,12 @@ word Cpu::RLC(word address) {
 
 	memory.Write(address, result);
 
+	AdvanceClocks(8);
 	return 16;
 }
 
 // rotate left through carry
-word Cpu::RL(byte & reg, bool isRegisterA) {
+word Cpu::RL(byte & reg, bool isRegisterA, int clocks) {
 
 	byte result = reg;
 
@@ -789,13 +837,16 @@ word Cpu::RL(byte & reg, bool isRegisterA) {
 
 	reg = result;
 
-	return 8;
+	AdvanceClocks(clocks);
+	return clocks;
 }
 
 // rotate left through carry (for memory)
 word Cpu::RL(word address) {
 
+	AdvanceClocks(4);
 	byte result = memory.Read(address);
+	AdvanceClocks(4);
 
 	bool bit7 = bitTest(result, Bits::b7);
 
@@ -811,11 +862,12 @@ word Cpu::RL(word address) {
 
 	memory.Write(address, result);
 
+	AdvanceClocks(8);
 	return 16;
 }
 
 // rotate right bit 7 to carry
-word Cpu::RRC(byte & reg, bool isRegisterA) {
+word Cpu::RRC(byte & reg, bool isRegisterA, int clocks) {
 
 	byte result = reg;
 
@@ -839,13 +891,16 @@ word Cpu::RRC(byte & reg, bool isRegisterA) {
 
 	reg = result;
 
-	return 8;
+	AdvanceClocks(clocks);
+	return clocks;
 }
 
 // rotate right bit 7 to carry (for memory)
 word Cpu::RRC(word address) {
 
+	AdvanceClocks(4);
 	byte result = memory.Read(address);
+	AdvanceClocks(4);
 
 	bool bit0 = bitTest(result, Bits::b0);
 
@@ -861,11 +916,12 @@ word Cpu::RRC(word address) {
 
 	memory.Write(address, result);
 
+	AdvanceClocks(8);
 	return 16;
 }
 
 // rotate right through carry
-word Cpu::RR(byte & reg, bool isRegisterA) {
+word Cpu::RR(byte & reg, bool isRegisterA, int clocks) {
 
 	byte result = reg;
 
@@ -889,13 +945,16 @@ word Cpu::RR(byte & reg, bool isRegisterA) {
 
 	reg = result;
 
-	return 8;
+	AdvanceClocks(clocks);
+	return clocks;
 }
 
 // rotate right through carry (for memory)
 word Cpu::RR(word address) {
 
+	AdvanceClocks(4);
 	byte result = memory.Read(address);
+	AdvanceClocks(4);
 
 	bool bit0 = bitTest(result, Bits::b0);
 
@@ -911,6 +970,7 @@ word Cpu::RR(word address) {
 
 	memory.Write(address, result);
 
+	AdvanceClocks(8);
 	return 16;
 }
 
@@ -931,13 +991,16 @@ word Cpu::SLA(byte & reg) {
 
 	reg = result;
 
+	AdvanceClocks(8);
 	return 8;
 }
 
 // shift left into carry lsb set to 0 (for memory)
 word Cpu::SLA(word address) {
 
+	AdvanceClocks(4);
 	byte result = memory.Read(address);
+	AdvanceClocks(4);
 
 	bool bit7 = bitTest(result, Bits::b7);
 
@@ -951,6 +1014,7 @@ word Cpu::SLA(word address) {
 
 	memory.Write(address, result);
 
+	AdvanceClocks(8);
 	return 16;
 }
 
@@ -974,13 +1038,16 @@ word Cpu::SRA(byte & reg) {
 
 	reg = result;
 
+	AdvanceClocks(8);
 	return 8;
 }
 
 // shift right into carry, msb stays the same (for memory)
 word Cpu::SRA(word address) {
 
+	AdvanceClocks(4);
 	byte result = memory.Read(address);
+	AdvanceClocks(4);
 
 	bool bit7 = bitTest(result, Bits::b7);
 	bool bit0 = bitTest(result, Bits::b0);
@@ -997,6 +1064,7 @@ word Cpu::SRA(word address) {
 
 	memory.Write(address, result);
 
+	AdvanceClocks(8);
 	return 16;
 }
 
@@ -1017,13 +1085,16 @@ word Cpu::SRL(byte & reg) {
 
 	reg = result;
 
+	AdvanceClocks(8);
 	return 8;
 }
 
 // shift right into carry msb set to 0 (for memory)
 word Cpu::SRL(word address) {
 
+	AdvanceClocks(4);
 	byte result = memory.Read(address);
+	AdvanceClocks(4);
 
 	bool bit0 = bitTest(result, Bits::b0);
 
@@ -1037,6 +1108,7 @@ word Cpu::SRL(word address) {
 
 	memory.Write(address, result);
 
+	AdvanceClocks(8);
 	return 16;
 }
 
@@ -1050,7 +1122,16 @@ word Cpu::BIT(byte reg, byte bit) {
 	flagReset(flagType::negative);
 	flagSet(flagType::halfCarry);
 
+	AdvanceClocks(8);
 	return 8;
+}
+
+word Cpu::BITHL(byte bit) {
+
+	AdvanceClocks(4);
+	byte memVal = memory.Read(Combinebytes(registers.l, registers.h));
+
+	return BIT(memVal, bit);
 }
 
 // set bit
@@ -1060,6 +1141,7 @@ word Cpu::SET(byte& reg, byte bit) {
 
 	reg |= bitmask;
 
+	AdvanceClocks(8);
 	return 8;
 }
 
@@ -1068,12 +1150,15 @@ word Cpu::SET(word address, byte bit) {
 
 	byte bitmask = 1 << bit;
 
+	AdvanceClocks(4);
 	byte data = memory.Read(address);
+	AdvanceClocks(4);
 
 	data |= bitmask;
 
 	memory.Write(address, data);
 
+	AdvanceClocks(8);
 	return 16;
 }
 
@@ -1085,6 +1170,7 @@ word Cpu::RES(byte& reg, byte bit) {
 
 	reg &= bitmask;
 
+	AdvanceClocks(8);
 	return 8;
 }
 
@@ -1094,12 +1180,15 @@ word Cpu::RES(word address, byte bit) {
 	byte bitmask = 1 << bit;
 	bitmask = ~bitmask;
 
+	AdvanceClocks(4);
 	byte data = memory.Read(address);
+	AdvanceClocks(4);
 
 	data &= bitmask;
 
 	memory.Write(address, data);
 
+	AdvanceClocks(8);
 	return 16;
 }
 
@@ -1109,6 +1198,7 @@ word Cpu::JP() {
 	word address = Combinebytes(memory.Read(registers.pc), memory.Read(registers.pc + 1));
 	registers.pc = address;
 
+	AdvanceClocks(16);
 	return 16;
 }
 
@@ -1127,6 +1217,7 @@ word Cpu::JPcc(condition cdn) {
 	case Cpu::Carry:	if (flagTest(flagType::carry) == true) { registers.pc = address; cycles = 16; } break;
 	}
 
+	AdvanceClocks(cycles);
 	return cycles;
 }
 
@@ -1136,6 +1227,7 @@ word Cpu::JPHL() {
 	word address = Combinebytes(registers.l, registers.h);
 	registers.pc = address;
 
+	AdvanceClocks(4);
 	return 4;
 }
 
@@ -1146,6 +1238,7 @@ word Cpu::JR() {
 	registers.pc++;
 	registers.pc += offset;
 
+	AdvanceClocks(12);
 	return 12;
 }
 
@@ -1164,6 +1257,7 @@ word Cpu::JRcc(condition cdn) {
 	case Cpu::Carry:	if (flagTest(flagType::carry) == true) { registers.pc += offset; cycles = 12; } break;
 	}
 
+	AdvanceClocks(cycles);
 	return cycles;
 }
 
@@ -1180,6 +1274,7 @@ word Cpu::CALL() {
 
 	registers.pc = address;
 
+	AdvanceClocks(24);
 	return 24;
 }
 
@@ -1213,6 +1308,7 @@ word Cpu::CALLcc(condition cdn) {
 		registers.pc += 2;
 	}
 
+	AdvanceClocks(cycles);
 	return cycles;
 }
 
@@ -1227,6 +1323,7 @@ word Cpu::RST(short offset) {
 
 	registers.pc = offset;
 
+	AdvanceClocks(16);
 	return 16;
 }
 
@@ -1240,6 +1337,7 @@ word Cpu::RET() {
 
 	registers.pc = Combinebytes(first, second);
 
+	AdvanceClocks(16);
 	return 16;
 }
 
@@ -1267,6 +1365,7 @@ word Cpu::RETcc(condition cdn) {
 		cycles = 20;
 	}
 
+	AdvanceClocks(cycles);
 	return cycles;
 }
 
@@ -1282,6 +1381,7 @@ word Cpu::RETI() {
 
 	interupt = true;
 
+	AdvanceClocks(16);
 	return 16;
 }
 
@@ -1476,6 +1576,7 @@ int Cpu::performInterupts() {
 			}
 		}
 	}
+	AdvanceClocks(clocks);
 	return clocks;
 }
 
@@ -1540,4 +1641,11 @@ void Cpu::LCDStatusRegister(word& cyclesThisLine) {
 	}
 
 	memory.Write(Address::LCDCStatus, LCDCStatus);
+}
+
+void Cpu::AdvanceClocks(int clocks) {
+
+	memory.IncrementDivAndTimerRegisters(clocks);
+	graphics->update(clocks, speedMode);
+
 }

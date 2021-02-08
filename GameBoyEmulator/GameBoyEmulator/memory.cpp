@@ -554,7 +554,7 @@ void Memory::IncrementDivAndTimerRegisters(byte clocks) {
 
 		if (writingToTIMA == true) {
 			writingToTIMACounter++;
-			if (writingToTIMACounter > 4) {
+			if (writingToTIMACounter > 4) { // it takes one cycle (4 clocks) to write TMA to TIMA
 				writingToTIMA = false;
 			}
 		}
@@ -580,7 +580,7 @@ void Memory::IncrementDivAndTimerRegisters(byte clocks) {
 
 		if (timerOverflow == true) {
 			timerOverflowCounter++;
-			if (timerOverflowCounter > 4) {
+			if (timerOverflowCounter > 4) { // there is a one cycle (4 clocks) delay to detect if the timer overflows
 
 				timerOverflow = false;
 

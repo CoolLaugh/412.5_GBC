@@ -2,6 +2,7 @@
 
 Emulator::Emulator() {
 
+	cpu.graphics = &graphics;
 	cpu.memory.LoadRom("./gb/" + Filename);
 	cpu.ColorGameBoyMode = cpu.memory.ColorGameBoyMode;
 	graphics.ColorGameBoyMode = cpu.memory.ColorGameBoyMode;
@@ -23,13 +24,12 @@ void Emulator::Update() {
 		}
 		else {
 			cycles += 4;
+			cpu.AdvanceClocks(4);
 		}
 
 		totalCycles += cycles;
 		cpu.LCDStatusRegister(graphics.cyclesThisLine);
-		graphics.update(cycles, cpu.speedMode);
 		cpu.performInterupts();
-		cpu.memory.IncrementDivAndTimerRegisters(cycles);
 
 		elapsedOpcodes++;
 		byte ly = cpu.memory.Read(Address::LY);

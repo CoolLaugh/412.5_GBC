@@ -2,6 +2,7 @@
 #include <vector>
 #include <queue>
 #include "memory.h"
+#include "Graphics.h"
 
 typedef unsigned char byte;
 typedef unsigned short word;
@@ -52,6 +53,8 @@ public:
 		word pc = 0x100;
 	};
 
+	Graphics* graphics;
+
 	Registers registers;
 	bool halted = false;
 	bool stop = false;
@@ -78,6 +81,7 @@ public:
 	void PowerUpSequence();
 	word ExecuteOpcode();
 	word ExecuteExtendedOpcode();
+	void AdvanceClocks(int clocks);
 
 	int performInterupts();
 	void LCDStatusRegister(word& cyclesThisLine);
@@ -106,14 +110,14 @@ public:
 	void zeroFlag(byte val);
 
 	// ALU
-	word ADD(byte value);
-	word ADDC(byte value);
-	word SUB(byte value);
-	word SUBC(byte value);
-	word AND(byte value);
-	word OR(byte value);
-	word XOR(byte value);
-	word CP(byte value);
+	word ADD(byte value, int clocks = 4);
+	word ADDC(byte value, int clocks = 4);
+	word SUB(byte value, int clocks = 4);
+	word SUBC(byte value, int clocks = 4);
+	word AND(byte value, int clocks = 4);
+	word OR(byte value, int clocks = 4);
+	word XOR(byte value, int clocks = 4);
+	word CP(byte value, int clocks = 4);
 	word INC(byte& reg);
 	word INCMemory(word address);
 	word DEC(byte& reg);
@@ -142,13 +146,13 @@ public:
 	word EI();
 
 	// rotates and shifts
-	word RLC(byte& reg, bool isRegisterA = false);
+	word RLC(byte& reg, bool isRegisterA = false, int clocks = 8);
 	word RLC(word address);
-	word RL(byte& reg, bool isRegisterA = false);
+	word RL(byte& reg, bool isRegisterA = false, int clocks = 8);
 	word RL(word address);
-	word RRC(byte& reg, bool isRegisterA = false);
+	word RRC(byte& reg, bool isRegisterA = false, int clocks = 8);
 	word RRC(word address);
-	word RR(byte& reg, bool isRegisterA = false);
+	word RR(byte& reg, bool isRegisterA = false, int clocks = 8);
 	word RR(word address);
 	word SLA(byte& reg);
 	word SLA(word address);
@@ -159,6 +163,7 @@ public:
 
 	// bit opcodes
 	word BIT(byte reg, byte bit);
+	word BITHL(byte bit);
 	word SET(byte& reg, byte bit);
 	word SET(word address, byte bit);
 	word RES(byte& reg, byte bit);
