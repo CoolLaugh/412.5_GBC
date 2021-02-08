@@ -19,6 +19,7 @@ This is a gameboy and gameboy color emulator written in C++ using SFML for graph
 # Test Roms Passed
 * Blargg's cpu_instrs
 * Blargg's instr_timing
+* Blargg's mem_timing
 
 # References
 [Pan Docs](https://gbdev.io/pandocs/)
