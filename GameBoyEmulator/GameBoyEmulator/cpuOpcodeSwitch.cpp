@@ -703,10 +703,3 @@ word Cpu::ExecuteExtendedOpcode() {
 	}
 	return cycles;
 }
-
-void Cpu::AdvanceClocks(int clocks) {
-
-	memory.IncrementDivAndTimerRegisters(clocks);
-	graphics->update(clocks, speedMode);
-
-}

@@ -11,6 +11,7 @@ public:
 	sf::RenderWindow* BGMapWindow;
 
 	word cyclesThisLine = 0;
+	byte lastLY = 0;
 	bool ColorGameBoyMode = false;
 
 private:

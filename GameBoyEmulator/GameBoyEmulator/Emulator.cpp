@@ -18,16 +18,14 @@ void Emulator::Update() {
 
 	while (totalCycles <= 70224 * cpu.speedMode) {
 		
-		word cycles = 0;
 		if (cpu.halted == false) {
-			cycles += cpu.ExecuteOpcode();
+			totalCycles += cpu.ExecuteOpcode();
 		}
 		else {
-			cycles += 4;
+			totalCycles += 4;
 			cpu.AdvanceClocks(4);
 		}
 
-		totalCycles += cycles;
 		cpu.LCDStatusRegister(graphics.cyclesThisLine);
 		cpu.performInterupts();
 

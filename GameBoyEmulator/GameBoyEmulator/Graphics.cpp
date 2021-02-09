@@ -257,11 +257,12 @@ void Graphics::update(word cyclesThisUpdate, int speedMode) {
 
 	cyclesThisLine += cyclesThisUpdate;
 
-	if (memory->Read(Address::LY) == ScreenHeight) {
+	if (lastLY == (ScreenHeight - 1) && memory->Read(Address::LY) == ScreenHeight) {
 		byte interuptFlags = memory->Read(Address::InteruptFlag);
 		interuptFlags |= Bits::b0;
 		memory->Write(Address::InteruptFlag, interuptFlags);
 	}
+	lastLY = memory->Read(Address::LY);
 
 	if (memory->Read(Address::LY) > 153) {
 		memory->Write(Address::LY, 0);
@@ -271,6 +272,7 @@ void Graphics::update(word cyclesThisUpdate, int speedMode) {
 		drawScanLine();
 		cyclesThisLine -= (cyclesPerLine * speedMode);
 	}
+
 }
 
 void Graphics::drawScanLine() {
