@@ -1627,18 +1627,26 @@ void CPU::LCDStatusRegister(word& cyclesThisLine) {
 				setInterrupt(interruptFlags::LCDSTAT);
 			}
 		}
+	}
 
-		byte LYCompare = memory->Read(Address::LYCompare);
-		if (LY == LYCompare) {
-			bitSet(LCDCStatus, Bits::b2);
-			if (bitTest(LCDCStatus, Bits::b6) == true) {
-				setInterrupt(interruptFlags::LCDSTAT);
-			}
-		}
-		else {
-			bitReset(LCDCStatus, Bits::b2);
+	byte LYCompare = memory->Read(Address::LYCompare);
+	byte LY = memory->Read(Address::LY);
+	int lastLine = LY - 1;
+	if (lastLine < 0) {
+		lastLine = 153;
+	}
+	if (LY == LYCompare && lastLY == lastLine) {
+		BitSet(LCDCStatus, 2);
+		if (BitTest(LCDCStatus, 6) == true) {
+			byte interuptFlags = memory->Read(Address::InteruptFlag);
+			interuptFlags |= (1 << 1);
+			memory->Write(Address::InteruptFlag, interuptFlags);
 		}
 	}
+	else {
+		BitReset(LCDCStatus, 2);
+	}
+	lastLY = LY;
 
 	memory->Write(Address::LCDCStatus, LCDCStatus);
 }

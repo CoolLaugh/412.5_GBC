@@ -2,11 +2,20 @@
 
 Emulator::Emulator() {
 
-	gameboy = new Gameboy(Filename);
+	//gameboy = new Gameboy(Filename);
 
-	graphics.setPixelPointers(gameboy->GetScreenPixels(), gameboy->GetTilePixels(), gameboy->GetBackgroundPixels(), gameboy->GetColorPalettePixels());
+	//graphics.setPixelPointers(gameboy->GetScreenPixels(), gameboy->GetTilePixels(), gameboy->GetBackgroundPixels(), gameboy->GetColorPalettePixels());
 
 	ImGui::SFML::Init(*graphics.window);
+
+	keybindings[Gameboy::Buttons::up] = sf::Keyboard::Key::Up;
+	keybindings[Gameboy::Buttons::down] = sf::Keyboard::Key::Down;
+	keybindings[Gameboy::Buttons::left] = sf::Keyboard::Key::Left;
+	keybindings[Gameboy::Buttons::right] = sf::Keyboard::Key::Right;
+	keybindings[Gameboy::Buttons::B] = sf::Keyboard::Key::Z;
+	keybindings[Gameboy::Buttons::A] = sf::Keyboard::Key::X;
+	keybindings[Gameboy::Buttons::select] = sf::Keyboard::Key::C;
+	keybindings[Gameboy::Buttons::start] = sf::Keyboard::Key::V;
 }
 
 Emulator::~Emulator() {
@@ -21,6 +30,7 @@ void Emulator::Loop() {
 	sf::Event event;
 	while (graphics.window->isOpen()) {
 
+		sf::Keyboard::Key keyPressed = sf::Keyboard::Key::Unknown;
 		while (graphics.window->pollEvent(event)) {
 
 			ImGui::SFML::ProcessEvent(event);
@@ -33,33 +43,16 @@ void Emulator::Loop() {
 				bool pressed = false;
 				if (event.type == sf::Event::KeyPressed) {
 					pressed = true;
+					keyPressed = event.key.code;
 				}
 
-				if (event.key.code == sf::Keyboard::Up) {
-					gameboy->SetButtonState(Gameboy::Buttons::up, pressed);
+				for (auto iter = keybindings.begin(); iter != keybindings.end(); iter++) {
+					if (event.key.code == iter->second) {
+						gameboy->SetButtonState(iter->first, pressed);
+					}
 				}
-				else if (event.key.code == sf::Keyboard::Down) {
-					gameboy->SetButtonState(Gameboy::Buttons::down, pressed);
-				}
-				else if (event.key.code == sf::Keyboard::Left) {
-					gameboy->SetButtonState(Gameboy::Buttons::left, pressed);
-				}
-				else if (event.key.code == sf::Keyboard::Right) {
-					gameboy->SetButtonState(Gameboy::Buttons::right, pressed);
-				}
-				else if (event.key.code == sf::Keyboard::Z) {
-					gameboy->SetButtonState(Gameboy::Buttons::B, pressed);
-				}
-				else if (event.key.code == sf::Keyboard::X) {
-					gameboy->SetButtonState(Gameboy::Buttons::A, pressed);
-				}
-				else if (event.key.code == sf::Keyboard::C) {
-					gameboy->SetButtonState(Gameboy::Buttons::select, pressed);
-				}
-				else if (event.key.code == sf::Keyboard::V) {
-					gameboy->SetButtonState(Gameboy::Buttons::start, pressed);
-				}
-				else if (event.key.code == sf::Keyboard::F1 && pressed == true) {
+
+				if (event.key.code == sf::Keyboard::F1 && pressed == true) {
 					gameboy->SaveState(1);
 				}
 				else if (event.key.code == sf::Keyboard::F2 && pressed == true) {
@@ -73,6 +66,9 @@ void Emulator::Loop() {
 					if (gameboy->cpu.logState == true) {
 						gameboy->cpu.cleanOutputState();
 					}
+				}
+				else if (event.key.code == sf::Keyboard::F8 && pressed == true) {
+					showSettings = !showSettings;
 				}
 			}
 			else if (event.type == sf::Event::GainedFocus || event.type == sf::Event::LostFocus) {
@@ -91,12 +87,11 @@ void Emulator::Loop() {
 			gameboy->Advance(456);
 			if (gameboy->redrawScreen == true) {
 
-				graphics.updateWindow();
-				if (elapsedFrames % 15 == 0) {
-					graphics.updateBGMapWindow();
-					graphics.updateTileWindow();
-					graphics.updateColorPaletteWindow();
-				}
+				graphics.updateWindow(scale);
+				ImGui::SFML::Update(*graphics.window, deltaClock.restart());
+				MainMenuBar(keyPressed);
+				ImGui::SFML::Render(*graphics.window);
+				graphics.window->display();
 				gameboy->redrawScreen = false;
 				elapsedFrames++;
 			}
@@ -105,7 +100,19 @@ void Emulator::Loop() {
 	}
 }
 
-// https://eliasdaler.github.io/using-imgui-with-sfml-pt2/
+void Emulator::MainMenuBar(sf::Keyboard::Key keyPresse) {
+
+	ToolBar();
+	FileOpen();
+	Keybindings(keyPresse);
+	TileWindow();
+	BackgroundWindow();
+	about();
+
+	SettingsMenu();
+}
+
+// https://eliasdaler.github.io/using-imgui-with-sfml-pt2/ 
 namespace ImGui {
 	static auto vector_getter = [](void* vec, int idx, const char** out_text) {
 		auto& vector = *static_cast<std::vector<std::string>*>(vec);
@@ -132,47 +139,263 @@ namespace ImGui {
 void Emulator::FileSelectWindow() {
 
 	sf::Clock deltaClock;
-	bool fileSelected = false;
 
 	sf::Event event;
-	while (graphics.window->isOpen() && fileSelected == false) {
+	while (Filename == "") {
 
+		sf::Keyboard::Key keyPressed = sf::Keyboard::Key::Unknown;
 		while (graphics.window->pollEvent(event)) {
 
-			graphics.window->clear();
+			ImGui::SFML::ProcessEvent(event); 
 
-			ImGui::SFML::ProcessEvent(event);
-			ImGui::SFML::Update(*graphics.window, deltaClock.restart());
-
-			ImGui::Begin("Rom Select", NULL, ImGuiWindowFlags_NoMove + ImGuiWindowFlags_NoTitleBar + ImGuiWindowFlags_NoResize);
-
-			static int item = 0;
-			fs::path gamesFolder = "./gb";
-			std::vector<std::string> files;
-			for (const auto & entry : fs::directory_iterator(gamesFolder)) {
-				std::string file = entry.path().string();
-				int pos = file.find_last_of("\\") + 1;
-				file = file.substr(pos, file.length() - pos);
-				files.push_back(file);
+			if (event.type == sf::Event::KeyPressed) {
+				keyPressed = event.key.code;
 			}
-			
-			ImGui::ListBox("", &item, files, 22);
+		}
+		graphics.window->clear();
+		ImGui::SFML::Update(*graphics.window, deltaClock.restart());
+		MainMenuBar(keyPressed);
+		ImGui::SFML::Render(*graphics.window);
+		graphics.window->display();
+	}
 
-			if (ImGui::Button("Open")) {
+}
 
-				fileSelected = true;
-				Filename = files[item];
+void Emulator::SettingsMenu() {
+
+	if (showSettings == false) {
+		return;
+	}
+
+	ImGui::Begin("Settings", &showSettings, 0);
+
+	ImGui::Text("Settings");
+	if (ImGui::SliderInt("Scale", &scale, 2, 9)) {
+		graphics.window->setSize(sf::Vector2u(ScreenWidth * scale, ScreenHeight * scale + 20));
+	}
+	ImGui::End();
+
+}
+
+void Emulator::ToolBar() {
+
+	if (ImGui::BeginMainMenuBar()) {
+
+		if (ImGui::BeginMenu("File")) {
+			ImGui::MenuItem("Open", NULL, &showFileOpen);
+			if (ImGui::MenuItem("Reset", NULL, false)) {
 				delete gameboy;
 				gameboy = new Gameboy(Filename);
 				graphics.setPixelPointers(gameboy->GetScreenPixels(), gameboy->GetTilePixels(), gameboy->GetBackgroundPixels(), gameboy->GetColorPalettePixels());
 			}
+			if (ImGui::MenuItem("Exit", NULL, false)) {
+				graphics.window->close();
+			}
+			ImGui::EndMenu();
+		}
+		if (ImGui::BeginMenu("State")) {
+			if (ImGui::BeginMenu("Save State")) {
+				for (size_t i = 0; i < 10; i++) {
+					SaveStateMenuItem(i);
+				}
+				ImGui::EndMenu();
+			}
+			if (ImGui::BeginMenu("Load State")) {
+				for (size_t i = 0; i < 10; i++) {
+					LoadStateMenuItem(i);
+				}
+				ImGui::EndMenu();
+			}
+			ImGui::EndMenu();
+		}
+		if (ImGui::BeginMenu("Settings")) {
+			ImGui::MenuItem("Graphics", NULL, &showSettings);
+			ImGui::MenuItem("Keys", NULL, &showKeyBinds);
+			ImGui::EndMenu();
+		}
+		if (ImGui::BeginMenu("Debug")) {
+			ImGui::MenuItem("Tiles", NULL, &showTileWindow);
+			ImGui::MenuItem("Background Map", NULL, &showBackgroundWindow);
+			ImGui::MenuItem("ColorPalette(CGB)", NULL, &showColorPalettteWindow);
+			ImGui::EndMenu();
+		}
+		if (ImGui::BeginMenu("?")) {
+			ImGui::MenuItem("About", NULL, &showAbout);
+			ImGui::EndMenu();
+		}
 
-			ImGui::SetWindowPos(ImVec2(0, 0));
-			ImGui::SetWindowSize(ImVec2(ScreenWidth * 3, ScreenHeight * 3));
-			ImGui::End();
+		ImGui::EndMainMenuBar();
+	}
+}
 
-			ImGui::SFML::Render(*graphics.window);
-			graphics.window->display();
+void Emulator::FileOpen() {
+
+	if (showFileOpen == false) {
+		return;
+	}
+
+	ImGui::Begin("Open File", &showFileOpen, 0);
+
+	static int item = 0;
+	fs::path gamesFolder = "./gb";
+	std::vector<std::string> files;
+	for (const auto & entry : fs::directory_iterator(gamesFolder)) {
+		std::string file = entry.path().string();
+		if (file.find(".gb") != std::string::npos) {
+
+			int pos = file.find_last_of("\\") + 1;
+			file = file.substr(pos, file.length() - pos);
+			files.push_back(file);
 		}
 	}
+
+	ImGui::ListBox("", &item, files, 20);
+	
+	if (ImGui::Button("Open")) {
+		showFileOpen = false;
+		Filename = files[item];
+		delete gameboy;
+		gameboy = new Gameboy(Filename);
+		graphics.setPixelPointers(gameboy->GetScreenPixels(), gameboy->GetTilePixels(), gameboy->GetBackgroundPixels(), gameboy->GetColorPalettePixels());
+	}
+
+
+	ImGui::End();
+
+}
+
+void Emulator::Keybindings(sf::Keyboard::Key keyPressed) {
+
+	if (showKeyBinds == false) {
+		return;
+	}
+
+	ImGui::Begin("Keybinds", &showKeyBinds, 0);
+	SetKey("Up", "c", Gameboy::Buttons::up, keyPressed);
+	SetKey("Down", "c", Gameboy::Buttons::down, keyPressed);
+	SetKey("Left", "c", Gameboy::Buttons::left, keyPressed);
+	SetKey("Right", "c", Gameboy::Buttons::right, keyPressed);
+	SetKey("A", "c", Gameboy::Buttons::A, keyPressed);
+	SetKey("B", "c", Gameboy::Buttons::B, keyPressed);
+	SetKey("Start", "c", Gameboy::Buttons::start, keyPressed);
+	SetKey("Select", "c", Gameboy::Buttons::select, keyPressed);
+	ImGui::End();
+}
+
+void Emulator::about() {
+
+	if (showAbout == false) {
+		return;
+	}
+
+	ImGui::Begin("About", &showAbout, 0);
+	ImGui::Text("Gameboy Emulator");
+	ImGui::Text("Programmed by Zach Walters");
+	ImGui::Text("Emulator for the Gameboy and Gameboy Color systems");
+	ImGui::Text("Licensed under GNU GENERAL PUBLIC LICENSE Version 3");
+	ImGui::Text("\"Gameboy\" is a trademark of Nintendo");
+	ImGui::Text("I'm not affiliated with Nintendo in any way");
+	ImGui::End();
+}
+
+void Emulator::SetKey(std::string buttonName, std::string currentKey, Gameboy::Buttons button, sf::Keyboard::Key keyPressed) {
+
+	ImGui::Text((buttonName + ": ").c_str());
+	ImGui::SameLine();
+	if (keyListening[button] == true) {
+
+		ImGui::Button("Listening");
+		if (keyPressed != sf::Keyboard::Key::Unknown) {
+			keybindings[button] = keyPressed;
+			keyListening[button] = false;
+		}
+	}
+	else {
+
+		if (ImGui::Button(SFMLKeyNames[keybindings[button]].c_str())) {
+			keyListening[button] = true;
+		}
+	}
+}
+
+void Emulator::SaveStateMenuItem(int number) {
+
+	if (gameboy == nullptr) {
+		return;
+	}
+
+	if (ImGui::MenuItem(("Save State #" + std::to_string(number)).c_str(), NULL, false)) {
+		gameboy->SaveState(number);
+	}
+}
+
+void Emulator::LoadStateMenuItem(int number) {
+
+	if (gameboy == nullptr) {
+		return;
+	}
+
+	if (ImGui::MenuItem(("Load State #" + std::to_string(number)).c_str(), NULL, false)) {
+		gameboy->LoadState(number);
+	}
+}
+
+void Emulator::TileWindow() {
+
+	if (showTileWindow == false || gameboy == nullptr) {
+		return;
+	}
+
+	ImGui::Begin("Tile Memory", &showTileWindow, 0);
+
+	if (gameboy != nullptr) {
+		gameboy->ppu.updateTileWindow();
+		byte* tiles = gameboy->GetTilePixels();
+		sf::Image image;
+		image.create(256, 192, tiles);
+		TileTexture.loadFromImage(image);
+		ImGui::Image(TileTexture, ImVec2(256 * 2, 192 * 2));
+	}
+
+	ImGui::End();
+}
+
+void Emulator::BackgroundWindow() {
+
+	if (showBackgroundWindow == false || gameboy == nullptr) {
+		return;
+	}
+
+	ImGui::Begin("Background Map Memory", &showBackgroundWindow, 0);
+
+	if (gameboy != nullptr) {
+		gameboy->ppu.updateBGMapWindow();
+		sf::Image image;
+		image.create(256, 256, gameboy->GetBackgroundPixels());
+		BackgroundTexture.loadFromImage(image);
+		ImGui::Image(BackgroundTexture, ImVec2(256 * 2, 256 * 2));
+	}
+
+	ImGui::End();
+}
+
+void Emulator::ColorPaletteWindow() {
+
+	if (showColorPalettteWindow == false) {
+		return;
+	}
+
+	ImGui::Begin("Color Palette Memory", &showColorPalettteWindow, 0);
+
+	if (gameboy != nullptr) {
+
+		gameboy->ppu.updateColorPaletteWindow();
+		byte* colors = gameboy->GetColorPalettePixels();
+		sf::Image image;
+		image.create(4, 16, colors);
+		ColorTexture.loadFromImage(image);
+		ImGui::Image(ColorTexture, ImVec2(4 * 12, 16 * 12));
+	}
+
+	ImGui::End();
 }

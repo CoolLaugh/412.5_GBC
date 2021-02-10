@@ -2,9 +2,9 @@
 
 SFMLGraphics::SFMLGraphics() {
 	setupWindow();
-	setupTileWindow();
-	setupBGMapWindow();
-	setupColorPaletteWindow();
+	//setupTileWindow();
+	//setupBGMapWindow();
+	//setupColorPaletteWindow();
 }
 
 void SFMLGraphics::setPixelPointers(byte * mainWindow, byte * tileMemory, byte * BGMap, byte * ColorPalette) {
@@ -59,9 +59,10 @@ void SFMLGraphics::setupColorPaletteWindow() {
 	ColorPaletteWindow->setView(*ColorPaletteView);
 }
 
-void SFMLGraphics::updateWindow() {
-
-	updateWindowGeneric(window, view, backgroundPixels, ScreenWidth, ScreenHeight);
+void SFMLGraphics::updateWindow(int scale) {
+	float offset = 20.f / (ScreenHeight * scale + 20 / scale);
+	view->setViewport(sf::FloatRect(0.f, offset, 1.f, 1.f - offset));
+	updateWindowGeneric(window, view, backgroundPixels, ScreenWidth, ScreenHeight,false);
 }
 
 void SFMLGraphics::updateTileWindow() {

@@ -34,7 +34,7 @@ public:
 	void setupBGMapWindow();
 	void setupColorPaletteWindow();
 
-	void updateWindow();
+	void updateWindow(int scale);
 	void updateTileWindow();
 	void updateBGMapWindow();
 	void updateColorPaletteWindow();

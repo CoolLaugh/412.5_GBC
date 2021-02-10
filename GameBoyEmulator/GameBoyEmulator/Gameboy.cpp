@@ -35,12 +35,6 @@ void Gameboy::Advance(int clockCount) {
 
 		if (memory.Read(Address::LY) == 144 && LY == 143) {
 			redrawScreen = true;
-			if ((elapsedFrames % 15) == 0) {
-
-				ppu.updateTileWindow();
-				ppu.updateBGMapWindow();
-				ppu.updateColorPaletteWindow();
-			}
 			elapsedFrames++;
 		}
 	}

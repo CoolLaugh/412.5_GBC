@@ -67,6 +67,7 @@ public:
 
 	bool logState = false;
 	Memory* memory;
+	byte lastLY = 0;
 
 	bool flagTest(flagType flag);
 	void flagSet(flagType flag);

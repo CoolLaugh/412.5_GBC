@@ -4,11 +4,11 @@ PPU::PPU() {
 
 	backgroundPixels = new byte[ScreenWidth * ScreenHeight * 4];
 	tileMemoryPixels = new byte[256 * 192 * 4];
-	memset(tileMemoryPixels, 0, 256 * 192 * 4);
+	memset(tileMemoryPixels, 0x88, 256 * 192 * 4);
 	BGMapBackgroundPixels = new byte[256 * 256 * 4];
-	memset(BGMapBackgroundPixels, 0, 256 * 256 * 4);
+	memset(BGMapBackgroundPixels, 0x88, 256 * 256 * 4);
 	ColorPalettePixels = new byte[4 * 16 * 4];
-	memset(ColorPalettePixels, 0, 4 * 16 * 4);
+	memset(ColorPalettePixels, 0x88, 4 * 16 * 4);
 
 	backgroundPixelsColorIndex = new byte[ScreenWidth * ScreenHeight];
 }
@@ -159,16 +159,14 @@ void PPU::update(word cyclesThisUpdate, int speedMode) {
 
 	cyclesThisLine += cyclesThisUpdate;
 
-	if (lastLY == (ScreenHeight - 1) && memory->Read(Address::LY) == ScreenHeight) {
+	byte LY = memory->Read(Address::LY);
+	if (lastLY == (ScreenHeight - 1) && LY == ScreenHeight) {
 		byte interuptFlags = memory->Read(Address::InteruptFlag);
 		interuptFlags |= Bits::b0;
 		memory->Write(Address::InteruptFlag, interuptFlags);
 	}
-	lastLY = memory->Read(Address::LY);
 
-	if (memory->Read(Address::LY) > 153) {
-		memory->Write(Address::LY, 0);
-	}
+	lastLY = memory->Read(Address::LY);
 
 	if (cyclesThisLine >= (cyclesPerLine * speedMode)) {
 		drawScanLine();
@@ -198,6 +196,9 @@ void PPU::drawScanLine() {
 	}
 
 	memory->memorySpace[Address::LY]++;
+	if (memory->Read(Address::LY) > 153) {
+		memory->Write(Address::LY, 0);
+	}
 }
 
 void PPU::drawBackground() {

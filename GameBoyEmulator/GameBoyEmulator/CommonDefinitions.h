@@ -6,7 +6,7 @@ typedef unsigned short word;
 
 const int ScreenWidth = 160;
 const int ScreenHeight = 144;
-const int DisplayScale = 3;
+const int DisplayScale = 4;
 
 enum Address {
 
@@ -108,3 +108,15 @@ static std::string ExtendedOpcodeNames[] = {	"RLC B", "RLC C", "RLC D", "RLC E",
 												"RES B 2", "RES C 2", "RES D 2", "RES E 2", "RES H 2", "RES L 2", "RES (HL) 2", "RES A 2", "RES B 3", "RES C 3", "RES D 3", "RES E 3", "RES H 3", "RES L 3", "RES (HL) 3", "RES A 3",
 												"RES B 4", "RES C 4", "RES D 4", "RES E 4", "RES H 4", "RES L 4", "RES (HL) 4", "RES A 4", "RES B 5", "RES C 5", "RES D 5", "RES E 5", "RES H 5", "RES L 5", "RES (HL) 5", "RES A 5",
 												"RES B 6", "RES C 6", "RES D 6", "RES E 6", "RES H 6", "RES L 6", "RES (HL) 6", "RES A 6", "RES B 7", "RES C 7", "RES D 7", "RES E 7", "RES H 7", "RES L 7", "RES (HL) 7", "RES A 7" };
+
+static std::string SFMLKeyNames[] = {	"A", "B", "C", "D", "E", "F", "G", "H", "I", "J",
+										"K", "L", "M", "N", "O", "P", "Q", "R", "S", "T",
+										"U", "V", "W", "X", "Y", "Z", "Num0",  "Num1",  "Num2",  "Num3",
+										"Num4",  "Num5",  "Num6", "Num7", "Num8", "Num9", "Escape", "LControl", "LShift", "LAlt",
+										"LSystem", "RControl", "RShift", "RAlt", "RSystem", "Menu", "LBracket", "RBracket", "Semicolon", "Comma",
+										"Period", "Quote", "Slash", "Backslash", "Tilde", "Equal", "Hyphen", "Space", "Enter", "Backspace",
+										"Tab", "PageUp", "PageDown", "End", "Home", "Insert", "Delete", "Add", "Subtract", "Multiply",
+										"Divide", "Left", "Right", "Up", "Down", "Numpad0", "Numpad1", "Numpad2", "Numpad3", "Numpad4",
+										"Numpad5", "Numpad6", "Numpad7", "Numpad8", "Numpad9", "F1", "F2", "F3", "F4", "F5",
+										"F6", "F7", "F8", "F9", "F10", "F11", "F12", "F13", "F14", "F15",
+										"Pause" };
