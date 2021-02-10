@@ -2,7 +2,7 @@
 
 
 
-word Cpu::ExecuteOpcode() {
+word CPU::ExecuteOpcode() {
 
 	word cycles = 0;
 
@@ -11,7 +11,7 @@ word Cpu::ExecuteOpcode() {
 	//	programCounterTrace.pop();
 	//}
 	outputState();
-	byte opcode = memory.Read(registers.pc);
+	byte opcode = memory->Read(registers.pc);
 	registers.pc++;
 
 	// read memory instead of rom if pc is 0x4000-0x7FFF or 0xA000 - 0xBFFF
@@ -86,17 +86,17 @@ word Cpu::ExecuteOpcode() {
 	case 0x6D: cycles = LDreg(registers.l, registers.l); break;
 	case 0x6E: cycles = LDregHL(registers.l); break;
 
-	case 0x70: cycles = 8; memory.Write(Combinebytes(registers.l, registers.h), registers.b); AdvanceClocks(8); break;
-	case 0x71: cycles = 8; memory.Write(Combinebytes(registers.l, registers.h), registers.c); AdvanceClocks(8); break;
-	case 0x72: cycles = 8; memory.Write(Combinebytes(registers.l, registers.h), registers.d); AdvanceClocks(8); break;
-	case 0x73: cycles = 8; memory.Write(Combinebytes(registers.l, registers.h), registers.e); AdvanceClocks(8); break;
-	case 0x74: cycles = 8; memory.Write(Combinebytes(registers.l, registers.h), registers.h); AdvanceClocks(8); break;
-	case 0x75: cycles = 8; memory.Write(Combinebytes(registers.l, registers.h), registers.l); AdvanceClocks(8); break;
+	case 0x70: cycles = 8; memory->Write(Combinebytes(registers.l, registers.h), registers.b); AdvanceClocks(8); break;
+	case 0x71: cycles = 8; memory->Write(Combinebytes(registers.l, registers.h), registers.c); AdvanceClocks(8); break;
+	case 0x72: cycles = 8; memory->Write(Combinebytes(registers.l, registers.h), registers.d); AdvanceClocks(8); break;
+	case 0x73: cycles = 8; memory->Write(Combinebytes(registers.l, registers.h), registers.e); AdvanceClocks(8); break;
+	case 0x74: cycles = 8; memory->Write(Combinebytes(registers.l, registers.h), registers.h); AdvanceClocks(8); break;
+	case 0x75: cycles = 8; memory->Write(Combinebytes(registers.l, registers.h), registers.l); AdvanceClocks(8); break;
 	case 0x36: {
 		cycles = 12; 
-		byte value = memory.Read(registers.pc);
+		byte value = memory->Read(registers.pc);
 		AdvanceClocks(4);
-		memory.Write(Combinebytes(registers.l, registers.h), value);
+		memory->Write(Combinebytes(registers.l, registers.h), value);
 		AdvanceClocks(8); 
 		registers.pc++; break;
 	}
@@ -105,11 +105,11 @@ word Cpu::ExecuteOpcode() {
 	case 0x1A: cycles = LDRegFromMemory(registers.a, Combinebytes(registers.e, registers.d)); break;
 	case 0xFA: {
 		
-		byte first = memory.Read(registers.pc);
+		byte first = memory->Read(registers.pc);
 		AdvanceClocks(4);
-		byte second = memory.Read(registers.pc + 1);
+		byte second = memory->Read(registers.pc + 1);
 		AdvanceClocks(4);
-		cycles = LDRegFromMemory(registers.a, Combinebytes(memory.Read(registers.pc), memory.Read(registers.pc + 1))); 
+		cycles = LDRegFromMemory(registers.a, Combinebytes(memory->Read(registers.pc), memory->Read(registers.pc + 1))); 
 		registers.pc += 2; 
 		break;
 	} 
@@ -121,38 +121,38 @@ word Cpu::ExecuteOpcode() {
 	case 0x67: cycles = LDreg(registers.h, registers.a); break;
 	case 0x6F: cycles = LDreg(registers.l, registers.a); break;
 
-	case 0x02: cycles = 8; memory.Write(Combinebytes(registers.c, registers.b), registers.a); AdvanceClocks(8); break;
-	case 0x12: cycles = 8; memory.Write(Combinebytes(registers.e, registers.d), registers.a); AdvanceClocks(8); break;
-	case 0x77: cycles = 8; memory.Write(Combinebytes(registers.l, registers.h), registers.a); AdvanceClocks(8); break;
+	case 0x02: cycles = 8; memory->Write(Combinebytes(registers.c, registers.b), registers.a); AdvanceClocks(8); break;
+	case 0x12: cycles = 8; memory->Write(Combinebytes(registers.e, registers.d), registers.a); AdvanceClocks(8); break;
+	case 0x77: cycles = 8; memory->Write(Combinebytes(registers.l, registers.h), registers.a); AdvanceClocks(8); break;
 	case 0xEA: {
 		cycles = 16; 
-		byte low = memory.Read(registers.pc);
+		byte low = memory->Read(registers.pc);
 		AdvanceClocks(4);
-		byte high = memory.Read(registers.pc + 1);
+		byte high = memory->Read(registers.pc + 1);
 		AdvanceClocks(4);
-		memory.Write(Combinebytes(low, high), registers.a);
+		memory->Write(Combinebytes(low, high), registers.a);
 		AdvanceClocks(8); 
 		registers.pc += 2; 
 		break;
 	}
 
-	case 0xF2: cycles = 8; registers.a = memory.Read(0xFF00 + registers.c); AdvanceClocks(8); break;
+	case 0xF2: cycles = 8; registers.a = memory->Read(0xFF00 + registers.c); AdvanceClocks(8); break;
 
-	case 0xE2: cycles = 8; memory.Write(0xFF00 + registers.c, registers.a); AdvanceClocks(8); break;
+	case 0xE2: cycles = 8; memory->Write(0xFF00 + registers.c, registers.a); AdvanceClocks(8); break;
 
-	case 0x3A: cycles = 8; registers.a = memory.Read(Combinebytes(registers.l, registers.h)); decrement16reg(registers.h, registers.l); AdvanceClocks(8); break;
+	case 0x3A: cycles = 8; registers.a = memory->Read(Combinebytes(registers.l, registers.h)); decrement16reg(registers.h, registers.l); AdvanceClocks(8); break;
 
-	case 0x32: cycles = 8; memory.Write(Combinebytes(registers.l, registers.h), registers.a); decrement16reg(registers.h, registers.l); AdvanceClocks(8); break;
+	case 0x32: cycles = 8; memory->Write(Combinebytes(registers.l, registers.h), registers.a); decrement16reg(registers.h, registers.l); AdvanceClocks(8); break;
 
-	case 0x2A: cycles = 8; registers.a = memory.Read(Combinebytes(registers.l, registers.h)); increment16reg(registers.h, registers.l); AdvanceClocks(8); break;
+	case 0x2A: cycles = 8; registers.a = memory->Read(Combinebytes(registers.l, registers.h)); increment16reg(registers.h, registers.l); AdvanceClocks(8); break;
 
-	case 0x22: cycles = 8; memory.Write(Combinebytes(registers.l, registers.h), registers.a); increment16reg(registers.h, registers.l); AdvanceClocks(8); break;
+	case 0x22: cycles = 8; memory->Write(Combinebytes(registers.l, registers.h), registers.a); increment16reg(registers.h, registers.l); AdvanceClocks(8); break;
 
 	case 0xE0: {
 		cycles = 12; 
-		byte addressOffset = memory.Read(registers.pc);
+		byte addressOffset = memory->Read(registers.pc);
 		AdvanceClocks(4);
-		memory.Write(0xFF00 + addressOffset, registers.a);
+		memory->Write(0xFF00 + addressOffset, registers.a);
 		registers.pc++; 
 		AdvanceClocks(8); 
 		break;
@@ -161,9 +161,9 @@ word Cpu::ExecuteOpcode() {
 	case 0xF0: {
 		cycles = 12;
 		
-		byte value = memory.Read(registers.pc);
+		byte value = memory->Read(registers.pc);
 		AdvanceClocks(4);
-		registers.a = memory.Read(0xFF00 + value);
+		registers.a = memory->Read(0xFF00 + value);
 		AdvanceClocks(8);
 		registers.pc++;  
 		break;
@@ -200,8 +200,8 @@ word Cpu::ExecuteOpcode() {
 	case 0x83: cycles = ADD(registers.e); break;
 	case 0x84: cycles = ADD(registers.h); break;
 	case 0x85: cycles = ADD(registers.l); break;
-	case 0x86: cycles = ADD(memory.Read(Combinebytes(registers.l, registers.h)), 8); break;
-	case 0xC6: cycles = ADD(memory.Read(registers.pc), 8); registers.pc++; break;
+	case 0x86: cycles = ADD(memory->Read(Combinebytes(registers.l, registers.h)), 8); break;
+	case 0xC6: cycles = ADD(memory->Read(registers.pc), 8); registers.pc++; break;
 
 	// add with carry
 	case 0x8F: cycles = ADDC(registers.a); break;
@@ -211,8 +211,8 @@ word Cpu::ExecuteOpcode() {
 	case 0x8B: cycles = ADDC(registers.e); break;
 	case 0x8C: cycles = ADDC(registers.h); break;
 	case 0x8D: cycles = ADDC(registers.l); break;
-	case 0x8E: cycles = ADDC(memory.Read(Combinebytes(registers.l, registers.h)), 8); break;
-	case 0xCE: cycles = ADDC(memory.Read(registers.pc), 8); registers.pc++; break;
+	case 0x8E: cycles = ADDC(memory->Read(Combinebytes(registers.l, registers.h)), 8); break;
+	case 0xCE: cycles = ADDC(memory->Read(registers.pc), 8); registers.pc++; break;
 
 	// sub
 	case 0x97: cycles = SUB(registers.a); break;
@@ -222,8 +222,8 @@ word Cpu::ExecuteOpcode() {
 	case 0x93: cycles = SUB(registers.e); break;
 	case 0x94: cycles = SUB(registers.h); break;
 	case 0x95: cycles = SUB(registers.l); break;
-	case 0x96: cycles = SUB(memory.Read(Combinebytes(registers.l, registers.h)), 8); break;
-	case 0xD6: cycles = SUB(memory.Read(registers.pc), 8); registers.pc++; break;
+	case 0x96: cycles = SUB(memory->Read(Combinebytes(registers.l, registers.h)), 8); break;
+	case 0xD6: cycles = SUB(memory->Read(registers.pc), 8); registers.pc++; break;
 
 	// sub with carry
 	case 0x9F: cycles = SUBC(registers.a); break;
@@ -233,8 +233,8 @@ word Cpu::ExecuteOpcode() {
 	case 0x9B: cycles = SUBC(registers.e); break;
 	case 0x9C: cycles = SUBC(registers.h); break;
 	case 0x9D: cycles = SUBC(registers.l); break;
-	case 0x9E: cycles = SUBC(memory.Read(Combinebytes(registers.l, registers.h)), 8); break;
-	case 0xDE: cycles = SUBC(memory.Read(registers.pc), 8); registers.pc++; break;
+	case 0x9E: cycles = SUBC(memory->Read(Combinebytes(registers.l, registers.h)), 8); break;
+	case 0xDE: cycles = SUBC(memory->Read(registers.pc), 8); registers.pc++; break;
 
 	// AND
 	case 0xA7: cycles = AND(registers.a); break;
@@ -244,8 +244,8 @@ word Cpu::ExecuteOpcode() {
 	case 0xA3: cycles = AND(registers.e); break;
 	case 0xA4: cycles = AND(registers.h); break;
 	case 0xA5: cycles = AND(registers.l); break;
-	case 0xA6: cycles = AND(memory.Read(Combinebytes(registers.l, registers.h)), 8); break;
-	case 0xE6: cycles = AND(memory.Read(registers.pc), 8); registers.pc++; break;
+	case 0xA6: cycles = AND(memory->Read(Combinebytes(registers.l, registers.h)), 8); break;
+	case 0xE6: cycles = AND(memory->Read(registers.pc), 8); registers.pc++; break;
 
 	// OR
 	case 0xB7: cycles = OR(registers.a); break;
@@ -255,8 +255,8 @@ word Cpu::ExecuteOpcode() {
 	case 0xB3: cycles = OR(registers.e); break;
 	case 0xB4: cycles = OR(registers.h); break;
 	case 0xB5: cycles = OR(registers.l); break;
-	case 0xB6: cycles = OR(memory.Read(Combinebytes(registers.l, registers.h)), 8); break;
-	case 0xF6: cycles = OR(memory.Read(registers.pc), 8); registers.pc++; break;
+	case 0xB6: cycles = OR(memory->Read(Combinebytes(registers.l, registers.h)), 8); break;
+	case 0xF6: cycles = OR(memory->Read(registers.pc), 8); registers.pc++; break;
 
 	// XOR
 	case 0xAF: cycles = XOR(registers.a); break;
@@ -266,8 +266,8 @@ word Cpu::ExecuteOpcode() {
 	case 0xAB: cycles = XOR(registers.e); break;
 	case 0xAC: cycles = XOR(registers.h); break;
 	case 0xAD: cycles = XOR(registers.l); break;
-	case 0xAE: cycles = XOR(memory.Read(Combinebytes(registers.l, registers.h)), 8); break;
-	case 0xEE: cycles = XOR(memory.Read(registers.pc), 8); registers.pc++; break;
+	case 0xAE: cycles = XOR(memory->Read(Combinebytes(registers.l, registers.h)), 8); break;
+	case 0xEE: cycles = XOR(memory->Read(registers.pc), 8); registers.pc++; break;
 
 	// CP
 	case 0xBF: cycles = CP(registers.a); break;
@@ -277,8 +277,8 @@ word Cpu::ExecuteOpcode() {
 	case 0xBB: cycles = CP(registers.e); break;
 	case 0xBC: cycles = CP(registers.h); break;
 	case 0xBD: cycles = CP(registers.l); break;
-	case 0xBE: cycles = CP(memory.Read(Combinebytes(registers.l, registers.h)), 8); break;
-	case 0xFE: cycles = CP(memory.Read(registers.pc), 8); registers.pc++; break;
+	case 0xBE: cycles = CP(memory->Read(Combinebytes(registers.l, registers.h)), 8); break;
+	case 0xFE: cycles = CP(memory->Read(registers.pc), 8); registers.pc++; break;
 
 	// INC
 	case 0x3C: cycles = INC(registers.a); break;
@@ -411,11 +411,11 @@ word Cpu::ExecuteOpcode() {
 
 
 
-word Cpu::ExecuteExtendedOpcode() {
+word CPU::ExecuteExtendedOpcode() {
 
 	word cycles = 0;
 
-	byte opcode = memory.Read(registers.pc);
+	byte opcode = memory->Read(registers.pc);
 	registers.pc++;
 
 	switch (opcode) {

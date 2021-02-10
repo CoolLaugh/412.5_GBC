@@ -1,44 +1,20 @@
-#include "Graphics.h"
+#include "ppu.h"
 
-Graphics::Graphics() {
+PPU::PPU() {
 
-	window = new sf::RenderWindow(sf::VideoMode(ScreenWidth * DisplayScale, ScreenHeight * DisplayScale), "Gameboy Emulator");
-	window->setPosition(sf::Vector2i(950, 150));
-	window->setVerticalSyncEnabled(false);
-	window->setFramerateLimit(60);
+	backgroundPixels = new byte[ScreenWidth * ScreenHeight * 4];
+	tileMemoryPixels = new byte[256 * 192 * 4];
+	memset(tileMemoryPixels, 0, 256 * 192 * 4);
+	BGMapBackgroundPixels = new byte[256 * 256 * 4];
+	memset(BGMapBackgroundPixels, 0, 256 * 256 * 4);
+	ColorPalettePixels = new byte[4 * 16 * 4];
+	memset(ColorPalettePixels, 0, 4 * 16 * 4);
 
-	view = new sf::View(sf::FloatRect(0, 0, ScreenWidth, ScreenHeight));
-	window->setView(*view);
-
-	background = new sf::Image();
-	background->create(ScreenWidth, ScreenHeight, sf::Color::White);
-
-	backgroundPixels = new sf::Uint8[ScreenWidth * ScreenHeight * 4];
 	backgroundPixelsColorIndex = new byte[ScreenWidth * ScreenHeight];
-
-	setupTileWindow(); 
-	setupBGMapWindow();
-	setupColorPaletteWindow();
 }
 
-void Graphics::setupTileWindow() {
+void PPU::updateTileWindow() {
 
-	tileMemoryWindow = new sf::RenderWindow(sf::VideoMode((256) * DisplayScale, (192) * DisplayScale), "VRAM Tiles");
-	tileMemoryWindow->setPosition(sf::Vector2i(150, 150));
-	tileMemoryWindow->setVerticalSyncEnabled(false);
-	tileMemoryWindow->setFramerateLimit(60);
-
-	tileMemoryView = new sf::View(sf::FloatRect(0, 0, 256, 192));
-	tileMemoryWindow->setView(*tileMemoryView);
-
-	tileMemoryBackground = new sf::Image();
-	tileMemoryBackground->create(256, 192, sf::Color::Magenta);
-}
-
-void Graphics::updateTileWindow() {
-
-	tileMemoryWindow->clear();
-	tileMemoryWindow->setView(*tileMemoryView);
 	byte BGP = memory->Read(Address::BGWPalette);
 
 	int vramBankCount = 1;
@@ -57,7 +33,7 @@ void Graphics::updateTileWindow() {
 
 				word tileX = x * 8;
 				word tileY = y * 8;
-				sf::Color* palette = GetBGPalette(memory->vramBank[1][(0x9800 + y * 16 + x) - 0x8000]);
+				Color* palette = GetBGPalette(memory->vramBank[1][(0x9800 + y * 16 + x) - 0x8000]);
 
 				for (word i = 0; i < 8; i++) {
 
@@ -77,14 +53,16 @@ void Graphics::updateTileWindow() {
 						}
 						if (ColorGameBoyMode) {
 
-							tileMemoryBackground->setPixel((bank * 128) + tileX + j, tileY + i, palette[pixel]);
+							//tileMemoryBackground->setPixel((bank * 128) + tileX + j, tileY + i, palette[pixel]);
+							SetPixel(tileMemoryPixels, (bank * 128) + tileX + j, tileY + i, 256, palette[pixel]);
 						}
 						else {
 
 							byte offset = pixel * 2;
 							byte color = (BGP & (0x3 << offset)) >> offset;
 
-							tileMemoryBackground->setPixel((bank * 128) + tileX + j, tileY + i, BWPalette[color]);
+							//tileMemoryBackground->setPixel((bank * 128) + tileX + j, tileY + i, BWPalette[color]);
+							SetPixel(tileMemoryPixels, (bank * 128) + tileX + j, tileY + i, 256, palette[pixel]);
 						}
 					}
 
@@ -93,38 +71,9 @@ void Graphics::updateTileWindow() {
 		}
 	}
 	memory->currentVramBank = preserveBankNumber;
-
-
-	sf::Texture tilesTexture;
-	tilesTexture.loadFromImage(*tileMemoryBackground);
-	sf::Sprite tilesSprite;
-	tilesSprite.setTexture(tilesTexture, true);
-	tilesSprite.setPosition(0, 0);
-	
-	tileMemoryWindow->draw(tilesSprite);
-	tileMemoryWindow->display();
 }
 
-void Graphics::setupBGMapWindow() {
-
-	BGMapWindow = new sf::RenderWindow(sf::VideoMode(256 * DisplayScale, 256 * DisplayScale), "VRAM BGMap");
-	BGMapWindow->setPosition(sf::Vector2i(1450, 150));
-	BGMapWindow->setVerticalSyncEnabled(false);
-	BGMapWindow->setFramerateLimit(60);
-
-	BGMapView = new sf::View(sf::FloatRect(0, 0, 256, 256));
-	BGMapWindow->setView(*BGMapView);
-
-	BGMapBackground = new sf::Image();
-	BGMapBackground->create(256, 256, sf::Color::Magenta);
-
-	BGMapBackgroundPixels = new	sf::Uint8[256 * 256 * 4];
-}
-
-void Graphics::updateBGMapWindow() {
-
-	BGMapWindow->clear();
-	BGMapWindow->setView(*BGMapView);
+void PPU::updateBGMapWindow() {
 
 	for (size_t i = 0; i < 256; i++) {
 		DrawBackgroundLine(0, i, i, 256, BGMapBackgroundPixels);
@@ -157,39 +106,13 @@ void Graphics::updateBGMapWindow() {
 			SetPixel(BGMapBackgroundPixels, x, y, 256, { 0xFF, 0x00, 0x00 });
 		}
 	}
-
-	BGMapBackground->create(256, 256, BGMapBackgroundPixels);
-	sf::Texture BGMapTexture;
-	BGMapTexture.loadFromImage(*BGMapBackground);
-	sf::Sprite BGMapSprite;
-	BGMapSprite.setTexture(BGMapTexture, true);
-	BGMapSprite.setPosition(0, 0);
-	BGMapWindow->draw(BGMapSprite);
-	BGMapWindow->display();
 }
 
-void Graphics::setupColorPaletteWindow() {
-
-	ColorPaletteWindow = new sf::RenderWindow(sf::VideoMode(4 * DisplayScale * 12, 16 * DisplayScale * 12), "Color Palettes");
-	ColorPaletteWindow->setPosition(sf::Vector2i(950, 650));
-	ColorPaletteWindow->setVerticalSyncEnabled(false);
-	ColorPaletteWindow->setFramerateLimit(60);
-
-	ColorPaletteView = new sf::View(sf::FloatRect(0, 0, 4, 16));
-	ColorPaletteWindow->setView(*ColorPaletteView);
-
-	ColorPaletteBackground = new sf::Image();
-	ColorPaletteBackground->create(4, 16, sf::Color::Magenta);
-}
-
-void Graphics::updateColorPaletteWindow() {
+void PPU::updateColorPaletteWindow() {
 
 	if (ColorGameBoyMode == false) {
 		return;
 	}
-
-	ColorPaletteWindow->clear();
-	ColorPaletteWindow->setView(*ColorPaletteView);
 
 	for (size_t y = 0; y < 8; y++) {
 		for (size_t x = 0; x < 4; x++) {
@@ -206,7 +129,8 @@ void Graphics::updateColorPaletteWindow() {
 			green <<= 3;
 			blue <<= 3;
 
-			ColorPaletteBackground->setPixel(x, y, sf::Color(red, green, blue));
+			//ColorPaletteBackground->setPixel(x, y, sf::Color(red, green, blue));
+			SetPixel(BGMapBackgroundPixels, x, y, 256, { red, green, blue });
 		}
 	}
 
@@ -225,35 +149,13 @@ void Graphics::updateColorPaletteWindow() {
 			green <<= 3;
 			blue <<= 3;
 
-			ColorPaletteBackground->setPixel(x, y + 8, sf::Color(red, green, blue));
+			//ColorPaletteBackground->setPixel(x, y + 8, sf::Color(red, green, blue));
+			SetPixel(BGMapBackgroundPixels, x, y, 256, { red, green, blue });
 		}
 	}
-
-
-	sf::Texture ColorPaletteTexture;
-	ColorPaletteTexture.loadFromImage(*ColorPaletteBackground);
-	sf::Sprite ColorPaletteSprite;
-	ColorPaletteSprite.setTexture(ColorPaletteTexture, true);
-	ColorPaletteSprite.setPosition(0, 0);
-	ColorPaletteWindow->draw(ColorPaletteSprite);
-	ColorPaletteWindow->display();
 }
 
-void Graphics::updateWindow() {
-
-	window->clear();
-	window->setView(*view);
-	background->create(ScreenWidth, ScreenHeight, backgroundPixels);
-	sf::Texture backgroundTexture;
-	backgroundTexture.loadFromImage(*background);
-	sf::Sprite backgroundSprite;
-	backgroundSprite.setTexture(backgroundTexture, true);
-	backgroundSprite.setPosition(0, 0);
-	window->draw(backgroundSprite);
-	window->display();
-}
-
-void Graphics::update(word cyclesThisUpdate, int speedMode) {
+void PPU::update(word cyclesThisUpdate, int speedMode) {
 
 	cyclesThisLine += cyclesThisUpdate;
 
@@ -275,7 +177,7 @@ void Graphics::update(word cyclesThisUpdate, int speedMode) {
 
 }
 
-void Graphics::drawScanLine() {
+void PPU::drawScanLine() {
 
 	if (memory->Read(Address::LY) < ScreenHeight) {
 
@@ -298,7 +200,7 @@ void Graphics::drawScanLine() {
 	memory->memorySpace[Address::LY]++;
 }
 
-void Graphics::drawBackground() {
+void PPU::drawBackground() {
 
 	byte scrollY = memory->Read(Address::ScrollY);
 	byte scrollX = memory->Read(Address::ScrollX);
@@ -307,7 +209,7 @@ void Graphics::drawBackground() {
 	DrawBackgroundLine(scrollX, (scrollY + LY) % 256, LY, ScreenWidth, backgroundPixels, true);
 }
 
-byte Graphics::bitData(byte val, byte bit) {
+byte PPU::bitData(byte val, byte bit) {
 	
 	byte testBit = Bits::b7 >> bit;
 	
@@ -319,7 +221,7 @@ byte Graphics::bitData(byte val, byte bit) {
 	}
 }
 
-void Graphics::drawSprites() {
+void PPU::drawSprites() {
 
 	byte LCDC = memory->Read(Address::LCDC);
 	if (BitTest(LCDC, 1) == false) {
@@ -394,7 +296,7 @@ void Graphics::drawSprites() {
 						byte CGBPaletteNumber = flags & 0x7;
 						byte vRamBank = flags & Bits::b3;
 
-						sf::Color* palette = GetColorSpritePalette(CGBPaletteNumber);
+						Color* palette = GetColorSpritePalette(CGBPaletteNumber);
 						SetPixel(backgroundPixels, pixelX, LY, ScreenWidth, palette[pixel]);
 					}
 					else {
@@ -411,7 +313,7 @@ void Graphics::drawSprites() {
 
 }
 
-void Graphics::DrawBackgroundLine(int startX, int row, int screenY, int screenWidth, sf::Uint8* screen, bool mainScreen) {
+void PPU::DrawBackgroundLine(int startX, int row, int screenY, int screenWidth, byte* screen, bool mainScreen) {
 
 	byte LCDC = memory->Read(Address::LCDC);
 
@@ -462,7 +364,7 @@ void Graphics::DrawBackgroundLine(int startX, int row, int screenY, int screenWi
 		byte pixelDataLow = memory->vramBank[VramBank][address - 0x8000];
 		byte pixelDataHigh = memory->vramBank[VramBank][(address + 1) - 0x8000];
 
-		sf::Color* palette = nullptr;
+		Color* palette = nullptr;
 
 		if (ColorGameBoyMode) {
 			palette = GetBGPalette(CGBAttributes);
@@ -502,7 +404,7 @@ void Graphics::DrawBackgroundLine(int startX, int row, int screenY, int screenWi
 	}
 }
 
-void Graphics::DrawWindowLine() {
+void PPU::DrawWindowLine() {
 
 	byte LCDC = memory->Read(Address::LCDC);
 
@@ -583,7 +485,7 @@ void Graphics::DrawWindowLine() {
 
 			if (ColorGameBoyMode) {
 
-				sf::Color* palette = GetBGPalette(CGBAttributes);
+				Color* palette = GetBGPalette(CGBAttributes);
 				SetPixel(backgroundPixels, screenX, LY, ScreenWidth, palette[pixel]);
 			}
 			else {
@@ -600,16 +502,16 @@ void Graphics::DrawWindowLine() {
 	}
 }
 
-void Graphics::SetPixel(sf::Uint8 * screen, int x, int y, int screenWidth, sf::Color color) {
+void PPU::SetPixel(byte* screen, int x, int y, int screenWidth, Color color) {
 
 	int screenIndex = ((y * screenWidth) + x) * 4;
-	screen[screenIndex + 0] = color.r;
-	screen[screenIndex + 1] = color.g;
-	screen[screenIndex + 2] = color.b;
+	screen[screenIndex + 0] = color.red;
+	screen[screenIndex + 1] = color.green;
+	screen[screenIndex + 2] = color.blue;
 	screen[screenIndex + 3] = 0xFF;
 }
 
-byte Graphics::GetPixelIndex(byte dataLow, byte dataHigh, byte pixelX) {
+byte PPU::GetPixelIndex(byte dataLow, byte dataHigh, byte pixelX) {
 
 	byte pixelIndex = 0;
 
@@ -623,7 +525,7 @@ byte Graphics::GetPixelIndex(byte dataLow, byte dataHigh, byte pixelX) {
 	return pixelIndex;
 }
 
-word Graphics::GetTileDataAddress(byte LCDC, word address) {
+word PPU::GetTileDataAddress(byte LCDC, word address) {
 
 	word tileDataAddress = 0;
 
@@ -641,15 +543,17 @@ word Graphics::GetTileDataAddress(byte LCDC, word address) {
 	return tileDataAddress;
 }
 
-sf::Color* Graphics::GetBGPalette(byte CGBMapAttributes) {
+Color* PPU::GetBGPalette(byte CGBMapAttributes) {
 
 	if (ColorGameBoyMode == false) {
-		CGBPalette[0] = sf::Color(0xFF, 0xFF, 0xFF);
-		CGBPalette[1] = sf::Color(0xAA, 0xAA, 0xAA);
-		CGBPalette[2] = sf::Color(0x55, 0x55, 0x55);
-		CGBPalette[3] = sf::Color(0x00, 0x00, 0x00);
+
+		CGBPalette[0] = { 0xFF, 0xFF, 0xFF };
+		CGBPalette[1] = { 0xAA, 0xAA, 0xAA };
+		CGBPalette[2] = { 0x55, 0x55, 0x55 };
+		CGBPalette[3] = { 0x00, 0x00, 0x00 };
 	}
 	else {
+
 		byte paletteNumber = CGBMapAttributes & 0x7;
 
 		for (size_t i = 0; i < 8; i+= 2) {
@@ -665,15 +569,14 @@ sf::Color* Graphics::GetBGPalette(byte CGBMapAttributes) {
 			green <<= 3;
 			blue <<= 3;
 
-			CGBPalette[i / 2] = sf::Color(red, green, blue);
+			CGBPalette[i / 2] = { red, green, blue };
 		}
-
 	}
 
 	return CGBPalette;
 }
 
-sf::Color * Graphics::GetColorSpritePalette(int paletteNumber) {
+Color* PPU::GetColorSpritePalette(int paletteNumber) {
 
 	for (size_t i = 0; i < 8; i += 2) {
 
@@ -688,7 +591,7 @@ sf::Color * Graphics::GetColorSpritePalette(int paletteNumber) {
 		green <<= 3;
 		blue <<= 3;
 
-		CGBSpritePalette[i / 2] = sf::Color(red, green, blue);
+		CGBSpritePalette[i / 2] = { red, green, blue };
 	}
 
 	return CGBSpritePalette;

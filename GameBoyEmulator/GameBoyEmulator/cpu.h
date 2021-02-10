@@ -2,13 +2,13 @@
 #include <vector>
 #include <queue>
 #include "memory.h"
-#include "Graphics.h"
+#include "ppu.h"
 
 typedef unsigned char byte;
 typedef unsigned short word;
 
 
-class Cpu {
+class CPU {
 
 public:
 
@@ -53,7 +53,7 @@ public:
 		word pc = 0x100;
 	};
 
-	Graphics* graphics;
+	PPU* graphics;
 
 	Registers registers;
 	bool halted = false;
@@ -66,7 +66,7 @@ public:
 	byte speedMode = 1;
 
 	bool logState = false;
-	Memory memory;
+	Memory* memory;
 
 	bool flagTest(flagType flag);
 	void flagSet(flagType flag);

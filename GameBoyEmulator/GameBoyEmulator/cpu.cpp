@@ -1,6 +1,6 @@
 #include "cpu.h"
 
-bool Cpu::flagTest(flagType flag) {
+bool CPU::flagTest(flagType flag) {
 
 	byte result = registers.f & flag;
 	if (result == 0) {
@@ -11,12 +11,12 @@ bool Cpu::flagTest(flagType flag) {
 	}
 }
 
-void Cpu::flagSet(flagType flag) {
+void CPU::flagSet(flagType flag) {
 	
 	registers.f |= flag;
 }
 
-void Cpu::flagSet(flagType flag, bool value) {
+void CPU::flagSet(flagType flag, bool value) {
 
 	if (value == true) {
 		flagSet(flag);
@@ -27,34 +27,34 @@ void Cpu::flagSet(flagType flag, bool value) {
 
 }
 
-void Cpu::flagReset(flagType flag) {
+void CPU::flagReset(flagType flag) {
 
 	registers.f &= ~flag;
 }
 
-bool Cpu::bitTest(byte value, Bits bit) {
+bool CPU::bitTest(byte value, Bits bit) {
 
 	return (value & bit) != 0;
 }
 
-void Cpu::bitSet(byte& value, Bits bit) {
+void CPU::bitSet(byte& value, Bits bit) {
 
 	value |= bit;
 }
 
-void Cpu::bitReset(byte& value, Bits bit) {
+void CPU::bitReset(byte& value, Bits bit) {
 
 	value &= ~bit;
 }
 
-void Cpu::setInterrupt(interruptFlags flag) {
+void CPU::setInterrupt(interruptFlags flag) {
 	
-	byte interuptFlags = memory.Read(Address::InteruptFlag);
+	byte interuptFlags = memory->Read(Address::InteruptFlag);
 	interuptFlags |= (1 << flag);
-	memory.Write(Address::InteruptFlag, interuptFlags);
+	memory->Write(Address::InteruptFlag, interuptFlags);
 }
 
-void Cpu::PowerUpSequence() {
+void CPU::PowerUpSequence() {
 
 	// 2.7.1
 	if (ColorGameBoyMode == false) {
@@ -73,7 +73,7 @@ void Cpu::PowerUpSequence() {
 	registers.sp = 0xFFFE;
 	registers.pc = 0x100; // skips the nintendo logo check
 
-	memory.PowerUpSequence();
+	memory->PowerUpSequence();
 
 	outputStateBuffer.reserve(11000000);
 }
@@ -81,16 +81,16 @@ void Cpu::PowerUpSequence() {
 
 
 // load immediate value into register
-word Cpu::LD(byte & reg) {
+word CPU::LD(byte & reg) {
 
-	reg = memory.Read(registers.pc);
+	reg = memory->Read(registers.pc);
 	registers.pc++;
 	AdvanceClocks(8);
 	return 8; // cycles
 }
 
 // load value from one register into another
-word Cpu::LDreg(byte & reg1, byte & reg2) {
+word CPU::LDreg(byte & reg1, byte & reg2) {
 
 	reg1 = reg2;
 
@@ -99,27 +99,27 @@ word Cpu::LDreg(byte & reg1, byte & reg2) {
 }
 
 // load value from memory address
-word Cpu::LDRegFromMemory(byte & reg, word address) {
+word CPU::LDRegFromMemory(byte & reg, word address) {
 
-	reg = memory.Read(address);
+	reg = memory->Read(address);
 
 	AdvanceClocks(8);
 	return 8; // cycles
 }
 
-word Cpu::LDregHL(byte & reg) {
+word CPU::LDregHL(byte & reg) {
 
 	word address = Combinebytes(registers.l, registers.h);
-	reg = memory.Read(address);
+	reg = memory->Read(address);
 
 	AdvanceClocks(8);
 	return 8; // cycles
 }
 
 // put stackpointer plus immediate value into hl
-word Cpu::LDHL() {
+word CPU::LDHL() {
 
-	signed char n = memory.Read(registers.pc);
+	signed char n = memory->Read(registers.pc);
 	word hl = registers.sp + n;
 	registers.pc++;
 	std::pair<byte, byte> pair = splitBytes(hl);
@@ -135,32 +135,32 @@ word Cpu::LDHL() {
 	return 12; // cycles
 }
 
-word Cpu::WriteSP() {
+word CPU::WriteSP() {
 
-	word address = Combinebytes(memory.Read(registers.pc), memory.Read(registers.pc + 1));
+	word address = Combinebytes(memory->Read(registers.pc), memory->Read(registers.pc + 1));
 	registers.pc += 2;
 
 	std::pair<byte, byte> pair = splitBytes(registers.sp);
-	memory.Write(address, pair.first);
-	memory.Write(address + 1, pair.second);
+	memory->Write(address, pair.first);
+	memory->Write(address + 1, pair.second);
 
 	AdvanceClocks(20);
 	return 20;
 }
 
 // load immediate 16-bit value into register pair
-word Cpu::LD16(byte & reg1, byte & reg2) {
+word CPU::LD16(byte & reg1, byte & reg2) {
 
-	reg1 = memory.Read(registers.pc + 1);
-	reg2 = memory.Read(registers.pc);
+	reg1 = memory->Read(registers.pc + 1);
+	reg2 = memory->Read(registers.pc);
 	registers.pc += 2;
 	AdvanceClocks(12);
 	return 12;
 }
 
-word Cpu::LD16(word & reg1) {
+word CPU::LD16(word & reg1) {
 
-	reg1 = Combinebytes(memory.Read(registers.pc), memory.Read(registers.pc + 1));
+	reg1 = Combinebytes(memory->Read(registers.pc), memory->Read(registers.pc + 1));
 	registers.pc += 2;
 
 	AdvanceClocks(12);
@@ -168,23 +168,23 @@ word Cpu::LD16(word & reg1) {
 }
 
 // push two bytes onto the stack from a register pair
-word Cpu::Push(byte & reg1, byte & reg2) {
+word CPU::Push(byte & reg1, byte & reg2) {
 
 	registers.sp--;
-	memory.Write(registers.sp, reg1);
+	memory->Write(registers.sp, reg1);
 	registers.sp--;
-	memory.Write(registers.sp, reg2);
+	memory->Write(registers.sp, reg2);
 
 	AdvanceClocks(16);
 	return 16;
 }
 
 // pop two bytes off the stack into a register pair
-word Cpu::Pop(byte & reg1, byte & reg2) {
+word CPU::Pop(byte & reg1, byte & reg2) {
 
-	reg2 = memory.Read(registers.sp);
+	reg2 = memory->Read(registers.sp);
 	registers.sp++;
-	reg1 = memory.Read(registers.sp);
+	reg1 = memory->Read(registers.sp);
 	registers.sp++;
 
 	AdvanceClocks(12);
@@ -192,7 +192,7 @@ word Cpu::Pop(byte & reg1, byte & reg2) {
 }
 
 // indicates if the carry flag is set after addition from bit 3
-void Cpu::halfCarryFlag(byte value1, byte value2, bool carry) {
+void CPU::halfCarryFlag(byte value1, byte value2, bool carry) {
 
 	value1 &= 0xF;
 	value2 &= 0xF;
@@ -203,7 +203,7 @@ void Cpu::halfCarryFlag(byte value1, byte value2, bool carry) {
 }
 
 // indicates if the carry flag is set after addition from bit 11
-void Cpu::halfCarryFlag16(word value1, word value2) {
+void CPU::halfCarryFlag16(word value1, word value2) {
 
 	value1 &= 0xF;
 	value2 &= 0xF;
@@ -211,7 +211,7 @@ void Cpu::halfCarryFlag16(word value1, word value2) {
 	flagSet(flagType::halfCarry, (value1 + value2) > 0xF);
 }
 
-void Cpu::halfCarryFlag16Hi(word value1, word value2) {
+void CPU::halfCarryFlag16Hi(word value1, word value2) {
 
 	value1 &= 0xFFF;
 	value2 &= 0xFFF;
@@ -220,7 +220,7 @@ void Cpu::halfCarryFlag16Hi(word value1, word value2) {
 }
 
 // indicates if the carry flag is set after addition from bit 7
-void Cpu::carryFlag(byte value1, byte value2, bool carry) {
+void CPU::carryFlag(byte value1, byte value2, bool carry) {
 
 	word Wvalue1 = value1;
 	word Wvalue2 = value2;
@@ -231,7 +231,7 @@ void Cpu::carryFlag(byte value1, byte value2, bool carry) {
 }
 
 // indicates if the carry flag is set after 16-bit addition from bit 15
-void Cpu::carryFlag16(word value1, word value2) {
+void CPU::carryFlag16(word value1, word value2) {
 
 	value1 &= 0xFF;
 	value2 &= 0xFF;
@@ -239,7 +239,7 @@ void Cpu::carryFlag16(word value1, word value2) {
 	flagSet(flagType::carry, (value1 + value2) > 0xFF);
 }
 
-void Cpu::carryFlag16Hi(word value1, word value2) {
+void CPU::carryFlag16Hi(word value1, word value2) {
 
 	int result = value1;
 	result += value2;
@@ -248,7 +248,7 @@ void Cpu::carryFlag16Hi(word value1, word value2) {
 }
 
 // indicates if a bit is borrowed from bit 4 after a subtraction
-void Cpu::halfNoBorrow(byte value1, byte value2, bool carry) {
+void CPU::halfNoBorrow(byte value1, byte value2, bool carry) {
 
 	value1 &= 0xF;
 	value2 &= 0xF;
@@ -258,7 +258,7 @@ void Cpu::halfNoBorrow(byte value1, byte value2, bool carry) {
 }
 
 // indicates if a bit is borrowed after a subtraction
-void Cpu::noBorrow(byte value1, byte value2, bool carry) {
+void CPU::noBorrow(byte value1, byte value2, bool carry) {
 
 	word Wvalue1 = value1;
 	word Wvalue2 = value2;
@@ -267,13 +267,13 @@ void Cpu::noBorrow(byte value1, byte value2, bool carry) {
 	flagSet(flagType::carry, Wvalue1 < Wvalue2);
 }
 
-void Cpu::zeroFlag(byte val) {
+void CPU::zeroFlag(byte val) {
 
 	flagSet(flagType::zero, val == 0);
 }
 
 // add value to a, ignore carry
-word Cpu::ADD(byte value, int clocks) {
+word CPU::ADD(byte value, int clocks) {
 
 	byte result = registers.a + value;
 	
@@ -289,7 +289,7 @@ word Cpu::ADD(byte value, int clocks) {
 }
 
 // add value to a, include carry
-word Cpu::ADDC(byte value, int clocks) {
+word CPU::ADDC(byte value, int clocks) {
 
 	bool carry = flagTest(flagType::carry);
 
@@ -313,7 +313,7 @@ word Cpu::ADDC(byte value, int clocks) {
 }
 
 // subtract value from a, ignore carry
-word Cpu::SUB(byte value, int clocks) {
+word CPU::SUB(byte value, int clocks) {
 
 	byte result = registers.a - value;
 
@@ -329,7 +329,7 @@ word Cpu::SUB(byte value, int clocks) {
 }
 
 // subtract value from a, include carry
-word Cpu::SUBC(byte value, int clocks) {
+word CPU::SUBC(byte value, int clocks) {
 
 	bool carry = flagTest(flagType::carry);
 
@@ -353,7 +353,7 @@ word Cpu::SUBC(byte value, int clocks) {
 }
 
 // and value with register a
-word Cpu::AND(byte value, int clocks) {
+word CPU::AND(byte value, int clocks) {
 
 	byte result = registers.a & value;
 
@@ -369,7 +369,7 @@ word Cpu::AND(byte value, int clocks) {
 }
 
 // or value with register a
-word Cpu::OR(byte value, int clocks) {
+word CPU::OR(byte value, int clocks) {
 
 	byte result = registers.a | value;
 
@@ -385,7 +385,7 @@ word Cpu::OR(byte value, int clocks) {
 }
 
 // xor value with register a
-word Cpu::XOR(byte value, int clocks) {
+word CPU::XOR(byte value, int clocks) {
 
 	byte result = registers.a ^ value;
 
@@ -401,7 +401,7 @@ word Cpu::XOR(byte value, int clocks) {
 }
 
 // compare value to register a and set flags accordingly
-word Cpu::CP(byte value, int clocks) {
+word CPU::CP(byte value, int clocks) {
 
 	byte result = registers.a - value;
 
@@ -415,7 +415,7 @@ word Cpu::CP(byte value, int clocks) {
 }
 
 // increment register
-word Cpu::INC(byte& reg) {
+word CPU::INC(byte& reg) {
 
 	byte result = reg + 1;
 
@@ -430,9 +430,9 @@ word Cpu::INC(byte& reg) {
 }
 
 // increment memory location pointed to by register hl
-word Cpu::INCMemory(word address) {
+word CPU::INCMemory(word address) {
 
-	byte value = memory.Read(address);
+	byte value = memory->Read(address);
 	AdvanceClocks(4);
 	byte result = value + 1;
 
@@ -440,14 +440,14 @@ word Cpu::INCMemory(word address) {
 	flagReset(flagType::negative);
 	halfCarryFlag(value, 1, false);
 
-	memory.Write(address, result);
+	memory->Write(address, result);
 
 	AdvanceClocks(8);
 	return 12;
 }
 
 // decrement register
-word Cpu::DEC(byte& reg) {
+word CPU::DEC(byte& reg) {
 
 	byte result = reg - 1;
 
@@ -462,9 +462,9 @@ word Cpu::DEC(byte& reg) {
 }
 
 // decrement memory location pointed to by register hl
-word Cpu::DECMemory(word address) {
+word CPU::DECMemory(word address) {
 
-	byte value = memory.Read(address);
+	byte value = memory->Read(address);
 	AdvanceClocks(4);
 	byte result = value - 1;
 
@@ -472,14 +472,14 @@ word Cpu::DECMemory(word address) {
 	flagSet(flagType::negative);
 	halfNoBorrow(value, 1, false);
 
-	memory.Write(address, result);
+	memory->Write(address, result);
 
 	AdvanceClocks(8);
 	return 12; 
 }
 
 // add value to register combination hl
-word Cpu::ADDHL(word value) {
+word CPU::ADDHL(word value) {
 
 	word hl = Combinebytes(registers.l, registers.h);
 	word result = hl + value;
@@ -498,9 +498,9 @@ word Cpu::ADDHL(word value) {
 }
 
 // add immediate signed value to stack pointer
-word Cpu::ADDSP() {
+word CPU::ADDSP() {
 
-	signed char n = memory.Read(registers.pc);
+	signed char n = memory->Read(registers.pc);
 	registers.pc++;
 
 	word result = registers.sp + n;
@@ -517,7 +517,7 @@ word Cpu::ADDSP() {
 }
 
 // increment two registers as if they were one 16 bit register
-word Cpu::INC16(byte & reg1, byte & reg2) {
+word CPU::INC16(byte & reg1, byte & reg2) {
 
 	word combinedRegister = Combinebytes(reg1, reg2);
 
@@ -533,7 +533,7 @@ word Cpu::INC16(byte & reg1, byte & reg2) {
 }
 
 // increment 16 bit register
-word Cpu::INC16(word & reg) {
+word CPU::INC16(word & reg) {
 
 	reg++;
 
@@ -542,7 +542,7 @@ word Cpu::INC16(word & reg) {
 }
 
 // decrement two registers as if they were one 16 bit register
-word Cpu::DEC16(byte & reg1, byte & reg2) {
+word CPU::DEC16(byte & reg1, byte & reg2) {
 
 	word combinedRegister = Combinebytes(reg1, reg2);
 
@@ -559,7 +559,7 @@ word Cpu::DEC16(byte & reg1, byte & reg2) {
 
 
 // decrement 16 bit register
-word Cpu::DEC16(word & reg) {
+word CPU::DEC16(word & reg) {
 
 	reg--;
 
@@ -568,7 +568,7 @@ word Cpu::DEC16(word & reg) {
 }
 
 // swap the lower and upper nibbles
-word Cpu::SWAP(byte & reg) {
+word CPU::SWAP(byte & reg) {
 
 	byte upper = reg & 0xF0;
 	byte lower = reg & 0x0F;
@@ -590,10 +590,10 @@ word Cpu::SWAP(byte & reg) {
 }
 
 // swap the lower and upper nibbles (for memory)
-word Cpu::SWAP(word address) {
+word CPU::SWAP(word address) {
 
 	AdvanceClocks(4);
-	byte data = memory.Read(address);
+	byte data = memory->Read(address);
 	AdvanceClocks(4);
 
 	byte upper = data & 0xF0;
@@ -609,22 +609,22 @@ word Cpu::SWAP(word address) {
 	flagReset(flagType::halfCarry);
 	flagReset(flagType::carry);
 
-	memory.Write(address, result);
+	memory->Write(address, result);
 
 	AdvanceClocks(8);
 	return 16;
 }
 
 // swap the lower and upper nibble of a byte in memory
-word Cpu::SWAPMemory() {
+word CPU::SWAPMemory() {
 
 	word address = Combinebytes(registers.l, registers.h);
 
-	byte data = memory.Read(address);
+	byte data = memory->Read(address);
 
 	SWAP(data);
 
-	memory.Write(address, data);
+	memory->Write(address, data);
 
 	AdvanceClocks(16);
 	return 16;
@@ -632,7 +632,7 @@ word Cpu::SWAPMemory() {
 
 // decimal adjust register A
 // copied https://www.reddit.com/r/EmuDev/comments/cdtuyw/gameboy_emulator_fails_blargg_daa_test/etwcyvy/
-word Cpu::DAA() {
+word CPU::DAA() {
 
 	if (flagTest(flagType::negative) == false) {  // after an addition, adjust if (half-)carry occurred or if result is out of bounds
 		if (flagTest(flagType::carry) || registers.a > 0x99) {
@@ -661,7 +661,7 @@ word Cpu::DAA() {
 }
 
 // complement A register
-word Cpu::CPL() {
+word CPU::CPL() {
 
 	registers.a = ~registers.a;
 
@@ -673,7 +673,7 @@ word Cpu::CPL() {
 }
 
 // complement carry flag
-word Cpu::CCF() {
+word CPU::CCF() {
 
 	flagReset(flagType::negative);
 	flagReset(flagType::halfCarry);
@@ -685,7 +685,7 @@ word Cpu::CCF() {
 }
 
 // set carry flag
-word Cpu::SCF() {
+word CPU::SCF() {
 
 	flagReset(flagType::negative);
 	flagReset(flagType::halfCarry);
@@ -696,14 +696,14 @@ word Cpu::SCF() {
 }
 
 // no operation
-word Cpu::NOP() {
+word CPU::NOP() {
 	// does nothing
 	AdvanceClocks(4);
 	return 4;
 }
 
 // power down cpu until an interrupt occurs
-word Cpu::HALT() {
+word CPU::HALT() {
 
 	halted = true;
 	AdvanceClocks(4);
@@ -711,15 +711,15 @@ word Cpu::HALT() {
 }
 
 // halt cpu and display until button push
-word Cpu::STOP() {
+word CPU::STOP() {
 
-	memory.dividerRegister = 0;
+	memory->dividerRegister = 0;
 
 	registers.pc++;
 
 	if (ColorGameBoyMode == true) {
 
-		byte speedSwitch = memory.Read(Address::PrepareSpeedSwitch);
+		byte speedSwitch = memory->Read(Address::PrepareSpeedSwitch);
 		if ((speedSwitch & Bits::b0) != 0) {
 			if (speedMode == 1) {
 				speedMode = 2;
@@ -730,7 +730,7 @@ word Cpu::STOP() {
 				bitReset(speedSwitch, Bits::b7);
 			}
 			speedSwitch &= ~Bits::b0;
-			memory.Write(Address::PrepareSpeedSwitch, speedSwitch);
+			memory->Write(Address::PrepareSpeedSwitch, speedSwitch);
 		}
 	}
 	else {
@@ -743,7 +743,7 @@ word Cpu::STOP() {
 }
 
 // disable interupts
-word Cpu::DI() {
+word CPU::DI() {
 	interupt = false;
 	interuptEnable = false;
 	AdvanceClocks(4);
@@ -752,14 +752,14 @@ word Cpu::DI() {
 
 // enable interupts
 // EI has a one cycle delay but DI and RETI do not
-word Cpu::EI() {
+word CPU::EI() {
 	interuptEnable = true;
 	AdvanceClocks(4);
 	return 4;
 }
 
 // rotate left bit 7 to carry
-word Cpu::RLC(byte& reg, bool isRegisterA, int clocks) {
+word CPU::RLC(byte& reg, bool isRegisterA, int clocks) {
 
 	byte result = reg;
 
@@ -788,10 +788,10 @@ word Cpu::RLC(byte& reg, bool isRegisterA, int clocks) {
 }
 
 // rotate left bit 7 to carry (for memory)
-word Cpu::RLC(word address) {
+word CPU::RLC(word address) {
 
 	AdvanceClocks(4);
-	byte result = memory.Read(address);
+	byte result = memory->Read(address);
 	AdvanceClocks(4);
 
 	bool bit7 = bitTest(result, Bits::b7);
@@ -806,14 +806,14 @@ word Cpu::RLC(word address) {
 	flagReset(flagType::halfCarry);
 	flagSet(flagType::carry, bit7);
 
-	memory.Write(address, result);
+	memory->Write(address, result);
 
 	AdvanceClocks(8);
 	return 16;
 }
 
 // rotate left through carry
-word Cpu::RL(byte & reg, bool isRegisterA, int clocks) {
+word CPU::RL(byte & reg, bool isRegisterA, int clocks) {
 
 	byte result = reg;
 
@@ -842,10 +842,10 @@ word Cpu::RL(byte & reg, bool isRegisterA, int clocks) {
 }
 
 // rotate left through carry (for memory)
-word Cpu::RL(word address) {
+word CPU::RL(word address) {
 
 	AdvanceClocks(4);
-	byte result = memory.Read(address);
+	byte result = memory->Read(address);
 	AdvanceClocks(4);
 
 	bool bit7 = bitTest(result, Bits::b7);
@@ -860,14 +860,14 @@ word Cpu::RL(word address) {
 	flagReset(flagType::halfCarry);
 	flagSet(flagType::carry, bit7);
 
-	memory.Write(address, result);
+	memory->Write(address, result);
 
 	AdvanceClocks(8);
 	return 16;
 }
 
 // rotate right bit 7 to carry
-word Cpu::RRC(byte & reg, bool isRegisterA, int clocks) {
+word CPU::RRC(byte & reg, bool isRegisterA, int clocks) {
 
 	byte result = reg;
 
@@ -896,10 +896,10 @@ word Cpu::RRC(byte & reg, bool isRegisterA, int clocks) {
 }
 
 // rotate right bit 7 to carry (for memory)
-word Cpu::RRC(word address) {
+word CPU::RRC(word address) {
 
 	AdvanceClocks(4);
-	byte result = memory.Read(address);
+	byte result = memory->Read(address);
 	AdvanceClocks(4);
 
 	bool bit0 = bitTest(result, Bits::b0);
@@ -914,14 +914,14 @@ word Cpu::RRC(word address) {
 	flagReset(flagType::halfCarry);
 	flagSet(flagType::carry, bit0);
 
-	memory.Write(address, result);
+	memory->Write(address, result);
 
 	AdvanceClocks(8);
 	return 16;
 }
 
 // rotate right through carry
-word Cpu::RR(byte & reg, bool isRegisterA, int clocks) {
+word CPU::RR(byte & reg, bool isRegisterA, int clocks) {
 
 	byte result = reg;
 
@@ -950,10 +950,10 @@ word Cpu::RR(byte & reg, bool isRegisterA, int clocks) {
 }
 
 // rotate right through carry (for memory)
-word Cpu::RR(word address) {
+word CPU::RR(word address) {
 
 	AdvanceClocks(4);
-	byte result = memory.Read(address);
+	byte result = memory->Read(address);
 	AdvanceClocks(4);
 
 	bool bit0 = bitTest(result, Bits::b0);
@@ -968,14 +968,14 @@ word Cpu::RR(word address) {
 	flagReset(flagType::halfCarry);
 	flagSet(flagType::carry, bit0);
 
-	memory.Write(address, result);
+	memory->Write(address, result);
 
 	AdvanceClocks(8);
 	return 16;
 }
 
 // shift left into carry lsb set to 0
-word Cpu::SLA(byte & reg) {
+word CPU::SLA(byte & reg) {
 
 	byte result = reg;
 
@@ -996,10 +996,10 @@ word Cpu::SLA(byte & reg) {
 }
 
 // shift left into carry lsb set to 0 (for memory)
-word Cpu::SLA(word address) {
+word CPU::SLA(word address) {
 
 	AdvanceClocks(4);
-	byte result = memory.Read(address);
+	byte result = memory->Read(address);
 	AdvanceClocks(4);
 
 	bool bit7 = bitTest(result, Bits::b7);
@@ -1012,14 +1012,14 @@ word Cpu::SLA(word address) {
 	flagReset(flagType::halfCarry);
 	flagSet(flagType::carry, bit7);
 
-	memory.Write(address, result);
+	memory->Write(address, result);
 
 	AdvanceClocks(8);
 	return 16;
 }
 
 // shift right into carry, msb stays the same
-word Cpu::SRA(byte & reg) {
+word CPU::SRA(byte & reg) {
 
 	byte result = reg;
 
@@ -1043,10 +1043,10 @@ word Cpu::SRA(byte & reg) {
 }
 
 // shift right into carry, msb stays the same (for memory)
-word Cpu::SRA(word address) {
+word CPU::SRA(word address) {
 
 	AdvanceClocks(4);
-	byte result = memory.Read(address);
+	byte result = memory->Read(address);
 	AdvanceClocks(4);
 
 	bool bit7 = bitTest(result, Bits::b7);
@@ -1062,14 +1062,14 @@ word Cpu::SRA(word address) {
 	flagReset(flagType::halfCarry);
 	flagSet(flagType::carry, bit0);
 
-	memory.Write(address, result);
+	memory->Write(address, result);
 
 	AdvanceClocks(8);
 	return 16;
 }
 
 // shift right into carry msb set to 0
-word Cpu::SRL(byte & reg) {
+word CPU::SRL(byte & reg) {
 
 	byte result = reg;
 
@@ -1090,10 +1090,10 @@ word Cpu::SRL(byte & reg) {
 }
 
 // shift right into carry msb set to 0 (for memory)
-word Cpu::SRL(word address) {
+word CPU::SRL(word address) {
 
 	AdvanceClocks(4);
-	byte result = memory.Read(address);
+	byte result = memory->Read(address);
 	AdvanceClocks(4);
 
 	bool bit0 = bitTest(result, Bits::b0);
@@ -1106,14 +1106,14 @@ word Cpu::SRL(word address) {
 	flagReset(flagType::halfCarry);
 	flagSet(flagType::carry, bit0);
 
-	memory.Write(address, result);
+	memory->Write(address, result);
 
 	AdvanceClocks(8);
 	return 16;
 }
 
 // check bit and set flags
-word Cpu::BIT(byte reg, byte bit) {
+word CPU::BIT(byte reg, byte bit) {
 
 	byte bitmask = 1 << bit;
 
@@ -1126,16 +1126,16 @@ word Cpu::BIT(byte reg, byte bit) {
 	return 8;
 }
 
-word Cpu::BITHL(byte bit) {
+word CPU::BITHL(byte bit) {
 
 	AdvanceClocks(4);
-	byte memVal = memory.Read(Combinebytes(registers.l, registers.h));
+	byte memVal = memory->Read(Combinebytes(registers.l, registers.h));
 
 	return BIT(memVal, bit);
 }
 
 // set bit
-word Cpu::SET(byte& reg, byte bit) {
+word CPU::SET(byte& reg, byte bit) {
 
 	byte bitmask = 1 << bit;
 
@@ -1146,24 +1146,24 @@ word Cpu::SET(byte& reg, byte bit) {
 }
 
 // set bit
-word Cpu::SET(word address, byte bit) {
+word CPU::SET(word address, byte bit) {
 
 	byte bitmask = 1 << bit;
 
 	AdvanceClocks(4);
-	byte data = memory.Read(address);
+	byte data = memory->Read(address);
 	AdvanceClocks(4);
 
 	data |= bitmask;
 
-	memory.Write(address, data);
+	memory->Write(address, data);
 
 	AdvanceClocks(8);
 	return 16;
 }
 
 // reset bit
-word Cpu::RES(byte& reg, byte bit) {
+word CPU::RES(byte& reg, byte bit) {
 
 	byte bitmask = 1 << bit;
 	bitmask = ~bitmask;
@@ -1175,27 +1175,27 @@ word Cpu::RES(byte& reg, byte bit) {
 }
 
 // reset bit
-word Cpu::RES(word address, byte bit) {
+word CPU::RES(word address, byte bit) {
 
 	byte bitmask = 1 << bit;
 	bitmask = ~bitmask;
 
 	AdvanceClocks(4);
-	byte data = memory.Read(address);
+	byte data = memory->Read(address);
 	AdvanceClocks(4);
 
 	data &= bitmask;
 
-	memory.Write(address, data);
+	memory->Write(address, data);
 
 	AdvanceClocks(8);
 	return 16;
 }
 
 // jump
-word Cpu::JP() {
+word CPU::JP() {
 
-	word address = Combinebytes(memory.Read(registers.pc), memory.Read(registers.pc + 1));
+	word address = Combinebytes(memory->Read(registers.pc), memory->Read(registers.pc + 1));
 	registers.pc = address;
 
 	AdvanceClocks(16);
@@ -1203,18 +1203,18 @@ word Cpu::JP() {
 }
 
 // conditional jump
-word Cpu::JPcc(condition cdn) {
+word CPU::JPcc(condition cdn) {
 
-	word address = Combinebytes(memory.Read(registers.pc), memory.Read(registers.pc + 1));
+	word address = Combinebytes(memory->Read(registers.pc), memory->Read(registers.pc + 1));
 	registers.pc += 2;
 
 	word cycles = 12;
 
 	switch (cdn) {
-	case Cpu::NotZero:	if (flagTest(flagType::zero) == false) { registers.pc = address; cycles = 16; } break;
-	case Cpu::Zero:		if (flagTest(flagType::zero) == true) { registers.pc = address; cycles = 16; } break;
-	case Cpu::NotCarry: if (flagTest(flagType::carry) == false) { registers.pc = address; cycles = 16; } break;
-	case Cpu::Carry:	if (flagTest(flagType::carry) == true) { registers.pc = address; cycles = 16; } break;
+	case CPU::NotZero:	if (flagTest(flagType::zero) == false) { registers.pc = address; cycles = 16; } break;
+	case CPU::Zero:		if (flagTest(flagType::zero) == true) { registers.pc = address; cycles = 16; } break;
+	case CPU::NotCarry: if (flagTest(flagType::carry) == false) { registers.pc = address; cycles = 16; } break;
+	case CPU::Carry:	if (flagTest(flagType::carry) == true) { registers.pc = address; cycles = 16; } break;
 	}
 
 	AdvanceClocks(cycles);
@@ -1222,7 +1222,7 @@ word Cpu::JPcc(condition cdn) {
 }
 
 // jump to hl
-word Cpu::JPHL() {
+word CPU::JPHL() {
 
 	word address = Combinebytes(registers.l, registers.h);
 	registers.pc = address;
@@ -1232,9 +1232,9 @@ word Cpu::JPHL() {
 }
 
 // relative jump
-word Cpu::JR() {
+word CPU::JR() {
 
-	signed char offset = (signed char)memory.Read(registers.pc);
+	signed char offset = (signed char)memory->Read(registers.pc);
 	registers.pc++;
 	registers.pc += offset;
 
@@ -1243,18 +1243,18 @@ word Cpu::JR() {
 }
 
 // conditional relative jump
-word Cpu::JRcc(condition cdn) {
+word CPU::JRcc(condition cdn) {
 
-	signed char offset = (signed char)memory.Read(registers.pc);
+	signed char offset = (signed char)memory->Read(registers.pc);
 	registers.pc++;
 
 	word cycles = 8;
 
 	switch (cdn) {
-	case Cpu::NotZero:	if (flagTest(flagType::zero) == false) { registers.pc += offset; cycles = 12; } break;
-	case Cpu::Zero:		if (flagTest(flagType::zero) == true) { registers.pc += offset; cycles = 12; } break;
-	case Cpu::NotCarry: if (flagTest(flagType::carry) == false) { registers.pc += offset; cycles = 12; } break;
-	case Cpu::Carry:	if (flagTest(flagType::carry) == true) { registers.pc += offset; cycles = 12; } break;
+	case CPU::NotZero:	if (flagTest(flagType::zero) == false) { registers.pc += offset; cycles = 12; } break;
+	case CPU::Zero:		if (flagTest(flagType::zero) == true) { registers.pc += offset; cycles = 12; } break;
+	case CPU::NotCarry: if (flagTest(flagType::carry) == false) { registers.pc += offset; cycles = 12; } break;
+	case CPU::Carry:	if (flagTest(flagType::carry) == true) { registers.pc += offset; cycles = 12; } break;
 	}
 
 	AdvanceClocks(cycles);
@@ -1262,15 +1262,15 @@ word Cpu::JRcc(condition cdn) {
 }
 
 // call
-word Cpu::CALL() {
+word CPU::CALL() {
 
-	word address = Combinebytes(memory.Read(registers.pc), memory.Read(registers.pc + 1));
+	word address = Combinebytes(memory->Read(registers.pc), memory->Read(registers.pc + 1));
 
 	std::pair<byte, byte> pair = splitBytes(registers.pc + 2);
 	registers.sp--;
-	memory.Write(registers.sp, pair.second);
+	memory->Write(registers.sp, pair.second);
 	registers.sp--;
-	memory.Write(registers.sp, pair.first);
+	memory->Write(registers.sp, pair.first);
 
 	registers.pc = address;
 
@@ -1279,27 +1279,27 @@ word Cpu::CALL() {
 }
 
 // conditional call
-word Cpu::CALLcc(condition cdn) {
+word CPU::CALLcc(condition cdn) {
 
-	word address = Combinebytes(memory.Read(registers.pc), memory.Read(registers.pc + 1));
+	word address = Combinebytes(memory->Read(registers.pc), memory->Read(registers.pc + 1));
 
 	word cycles = 12;
 
 	bool call = false;
 	switch (cdn) {
-	case Cpu::NotZero:	if (flagTest(flagType::zero) == false)	call = true; break;
-	case Cpu::Zero:		if (flagTest(flagType::zero) == true)	call = true; break;
-	case Cpu::NotCarry: if (flagTest(flagType::carry) == false)	call = true; break;
-	case Cpu::Carry:	if (flagTest(flagType::carry) == true)	call = true; break;
+	case CPU::NotZero:	if (flagTest(flagType::zero) == false)	call = true; break;
+	case CPU::Zero:		if (flagTest(flagType::zero) == true)	call = true; break;
+	case CPU::NotCarry: if (flagTest(flagType::carry) == false)	call = true; break;
+	case CPU::Carry:	if (flagTest(flagType::carry) == true)	call = true; break;
 	}
 
 	if (call == true) {
 
 		std::pair<byte, byte> pair = splitBytes(registers.pc + 2);
 		registers.sp--;
-		memory.Write(registers.sp, pair.second);
+		memory->Write(registers.sp, pair.second);
 		registers.sp--;
-		memory.Write(registers.sp, pair.first);
+		memory->Write(registers.sp, pair.first);
 
 		registers.pc = address;
 		cycles = 24;
@@ -1313,13 +1313,13 @@ word Cpu::CALLcc(condition cdn) {
 }
 
 // restart
-word Cpu::RST(short offset) {
+word CPU::RST(short offset) {
 
 	std::pair<byte, byte> pair = splitBytes(registers.pc);
 	registers.sp--;
-	memory.Write(registers.sp, pair.second);
+	memory->Write(registers.sp, pair.second);
 	registers.sp--;
-	memory.Write(registers.sp, pair.first);
+	memory->Write(registers.sp, pair.first);
 
 	registers.pc = offset;
 
@@ -1328,11 +1328,11 @@ word Cpu::RST(short offset) {
 }
 
 // return
-word Cpu::RET() {
+word CPU::RET() {
 
-	byte first = memory.Read(registers.sp);
+	byte first = memory->Read(registers.sp);
 	registers.sp++;
-	byte second = memory.Read(registers.sp);
+	byte second = memory->Read(registers.sp);
 	registers.sp++;
 
 	registers.pc = Combinebytes(first, second);
@@ -1342,23 +1342,23 @@ word Cpu::RET() {
 }
 
 // conditional return
-word Cpu::RETcc(condition cdn) {
+word CPU::RETcc(condition cdn) {
 
 	word cycles = 8;
 
 	bool ret = false;
 	switch (cdn) {
-	case Cpu::NotZero:	if (flagTest(flagType::zero) == false)	ret = true; break;
-	case Cpu::Zero:		if (flagTest(flagType::zero) == true)	ret = true; break;
-	case Cpu::NotCarry: if (flagTest(flagType::carry) == false)	ret = true; break;
-	case Cpu::Carry:	if (flagTest(flagType::carry) == true)	ret = true; break;
+	case CPU::NotZero:	if (flagTest(flagType::zero) == false)	ret = true; break;
+	case CPU::Zero:		if (flagTest(flagType::zero) == true)	ret = true; break;
+	case CPU::NotCarry: if (flagTest(flagType::carry) == false)	ret = true; break;
+	case CPU::Carry:	if (flagTest(flagType::carry) == true)	ret = true; break;
 	}
 
 	if (ret == true) {
 
-		byte first = memory.Read(registers.sp);
+		byte first = memory->Read(registers.sp);
 		registers.sp++;
-		byte second = memory.Read(registers.sp);
+		byte second = memory->Read(registers.sp);
 		registers.sp++;
 
 		registers.pc = Combinebytes(first, second);
@@ -1370,11 +1370,11 @@ word Cpu::RETcc(condition cdn) {
 }
 
 // return and enable interrupts
-word Cpu::RETI() {
+word CPU::RETI() {
 
-	byte first = memory.Read(registers.sp);
+	byte first = memory->Read(registers.sp);
 	registers.sp++;
-	byte second = memory.Read(registers.sp);
+	byte second = memory->Read(registers.sp);
 	registers.sp++;
 
 	registers.pc = Combinebytes(first, second);
@@ -1386,7 +1386,7 @@ word Cpu::RETI() {
 }
 
 // decrement two registers as one 16 bit registers
-void Cpu::decrement16reg(byte & reg1, byte & reg2) {
+void CPU::decrement16reg(byte & reg1, byte & reg2) {
 
 	word combined = Combinebytes(reg2, reg1);
 	combined--;
@@ -1395,7 +1395,7 @@ void Cpu::decrement16reg(byte & reg1, byte & reg2) {
 }
 
 // increment two registers as one 16 bit registers
-void Cpu::increment16reg(byte & reg1, byte & reg2) {
+void CPU::increment16reg(byte & reg1, byte & reg2) {
 
 	word combined = Combinebytes(reg2, reg1);
 	combined++;
@@ -1404,7 +1404,7 @@ void Cpu::increment16reg(byte & reg1, byte & reg2) {
 }
 
 // combine multiple registers into word
-word Cpu::Combinebytes(byte value1, byte value2) {
+word CPU::Combinebytes(byte value1, byte value2) {
 
 	word combine = value2;
 	combine <<= 8;
@@ -1414,7 +1414,7 @@ word Cpu::Combinebytes(byte value1, byte value2) {
 }
 
 // seperate word into seperate bytes for multiple registers
-std::pair<byte, byte> Cpu::splitBytes(word value) {
+std::pair<byte, byte> CPU::splitBytes(word value) {
 
 	byte first = value & 0xFF;
 	byte second = (value >> 8) & 0xFF;
@@ -1422,7 +1422,7 @@ std::pair<byte, byte> Cpu::splitBytes(word value) {
 	return std::make_pair(first, second);
 }
 
-word Cpu::CombinebytesR(byte value1, byte value2) {
+word CPU::CombinebytesR(byte value1, byte value2) {
 
 	word combine = value1;
 	combine <<= 8;
@@ -1431,7 +1431,7 @@ word Cpu::CombinebytesR(byte value1, byte value2) {
 	return combine;
 }
 
-std::pair<byte, byte> Cpu::splitBytesR(word value) {
+std::pair<byte, byte> CPU::splitBytesR(word value) {
 
 	byte first = (value >> 8) & 0xFF;
 	byte second = value & 0xFF;
@@ -1439,14 +1439,14 @@ std::pair<byte, byte> Cpu::splitBytesR(word value) {
 	return std::make_pair(first, second);
 }
 
-void Cpu::cleanOutputState() {
+void CPU::cleanOutputState() {
 
 	std::ofstream out;
 	out.open("CPUStateLog.txt", std::ios::out | std::ios::trunc);
 	out.close();
 }
 
-void Cpu::outputState() {
+void CPU::outputState() {
 
 	if (logState == false) {
 		return;
@@ -1465,40 +1465,40 @@ void Cpu::outputState() {
 
 	word HLAddress = Combinebytes(registers.l, registers.h);
 	outputStateBuffer += "(HL+-1): (";
-	outputStateBuffer += hex[(memory.Read(HLAddress - 1) & 0xF0) >> 4] + hex[(memory.Read(HLAddress - 1) & 0x0F)];
+	outputStateBuffer += hex[(memory->Read(HLAddress - 1) & 0xF0) >> 4] + hex[(memory->Read(HLAddress - 1) & 0x0F)];
 	outputStateBuffer += " ";
-	outputStateBuffer += hex[(memory.Read(HLAddress) & 0xF0) >> 4] + hex[(memory.Read(HLAddress) & 0x0F)];
+	outputStateBuffer += hex[(memory->Read(HLAddress) & 0xF0) >> 4] + hex[(memory->Read(HLAddress) & 0x0F)];
 	outputStateBuffer += " ";
-	outputStateBuffer += hex[(memory.Read(HLAddress + 1) & 0xF0) >> 4] + hex[(memory.Read(HLAddress + 1) & 0x0F)];
+	outputStateBuffer += hex[(memory->Read(HLAddress + 1) & 0xF0) >> 4] + hex[(memory->Read(HLAddress + 1) & 0x0F)];
 	outputStateBuffer += ") ";
 
 	outputStateBuffer += "SP: " + hex[(registers.sp & 0xF000) >> 12] + hex[(registers.sp & 0x0F00) >> 8];
 	outputStateBuffer += hex[(registers.sp & 0x00F0) >> 4] + hex[(registers.sp & 0x000F)] + " ";
 
-	outputStateBuffer += "DIV: " + hex[(memory.dividerRegister & 0xF000) >> 12] + hex[(memory.dividerRegister & 0x0F00) >> 8];
-	outputStateBuffer += hex[(memory.dividerRegister & 0x00F0) >> 4] + hex[(memory.dividerRegister & 0x000F)] + " ";
+	outputStateBuffer += "DIV: " + hex[(memory->dividerRegister & 0xF000) >> 12] + hex[(memory->dividerRegister & 0x0F00) >> 8];
+	outputStateBuffer += hex[(memory->dividerRegister & 0x00F0) >> 4] + hex[(memory->dividerRegister & 0x000F)] + " ";
 
-	outputStateBuffer += "TIMA: " + hex[(memory.Read(Address::Timer) & 0xF0) >> 4] + hex[(memory.Read(Address::Timer) & 0x0F)] + " ";
+	outputStateBuffer += "TIMA: " + hex[(memory->Read(Address::Timer) & 0xF0) >> 4] + hex[(memory->Read(Address::Timer) & 0x0F)] + " ";
 
 	outputStateBuffer += "PC: " + hex[(registers.pc & 0xF000) >> 12] + hex[(registers.pc & 0x0F00) >> 8];
 	outputStateBuffer += hex[(registers.pc & 0x00F0) >> 4] + hex[(registers.pc & 0x000F)] + " ";
 
 	outputStateBuffer += "(PC): (";
-	outputStateBuffer += hex[(memory.Read(registers.pc) & 0xF0) >> 4] + hex[(memory.Read(registers.pc) & 0x0F)];
+	outputStateBuffer += hex[(memory->Read(registers.pc) & 0xF0) >> 4] + hex[(memory->Read(registers.pc) & 0x0F)];
 	outputStateBuffer += " ";
-	outputStateBuffer += hex[(memory.Read(registers.pc + 1) & 0xF0) >> 4] + hex[(memory.Read(registers.pc + 1) & 0x0F)];
+	outputStateBuffer += hex[(memory->Read(registers.pc + 1) & 0xF0) >> 4] + hex[(memory->Read(registers.pc + 1) & 0x0F)];
 	outputStateBuffer += " ";
-	outputStateBuffer += hex[(memory.Read(registers.pc + 2) & 0xF0) >> 4] + hex[(memory.Read(registers.pc + 2) & 0x0F)];
+	outputStateBuffer += hex[(memory->Read(registers.pc + 2) & 0xF0) >> 4] + hex[(memory->Read(registers.pc + 2) & 0x0F)];
 	outputStateBuffer += " ";
-	outputStateBuffer += hex[(memory.Read(registers.pc + 3) & 0xF0) >> 4] + hex[(memory.Read(registers.pc + 3) & 0x0F)];
+	outputStateBuffer += hex[(memory->Read(registers.pc + 3) & 0xF0) >> 4] + hex[(memory->Read(registers.pc + 3) & 0x0F)];
 	outputStateBuffer += ") ";
 
-	outputStateBuffer += OpcodeNames[memory.Read(registers.pc)];
-	outputStateBufferOpcodesOnly += OpcodeNames[memory.Read(registers.pc)];
+	outputStateBuffer += OpcodeNames[memory->Read(registers.pc)];
+	outputStateBufferOpcodesOnly += OpcodeNames[memory->Read(registers.pc)];
 
-	if (memory.Read(registers.pc) == 0xCB) {
-		outputStateBuffer += ExtendedOpcodeNames[memory.Read(registers.pc + 1)];
-		outputStateBufferOpcodesOnly += ExtendedOpcodeNames[memory.Read(registers.pc + 1)];
+	if (memory->Read(registers.pc) == 0xCB) {
+		outputStateBuffer += ExtendedOpcodeNames[memory->Read(registers.pc + 1)];
+		outputStateBufferOpcodesOnly += ExtendedOpcodeNames[memory->Read(registers.pc + 1)];
 	}
 	outputStateBuffer += "\n";
 	outputStateBufferOpcodesOnly += "\n";
@@ -1520,7 +1520,7 @@ void Cpu::outputState() {
 
 }
 
-int Cpu::performInterupts() {
+int CPU::performInterupts() {
 
 	int clocks = 0;
 
@@ -1535,8 +1535,8 @@ int Cpu::performInterupts() {
 	}
 
 
-	byte interuptFlags = memory.Read(Address::InteruptFlag);
-	byte interuptsEnabled = memory.Read(Address::InteruptEnable);
+	byte interuptFlags = memory->Read(Address::InteruptFlag);
+	byte interuptsEnabled = memory->Read(Address::InteruptEnable);
 
 	if (interuptFlags != 0 && interuptsEnabled != 0) {
 		halted = false;
@@ -1568,7 +1568,7 @@ int Cpu::performInterupts() {
 				}
 
 				interuptFlags &= ~(1 << i); // reset bit of interupt
-				memory.Write(Address::InteruptFlag, interuptFlags);
+				memory->Write(Address::InteruptFlag, interuptFlags);
 				interupt = false;
 				halted = false;
 
@@ -1582,20 +1582,20 @@ int Cpu::performInterupts() {
 
 
 
-void Cpu::LCDStatusRegister(word& cyclesThisLine) {
+void CPU::LCDStatusRegister(word& cyclesThisLine) {
 
-	byte LCDC = memory.Read(Address::LCDC);
-	byte LCDCStatus = memory.Read(Address::LCDCStatus);
+	byte LCDC = memory->Read(Address::LCDC);
+	byte LCDCStatus = memory->Read(Address::LCDCStatus);
 
 	if (bitTest(LCDC, Bits::b7) == false) {
 
-		memory.memorySpace[Address::LY] = 0;
+		memory->memorySpace[Address::LY] = 0;
 		cyclesThisLine = 0;
 		LCDCStatus &= ~0x03;
 	}
 	else {
 
-		byte LY = memory.Read(Address::LY);
+		byte LY = memory->Read(Address::LY);
 		byte mode = LCDCStatus & 0x3;
 
 		if (LY >= 144 && mode != 0x1) { // mode 1
@@ -1628,7 +1628,7 @@ void Cpu::LCDStatusRegister(word& cyclesThisLine) {
 			}
 		}
 
-		byte LYCompare = memory.Read(Address::LYCompare);
+		byte LYCompare = memory->Read(Address::LYCompare);
 		if (LY == LYCompare) {
 			bitSet(LCDCStatus, Bits::b2);
 			if (bitTest(LCDCStatus, Bits::b6) == true) {
@@ -1640,12 +1640,12 @@ void Cpu::LCDStatusRegister(word& cyclesThisLine) {
 		}
 	}
 
-	memory.Write(Address::LCDCStatus, LCDCStatus);
+	memory->Write(Address::LCDCStatus, LCDCStatus);
 }
 
-void Cpu::AdvanceClocks(int clocks) {
+void CPU::AdvanceClocks(int clocks) {
 
-	memory.IncrementDivAndTimerRegisters(clocks);
+	memory->IncrementDivAndTimerRegisters(clocks);
 	graphics->update(clocks, speedMode);
 
 }

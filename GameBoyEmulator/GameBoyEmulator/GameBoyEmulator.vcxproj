@@ -87,11 +87,11 @@
       <Optimization>Disabled</Optimization>
       <SDLCheck>true</SDLCheck>
       <ConformanceMode>true</ConformanceMode>
-      <AdditionalIncludeDirectories>C:\Users\Zach\Documents\GameboyEmulator\GameBoyEmulator\SFML-2.5.1\include;C:\Users\Zach\Documents\GameboyEmulator\GameBoyEmulator\SFML-2.5.1\include\SFML;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>D:\Librarys\imgui-1.53;C:\Users\Zach\Documents\GameboyEmulator\GameBoyEmulator\SFML-2.5.1\include;C:\Users\Zach\Documents\GameboyEmulator\GameBoyEmulator\SFML-2.5.1\include\SFML;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
-      <AdditionalDependencies>sfml-audio-d.lib;sfml-graphics-d.lib;sfml-main-d.lib;sfml-system-d.lib;sfml-window-d.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>sfml-audio-d.lib;sfml-graphics-d.lib;sfml-main-d.lib;sfml-system-d.lib;sfml-window-d.lib;opengl32.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <AdditionalLibraryDirectories>..\SFML-2.5.1\lib;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
     </Link>
   </ItemDefinitionGroup>
@@ -118,7 +118,7 @@
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <SDLCheck>true</SDLCheck>
       <ConformanceMode>true</ConformanceMode>
-      <AdditionalIncludeDirectories>C:\Users\Zach\Documents\GameboyEmulator\GameBoyEmulator\SFML-2.5.1\include;..\SFML-2.5.1\include\SFML;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>D:\Librarys\imgui-1.53;C:\Users\Zach\Documents\GameboyEmulator\GameBoyEmulator\SFML-2.5.1\include;..\SFML-2.5.1\include\SFML;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -131,17 +131,24 @@
     <ClCompile Include="CommonDefinitions.cpp" />
     <ClCompile Include="cpu.cpp" />
     <ClCompile Include="cpuOpcodeSwitch.cpp" />
+    <ClCompile Include="D:\Librarys\imgui-1.53\imgui-SFML.cpp" />
+    <ClCompile Include="D:\Librarys\imgui-1.53\imgui.cpp" />
+    <ClCompile Include="D:\Librarys\imgui-1.53\imgui_draw.cpp" />
     <ClCompile Include="Emulator.cpp" />
-    <ClCompile Include="Graphics.cpp" />
+    <ClCompile Include="Gameboy.cpp" />
+    <ClCompile Include="ppu.cpp" />
     <ClCompile Include="main.cpp" />
     <ClCompile Include="memory.cpp" />
+    <ClCompile Include="SFMLGraphics.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="CommonDefinitions.h" />
     <ClInclude Include="cpu.h" />
     <ClInclude Include="Emulator.h" />
-    <ClInclude Include="Graphics.h" />
+    <ClInclude Include="Gameboy.h" />
+    <ClInclude Include="ppu.h" />
     <ClInclude Include="memory.h" />
+    <ClInclude Include="SFMLGraphics.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
