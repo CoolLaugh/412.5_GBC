@@ -127,6 +127,9 @@ void Memory::CreateRamBanks() {
 	case 0xB: mbc = 0; break;
 	case 0xC: mbc = 0; break;
 	case 0xD: mbc = 0; break;
+	case 0xF: mbc = 3; break;
+	case 0x10: mbc = 3; break;
+	case 0x11: mbc = 3; break;
 	case 0x12: mbc = 3; break;
 	case 0x13: mbc = 3; break;
 	case 0x19: mbc = 5; break;
@@ -135,6 +138,8 @@ void Memory::CreateRamBanks() {
 	case 0x1C: mbc = 5; break;
 	case 0x1D: mbc = 5; break;
 	case 0x1E: mbc = 5; break;
+	case 0x20: mbc = 6; break;
+	case 0x22: mbc = 7; break;
 	}
 
 	byte romSize = Read(Address::RomSize);
@@ -182,12 +187,9 @@ void Memory::CreateRamBanks() {
 	}
 
 
-	int vramBankSize = 0;
+	int vramBankSize = 1;
 	if (ColorGameBoyMode == true) {
 		vramBankSize = 2;
-	}
-	else {
-		vramBankSize = 1;
 	}
 
 	for (size_t i = 0; i < vramBank.size(); i++) {
