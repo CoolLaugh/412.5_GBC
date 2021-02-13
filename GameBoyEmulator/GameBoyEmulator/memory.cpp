@@ -262,111 +262,8 @@ byte Memory::Read(word address, int vRamBank) {
 void Memory::Write(word address, byte data) {
 
 	// 0 - 7FFF cartrigde
-	// 8000 - 7FFF
-
-	if (address >= 0x0000 && address <= 0x1FFF) {
-		if (mbc == 1 || mbc == 3 || mbc == 5) {
-
-			data &= 0xF;
-
-			if (data == 0xA) {
-				ramBankEnabled = true;
-			}
-			else {
-				ramBankEnabled = false;
-			}
-		}
-		else if (mbc == 2) {
-			word addressCheck = address & 0x100;
-			if (addressCheck == 0) {
-
-				data &= 0xF;
-				if (data == 0xA) {
-					ramBankEnabled = true;
-				}
-				else {
-					ramBankEnabled = false;
-				}
-			}
-		}
-	}
-	else if (address >= 0x2000 && address <= 0x3FFF) {
-
-		if (mbc == 1) {
-
-			data &= 0x1F;
-
-			if (data == 0) { // values of 0 and 1 do the same thing
-				data = 1;
-			}
-
-			// top 3 bits must be preserved
-			currentRomBank &= 0xE0;
-			currentRomBank |= data;
-
-		}
-		else if (mbc == 2) {
-
-			data &= 15;
-			if (data == 0) { // values of 0 and 1 do the same thing
-				data = 1;
-			}
-
-			currentRomBank = data;
-		}
-		else if (mbc == 3) {
-
-			data &= 127;
-			currentRomBank = data;
-		}
-		else if (mbc == 5) {
-
-			if (address >= 0x2000 && address <= 0x2FFF) {
-
-				currentRomBank &= 0x10000;
-				currentRomBank |= data;
-			}
-			else if (address >= 0x3000 && address <= 0x3FFF) {
-
-				data &= 1;
-				data <<= 8;
-				currentRomBank |= data;
-			}
-
-		}
-	}
-	else if (address >= 0x4000 && address <= 0x5FFF && mbc == 1) {
-		if (mbc == 1 || mbc == 3) {
-			if (memoryModel == mm4_32) {
-
-				data &= 3;
-				currentRamBank = data;
-			}
-			else if (memoryModel == mm16_8) {
-
-				data &= 3;
-				data <<= 5;
-				currentRamBank |= data;
-			}
-		}
-		if (mbc == 5) {
-
-			data &= 0x0F;
-			currentRamBank = data;
-		}
-	}
-	else if (address >= 0x6000 && address <= 0x7FFF) {
-		if (mbc == 1 || mbc == 3 || mbc == 5) {
-			data &= 1;
-
-			if (data == 0) {
-				memoryModel = mm16_8;
-			}
-			else if (data == 1) {
-				memoryModel = mm4_32;
-			}
-
-		}
+	if (address >= 0x0000 && address <= 0x7FFF) {
+		WriteMBCSwitch(address, data);
 	}
 	// 0x8000 - 0x9FFF 8kb video ram (vram) (1 for gameboy, 2 switchable for gameboy color)
 	else if (address >= 0x8000 && address <= 0x9FFF) {
@@ -399,12 +296,6 @@ void Memory::Write(word address, byte data) {
 		memorySpace[address] = data;
 		if (data == 0x81) { // output for test rom
 			std::cout << memorySpace[0xFF01];
-			std::ofstream resultsFile;
-			resultsFile.open("results.txt", std::ios::app);
-			byte out = memorySpace[0xFF01];
-			char toHex[16] = { '0', '1', '2' , '3' , '4' , '5' , '6' , '7' , '8', '9', 'A', 'B', 'C', 'D', 'E', 'F' };
-			resultsFile << "0x" << toHex[(out >> 4)] << toHex[(out & 0xF)] << "\n";
-			resultsFile.close();
 		}
 	}
 	else if (address == 0xFF04) { // DIV register
@@ -514,6 +405,166 @@ void Memory::Write(word address, byte data) {
 		memorySpace[address] = data; // no special behaviour
 	}
 }
+
+void Memory::WriteMBCSwitch(word address, byte data) {
+
+	switch (mbc) {
+	case 1:
+		if (address < 0x2000) {
+			mbc1_00001FFF(data);
+		}
+		else if (address < 0x4000) {
+			mbc1_20003FFF(address, data);
+		}
+		else if (address < 0x6000) {
+			mbc1_40005FFF(data);
+		}
+		else {
+			mbc1_60007FFF(data);
+		}
+		break;
+	case 2:
+		if (address < 0x4000) {
+			mbc2_00003FFF(address, data);
+		}
+		break;
+	case 3:
+		if (address < 0x2000) {
+			mbc3_00001FFF(data);
+		}
+		else if (address < 0x4000) {
+			mbc3_20003FFF(data);
+		}
+		else if (address < 0x6000) {
+			mbc3_40005FFF(data);
+		}
+		else {
+			mbc3_60007FFF(data);
+		}
+		break;
+	case 5:
+		if (address < 0x2000) {
+			mbc5_00001FFF(data);
+		}
+		else if (address < 0x3000) {
+			mbc5_20002FFF(data);
+		}
+		else if (address < 0x4000) {
+			mbc5_30003FFF(data);
+		}
+		else if (address < 0x6000) {
+			mbc5_40005FFF(data);
+		}
+		break;
+	}
+}
+
+void Memory::mbc1_00001FFF(byte data) {
+	data &= 0x0F;
+	ramBankEnabled = (data == 0xA);
+}
+
+void Memory::mbc1_20003FFF(word address, byte data) {
+
+	data &= 0x1F;
+	if (data == 0) { // values of 0 and 1 do the same thing
+		data = 1;
+	}
+	currentRomBank &= 0xE0; // top 3 bits must be preserved
+	currentRomBank |= data;
+}
+
+void Memory::mbc1_40005FFF(byte data) {
+
+	if (memoryModel == mm4_32) {
+
+		data &= 3;
+		currentRamBank = data;
+	}
+	else if (memoryModel == mm16_8) {
+
+		data &= 3;
+		data <<= 5;
+		currentRamBank |= data;
+	}
+}
+
+void Memory::mbc1_60007FFF(byte data) {
+
+	data &= 1;
+
+	if (data == 0) {
+		memoryModel = mm16_8;
+	}
+	else if (data == 1) {
+		memoryModel = mm4_32;
+	}
+}
+
+void Memory::mbc2_00003FFF(word address, byte data) {
+
+	if (BitTest(address, 8) == false) {
+		data &= 0x0F;
+		ramBankEnabled = (data == 0x0A);
+	}
+	else {
+		if (data == 0) {
+			data = 1;
+		}
+		currentRomBank = data;
+	}
+
+}
+
+void Memory::mbc3_00001FFF(byte data) {
+	mbc1_00001FFF(data);
+}
+
+void Memory::mbc3_20003FFF(byte data) {
+
+	data &= 0x7F;
+	if (data == 0) { // values of 0 and 1 do the same thing
+		data = 1;
+	}
+	currentRomBank = data;
+}
+
+void Memory::mbc3_40005FFF(byte data) {
+	if (data <= 3) {
+		data &= 3;
+		currentRamBank = data;
+	}
+	else if (data >= 0x8 && data <= 0xC) {
+		// real time clock register
+	}
+
+}
+
+void Memory::mbc3_60007FFF(byte data) {
+
+	// latch the current time by writing 0x00 then 0x01
+}
+
+void Memory::mbc5_00001FFF(byte data) {
+	mbc1_00001FFF(data);
+}
+
+void Memory::mbc5_20002FFF(byte data) {
+	currentRomBank &= 0xFF00;
+	currentRomBank |= data;
+}
+
+void Memory::mbc5_30003FFF(byte data) {
+	word bit8 = data & 0x1;
+	bit8 <<= 8;
+	currentRomBank |= bit8;
+}
+
+void Memory::mbc5_40005FFF(byte data) {
+	data &= 0x0F;
+	currentRamBank = data;
+}
+
 
 byte Memory::GetJoypadState() {
 
@@ -680,12 +731,10 @@ void Memory::LoadExternalRam(std::string fileName) {
 		saveFileStream.read((char*)SaveFileData, saveFileSize);
 		saveFileStream.close();
 
-		for (size_t i = 0; i < saveFileSize; i++) {
-
-			int ramBankIndex = i / RamBankSize;
-			int index = i % RamBankSize;
-
-			ramBank[ramBankIndex][index] = SaveFileData[i];
+		for (size_t i = 0; i < ramBank.size(); i++) {
+			for (size_t j = 0; j < RamBankSize; j++) {
+				ramBank[i][j] = SaveFileData[i * RamBankSize + j];
+			}
 		}
 
 		delete SaveFileData;

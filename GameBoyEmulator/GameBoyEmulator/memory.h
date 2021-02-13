@@ -47,9 +47,10 @@ public:
 	bool externalRamChanged = false;
 	bool ColorGameBoyMode = false;
 	byte currentRamBank = 0;
+	byte currentRamBankB = 0;
 	byte currentWramBank = 1;
 	byte currentVramBank = 0;
-	byte currentRomBank = 0;
+	word currentRomBank = 0;
 	byte numberOfRamBanks = 0;
 	bool ramBankEnabled;
 	std::vector<byte*> ramBank;
@@ -68,8 +69,25 @@ public:
 	void PowerUpSequence();
 	bool LoadRom(const std::string fileName);
 	void CreateRamBanks();
+
 	byte Read(word address, int vRamBank = -1);
+
 	void Write(word address, byte data);
+	void WriteMBCSwitch(word address, byte data);
+	void mbc1_00001FFF(byte data);
+	void mbc1_20003FFF(word address, byte data);
+	void mbc1_40005FFF(byte data);
+	void mbc1_60007FFF(byte data);
+	void mbc2_00003FFF(word address, byte data);
+	void mbc3_00001FFF(byte data);
+	void mbc3_20003FFF(byte data);
+	void mbc3_40005FFF(byte data);
+	void mbc3_60007FFF(byte data);
+	void mbc5_00001FFF(byte data);
+	void mbc5_20002FFF(byte data);
+	void mbc5_30003FFF(byte data);
+	void mbc5_40005FFF(byte data);
+
 	byte GetJoypadState();
 	void IncrementDivAndTimerRegisters(byte clocks);
 	void DumpMemory(std::string fileName = "MemoryDump");
