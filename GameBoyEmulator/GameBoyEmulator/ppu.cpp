@@ -230,6 +230,7 @@ void PPU::drawSprites() {
 	}
 	word spriteAttributeTable = Address::SpriteAttributes;
 
+	int spritesThisLine = 0;
 	for (word i = 0; i < 40; i++) {
 
 		int positionY = memory->Read(spriteAttributeTable + (i * 4));
@@ -249,30 +250,38 @@ void PPU::drawSprites() {
 		bool Xflip = BitTest(flags, 5);
 
 		byte spriteHeight = 8;
-		if (BitTest(LCDC, 2)) {
+		if (BitTest(LCDC, 2) == true) {
 			spriteHeight = 16;
 			patternNumber &= ~Bits::b0;
 		}
 
 		byte OGP = memory->Read(Address::OBJPalette0);
-		if (BitTest(flags, 4)) {
+		if (BitTest(flags, 4) == true) {
 			OGP = memory->Read(Address::OBJPalette1);
 		}
 
 		byte LY = memory->Read(Address::LY);
 
-		if (LY < positionY + spriteHeight && LY >= positionY) {
+		if (LY < positionY + spriteHeight && LY >= positionY && spritesThisLine < 10) {
 
+			spritesThisLine++;
 			int drawLine = LY - positionY;
 			if (Yflip == true) {
 				drawLine -= (spriteHeight - 1);
 				drawLine *= -1;
 			}
 
+			int vramBank = 0;
+			if (ColorGameBoyMode == true) {
+				if (BitTest(flags, 3) == true) {
+					vramBank = 1;
+				}
+			}
+
 			word tileLocation = Address::TilePattern0 + (patternNumber * 16);
 
-			byte pixelDataLow = memory->Read(tileLocation + drawLine * 2);
-			byte pixelDataHigh = memory->Read(tileLocation + drawLine * 2 + 1);
+			byte pixelDataLow = memory->Read(tileLocation + drawLine * 2, vramBank);
+			byte pixelDataHigh = memory->Read(tileLocation + drawLine * 2 + 1, vramBank);
 
 			for (int j = 0; j < 8; j++) {
 
@@ -286,7 +295,8 @@ void PPU::drawSprites() {
 
 				int pixelX = positionX + pixelOffsetX;
 
-				if (BitTest(flags, 7) == true && backgroundPixelsColorIndex[(LY * ScreenWidth) + pixelX] > 0) {
+				if (BitTest(flags, 7) == true && backgroundPixelsColorIndex[(LY * ScreenWidth) + pixelX] > 0 ||
+					backgroundPixelsColorIndex[(LY * ScreenWidth) + pixelX] == 0x10) {
 					continue;
 				}
 
@@ -335,9 +345,11 @@ void PPU::DrawBackgroundLine(int startX, int row, int screenY, int screenWidth, 
 
 		bool yFlip = false;
 		bool xFlip = false;
+		bool BGtoOAMPriority = false;
 		byte CGBAttributes = 0;
 		byte VramBank = 0;
 
+		Color* palette = nullptr;
 		if (ColorGameBoyMode == true) {
 			
 			CGBAttributes = memory->Read(backgroundMapAddress, 1);
@@ -345,12 +357,20 @@ void PPU::DrawBackgroundLine(int startX, int row, int screenY, int screenWidth, 
 			if (BitTest(CGBAttributes, 6) == true) {
 				yFlip = true;
 			}
+
 			if (BitTest(CGBAttributes, 5) == true) {
 				xFlip = true;
 			}
+
 			if (BitTest(CGBAttributes, 3) == true) {
 				VramBank = 1;
 			}
+
+			if (BitTest(CGBAttributes, 7) == true) {
+				BGtoOAMPriority = true;
+			}
+
+			palette = GetBGPalette(CGBAttributes);
 		}
 
 
@@ -364,12 +384,6 @@ void PPU::DrawBackgroundLine(int startX, int row, int screenY, int screenWidth, 
 
 		byte pixelDataLow = memory->vramBank[VramBank][address - 0x8000];
 		byte pixelDataHigh = memory->vramBank[VramBank][(address + 1) - 0x8000];
-
-		Color* palette = nullptr;
-
-		if (ColorGameBoyMode) {
-			palette = GetBGPalette(CGBAttributes);
-		}
 
 		do {
 
@@ -386,7 +400,12 @@ void PPU::DrawBackgroundLine(int startX, int row, int screenY, int screenWidth, 
 
 				SetPixel(screen, screenX, screenY, screenWidth, palette[pixel]);
 				if (mainScreen == true) {
-					backgroundPixelsColorIndex[screenIndex / 4] = pixel;
+					if (BGtoOAMPriority == true) {
+						backgroundPixelsColorIndex[screenIndex / 4] = 0x10; // special BG has priority value
+					}
+					else {
+						backgroundPixelsColorIndex[screenIndex / 4] = pixel;
+					}
 				}
 			}
 			else {
@@ -446,6 +465,7 @@ void PPU::DrawWindowLine() {
 
 		bool yFlip = false;
 		bool xFlip = false;
+		bool BGtoOAMPriority = false;
 		byte CGBAttributes = 0;
 		byte VramBank = 0;
 
@@ -456,11 +476,17 @@ void PPU::DrawWindowLine() {
 			if (BitTest(CGBAttributes, 6) == true) {
 				yFlip = true;
 			}
+
 			if (BitTest(CGBAttributes, 5) == true) {
 				xFlip = true;
 			}
+
 			if (BitTest(CGBAttributes, 3) == true) {
 				VramBank = 1;
+			}
+
+			if (BitTest(CGBAttributes, 7) == true) {
+				BGtoOAMPriority = true;
 			}
 		}
 
@@ -484,10 +510,17 @@ void PPU::DrawWindowLine() {
 
 			byte pixel = GetPixelIndex(pixelDataLow, pixelDataHigh, pixelX);
 
+			int screenIndex = ((LY * ScreenWidth) + screenX);
 			if (ColorGameBoyMode) {
 
 				Color* palette = GetBGPalette(CGBAttributes);
 				SetPixel(backgroundPixels, screenX, LY, ScreenWidth, palette[pixel]);
+				if (BGtoOAMPriority == true) {
+					backgroundPixelsColorIndex[screenIndex] = 0x10; // special BG has priority value
+				}
+				else {
+					backgroundPixelsColorIndex[screenIndex] = pixel;
+				}
 			}
 			else {
 
@@ -495,6 +528,7 @@ void PPU::DrawWindowLine() {
 				byte color = (BGP & (0x3 << offset)) >> offset;
 
 				SetPixel(backgroundPixels, screenX, LY, ScreenWidth, BWPalette[pixel]);
+				backgroundPixelsColorIndex[screenIndex] = color;
 			}
 
 			screenX++;
