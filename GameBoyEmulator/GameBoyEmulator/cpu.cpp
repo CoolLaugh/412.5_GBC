@@ -1635,6 +1635,7 @@ void CPU::LCDStatusRegister(word& cyclesThisLine) {
 	if (lastLine < 0) {
 		lastLine = 153;
 	}
+
 	if (LY == LYCompare && lastLY == lastLine) {
 		BitSet(LCDCStatus, 2);
 		if (BitTest(LCDCStatus, 6) == true) {

@@ -23,6 +23,7 @@ class Emulator {
 	sf::Texture ColorTexture;
 	int elapsedFrames = 0;
 	int scale = 4;
+	int framerateLimit = 60;
 
 	bool showSettings = false;
 	bool showFileOpen = false;

@@ -68,7 +68,13 @@ void Emulator::Loop() {
 					}
 				}
 				else if (event.key.code == sf::Keyboard::F8 && pressed == true) {
-					showSettings = !showSettings;
+					if (framerateLimit == 60) {
+						framerateLimit = 600;
+					}
+					else {
+						framerateLimit = 60;
+					}
+					graphics.window->setFramerateLimit(framerateLimit);
 				}
 			}
 			else if (event.type == sf::Event::GainedFocus || event.type == sf::Event::LostFocus) {

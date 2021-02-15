@@ -37,6 +37,7 @@ private:
 
 	Color CGBPalette[4];
 	Color CGBSpritePalette[4];
+	bool lineDrawn = false;
 
 public:
 

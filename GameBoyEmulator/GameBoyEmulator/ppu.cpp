@@ -169,10 +169,21 @@ void PPU::update(word cyclesThisUpdate, int speedMode) {
 	lastLY = memory->Read(Address::LY);
 
 	if (cyclesThisLine >= (cyclesPerLine * speedMode)) {
-		drawScanLine();
+
+		memory->memorySpace[Address::LY]++;
+		if (memory->Read(Address::LY) > 153) {
+			memory->Write(Address::LY, 0);
+		}
+
+		lineDrawn = false;
 		cyclesThisLine -= (cyclesPerLine * speedMode);
 	}
-
+	// the screen is drawn 150-225? clocks into a given LY, 
+	// scrollX may change immediatly after LY increment from a LCDStat interrupt
+	if (cyclesThisLine > 200 && lineDrawn == false) {
+		drawScanLine();
+		lineDrawn = true;
+	}
 }
 
 void PPU::drawScanLine() {
@@ -193,11 +204,6 @@ void PPU::drawScanLine() {
 		}
 		memory->HBlankDMA();
 
-	}
-
-	memory->memorySpace[Address::LY]++;
-	if (memory->Read(Address::LY) > 153) {
-		memory->Write(Address::LY, 0);
 	}
 }
 
