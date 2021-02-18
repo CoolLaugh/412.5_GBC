@@ -33,24 +33,42 @@ void APU::step(int clocks) {
 
 	if (memory->resetSC1Length == true) {
 		memory->resetSC1Length = false;
-		resetSC1Length(memory->Read(0xFF14) & 0x3F);
+		resetSC1Length(memory->Read(0xFF11) & 0x3F);
 	}
+	if (memory->resetSC2Length == true) {
+		memory->resetSC2Length = false;
+		resetSC2Length(memory->Read(0xFF16) & 0x3F);
+	}
+	//if (memory->resetSC3Length == true) {
+	//	memory->resetSC3Length = false;
+	//	resetSC3Length(memory->Read(0xFF1B));
+	//}
+	//if (memory->resetSC4Length == true) {
+	//	memory->resetSC4Length = false;
+	//	resetSC4Length(memory->Read(0xFF20) & 0x3F);
+	//}
 
 	for (size_t i = 0; i < clocks; i++) {
 
-		channel1FrameSequencer(channel1);
+		channel1FrameSequencer(channel1, 0xFF14);
 		channel1Sweep(channel1);
-		channel1Timer(channel1);
-		channel1Duty(channel1); 
-		channel1Envelope(channel1);
+		channel1Timer(channel1, 0xFF14, 0xFF13);
+		channel1Duty(channel1, 0xFF11);
+		channel1Envelope(channel1, 0xFF12);
 		channel1buffer(channel1);
+
+		channel1FrameSequencer(channel2, 0xFF19);
+		channel1Timer(channel2, 0xFF19, 0xFF18);
+		channel1Duty(channel2, 0xFF16);
+		channel1Envelope(channel2, 0xFF17);
+		channel1buffer(channel2);
 	}
 
 	if (channel1.buffer.size() >= 100000) {
 
 		samples.clear();
 		for (size_t i = 0; i < channel1.buffer.size(); i++) {
-			samples.push_back(channel1.buffer[i] * 100 * scale);
+			samples.push_back((channel1.buffer[i] + channel2.buffer[i]) * 100 * scale);
 		}
 
 		buffer.loadFromSamples(&samples[0], samples.size(), 1, 44100);
@@ -62,8 +80,13 @@ void APU::step(int clocks) {
 		for (size_t i = 0; i < channel1.buffer.size(); i++) {
 			channel1.lastBuffer.push_back(channel1.buffer[i]);
 		}
-
 		channel1.buffer.clear();
+
+		channel2.lastBuffer.clear();
+		for (size_t i = 0; i < channel2.buffer.size(); i++) {
+			channel2.lastBuffer.push_back(channel2.buffer[i]);
+		}
+		channel2.buffer.clear();
 	}
 }
 
@@ -103,7 +126,22 @@ void APU::resetSC1Length(byte val) {
 	}
 }
 
-void APU::channel1FrameSequencer(Channel & channel) {
+void APU::resetSC2Length(byte val) {
+
+	if (channel2.length == 0) {
+		channel2.length = 64 - val;
+	}
+	channel2.enabled = true;
+	channel2.amp = memory->Read(0xFF17) >> 4;
+	channel2.envelope = memory->Read(0xFF17) & 7;
+	channel2.envelopeEnabled = true;
+
+	if (memory->Read(0xFF17) >> 3 == 0x0) {
+		channel2.enabled = false;
+	}
+}
+
+void APU::channel1FrameSequencer(Channel & channel, word FrequencyHigh) {
 
 	channel.frameSequencer++;
 	if (channel.frameSequencer >= 8230) {// 8230 is 512 hz at 60fps, 512 hz at 59.72fps would be 8192 clocks
@@ -115,7 +153,7 @@ void APU::channel1FrameSequencer(Channel & channel) {
 
 		if (channel.frameSequencerStep % 2 == 0 &&
 			channel.length > 0 &&
-			BitTest(memory->Read(0xFF14), 6) == true) {
+			BitTest(memory->Read(FrequencyHigh), 6) == true) {
 
 			channel.length--;
 			if (channel.length <= 0) {
@@ -180,11 +218,11 @@ void APU::channel1Sweep(Channel & channel) {
 	}
 }
 
-void APU::channel1Timer(Channel & channel) {
+void APU::channel1Timer(Channel & channel, word FrequencyHigh, word FrequencyLow) {
 
 	if (channel.timer <= 0) {
 
-		word freq = (memory->Read(0xFF14) & 0x7) << 8 | memory->Read((0xFF13));
+		word freq = (memory->Read(FrequencyHigh) & 0x7) << 8 | memory->Read((FrequencyLow));
 		int hz = 131072 / (2048 - freq); // hz, number of times per second the wave duty will repeat
 		channel.timer = ((70224 * 60) / hz) / 8; // 70224 clocks per frame, 60 frames per second, 8 parts per wave duty
 		
@@ -197,18 +235,18 @@ void APU::channel1Timer(Channel & channel) {
 	}
 }
 
-void APU::channel1Duty(Channel & channel) {
+void APU::channel1Duty(Channel & channel, word dutyAddress) {
 
-	int duty = (memory->Read(0xFF11) >> 6) & 0x3;
+	int duty = (memory->Read(dutyAddress) >> 6) & 0x3;
 
 	channel.duty = duties[duty][channel.dutyIndex];
 }
 
-void APU::channel1Envelope(Channel & channel) {
+void APU::channel1Envelope(Channel & channel, word volumeEnvelopeAddress) {
 
 	if (channel.frameSequencer != 0 ||
 		channel.frameSequencerStep != 7 ||
-		(memory->Read(0xFF12) & 0x7) == 0 ||
+		(memory->Read(volumeEnvelopeAddress) & 0x7) == 0 ||
 		channel.envelopeEnabled == false) {
 
 		return;
@@ -218,10 +256,10 @@ void APU::channel1Envelope(Channel & channel) {
 
 	if (channel.envelope <= 0) {
 
-		channel.envelope = memory->Read(0xFF12) & 7;
+		channel.envelope = memory->Read(volumeEnvelopeAddress) & 7;
 
 		int direction = -1;
-		if (BitTest(memory->Read(0xFF12), 3) == true) {
+		if (BitTest(memory->Read(volumeEnvelopeAddress), 3) == true) {
 			direction = 1;
 		}
 
@@ -252,7 +290,7 @@ void APU::channel1buffer(Channel & channel) {
 		}
 		else {
 
-			channel.buffer.push_back((float)channel1.amp / 100.f);
+			channel.buffer.push_back((float)channel.amp / 100.f);
 		}
 	}
 }

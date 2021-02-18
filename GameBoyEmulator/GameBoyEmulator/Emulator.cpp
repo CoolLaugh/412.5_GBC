@@ -414,8 +414,9 @@ void Emulator::Channel() {
 	}
 
 	ImGui::Begin("Audio Channels", &showAudioWindow, 0);
-	if (gameboy != nullptr && gameboy->apu.channel1.lastBuffer.size() > 0) {
+	if (gameboy != nullptr) {
 		ImGui::PlotLines("Channel 1", &gameboy->apu.channel1.lastBuffer[0], gameboy->apu.channel1.lastBuffer.size());
+		ImGui::PlotLines("Channel 2", &gameboy->apu.channel2.lastBuffer[0], gameboy->apu.channel2.lastBuffer.size());
 		ImGui::SliderInt("Volume", &gameboy->apu.scale, 0, 10000);
 	}
 

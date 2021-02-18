@@ -64,6 +64,9 @@ public:
 	int writingToTIMACounter = 0;
 	bool oldBit = false;
 	bool resetSC1Length = false;
+	bool resetSC2Length = false;
+	bool resetSC3Length = false;
+	bool resetSC4Length = false;
 
 	Memory(); 
 	void PowerUpSequence();

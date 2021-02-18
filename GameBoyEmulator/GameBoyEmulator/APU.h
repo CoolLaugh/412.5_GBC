@@ -27,6 +27,7 @@ class APU {
 public:
 	Memory* memory;
 	Channel channel1;
+	Channel channel2;
 	int scale = 500;
 
 	APU();
@@ -52,14 +53,15 @@ public:
 	void step(int clocks);
 
 	void resetSC1Length(byte val);
+	void resetSC2Length(byte val);
 
 private:
 
-	void channel1FrameSequencer(Channel& channel);
+	void channel1FrameSequencer(Channel& channel, word FrequencyHigh);
 	void channel1Sweep(Channel& channel);
-	void channel1Timer(Channel& channel);
-	void channel1Duty(Channel& channel);
-	void channel1Envelope(Channel& channel);
+	void channel1Timer(Channel& channel, word FrequencyHigh, word FrequencyLow);
+	void channel1Duty(Channel& channel, word dutyAddress);
+	void channel1Envelope(Channel& channel, word volumeEnvelopeAddress);
 	void channel1buffer(Channel& channel);
 };
 

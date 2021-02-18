@@ -316,6 +316,18 @@ void Memory::Write(word address, byte data) {
 		memorySpace[address] = data;
 		resetSC1Length = true;
 	}
+	else if (address == 0xFF19) {
+		memorySpace[address] = data;
+		resetSC2Length = true;
+	}
+	else if (address == 0xFF1E) {
+		memorySpace[address] = data;
+		resetSC3Length = true;
+	}
+	else if (address == 0xFF23) {
+		memorySpace[address] = data;
+		resetSC4Length = true;
+	}
 	else if (address == 0xFF44) {
 		memorySpace[address] = 0;
 	}
