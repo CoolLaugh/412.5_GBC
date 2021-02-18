@@ -1,7 +1,7 @@
 #pragma once
 #include "cpu.h"
 #include "ppu.h"
-
+#include "APU.h"
 
 
 class Gameboy {
@@ -10,6 +10,7 @@ public:
 
 	CPU cpu;
 	PPU ppu;
+	APU apu;
 	Memory memory;
 
 	int totalCycles = 0;

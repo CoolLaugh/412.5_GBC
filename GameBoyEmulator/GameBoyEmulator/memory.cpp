@@ -206,9 +206,9 @@ void Memory::CreateRamBanks() {
 
 byte Memory::Read(word address, int vRamBank) {
 
-	if (address == 0xFF26) { // hack for no audio
-		return 0x00;
-	}
+	//if (address == 0xFF26) { // hack for no audio
+	//	return 0x00;
+	//}
 
 	// rom bank 0x4000 - 0x7FFF
 	if (address >= 0x4000 && address <= 0x7FFF) {
@@ -311,6 +311,10 @@ void Memory::Write(word address, byte data) {
 		if (writingToTIMA == true) { // writing to TMA in the same cycle as TMA is being loaded into TIMA causes the same value to be written to TIMA
 			memorySpace[Address::Timer] = data;
 		}
+	}
+	else if (address == 0xFF14) {
+		memorySpace[address] = data;
+		resetSC1Length = true;
 	}
 	else if (address == 0xFF44) {
 		memorySpace[address] = 0;

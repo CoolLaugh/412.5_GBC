@@ -32,6 +32,7 @@ class Emulator {
 	bool showBackgroundWindow = false;
 	bool showColorPalettteWindow = false;
 	bool showAbout = false;
+	bool showAudioWindow = true;
 
 	bool menuTest = false;
 
@@ -56,6 +57,7 @@ public:
 	void TileWindow();
 	void BackgroundWindow();
 	void ColorPaletteWindow();
+	void Channel();
 
 };
 

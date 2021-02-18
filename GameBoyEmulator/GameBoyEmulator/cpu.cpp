@@ -1656,5 +1656,5 @@ void CPU::AdvanceClocks(int clocks) {
 
 	memory->IncrementDivAndTimerRegisters(clocks);
 	graphics->update(clocks, speedMode);
-
+	apu->step(clocks);
 }

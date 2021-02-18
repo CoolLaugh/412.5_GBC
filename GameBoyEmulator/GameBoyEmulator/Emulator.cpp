@@ -114,7 +114,7 @@ void Emulator::MainMenuBar(sf::Keyboard::Key keyPresse) {
 	TileWindow();
 	BackgroundWindow();
 	about();
-
+	Channel();
 	SettingsMenu();
 }
 
@@ -223,6 +223,7 @@ void Emulator::ToolBar() {
 			ImGui::MenuItem("Tiles", NULL, &showTileWindow);
 			ImGui::MenuItem("Background Map", NULL, &showBackgroundWindow);
 			ImGui::MenuItem("ColorPalette(CGB)", NULL, &showColorPalettteWindow);
+			ImGui::MenuItem("Audio", NULL, &showAudioWindow);
 			ImGui::EndMenu();
 		}
 		if (ImGui::BeginMenu("?")) {
@@ -401,6 +402,21 @@ void Emulator::ColorPaletteWindow() {
 		image.create(4, 16, colors);
 		ColorTexture.loadFromImage(image);
 		ImGui::Image(ColorTexture, ImVec2(4 * 12, 16 * 12));
+	}
+
+	ImGui::End();
+}
+
+void Emulator::Channel() {
+
+	if (showAudioWindow == false) {
+		return;
+	}
+
+	ImGui::Begin("Audio Channels", &showAudioWindow, 0);
+	if (gameboy != nullptr && gameboy->apu.channel1.lastBuffer.size() > 0) {
+		ImGui::PlotLines("Channel 1", &gameboy->apu.channel1.lastBuffer[0], gameboy->apu.channel1.lastBuffer.size());
+		ImGui::SliderInt("Volume", &gameboy->apu.scale, 0, 10000);
 	}
 
 	ImGui::End();

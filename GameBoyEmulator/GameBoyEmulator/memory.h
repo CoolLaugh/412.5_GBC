@@ -5,7 +5,6 @@
 #include "CommonDefinitions.h"
 #include <filesystem>
 
-
 namespace fs = std::experimental::filesystem;
 
 class Memory {
@@ -64,6 +63,7 @@ public:
 	bool writingToTIMA = false;
 	int writingToTIMACounter = 0;
 	bool oldBit = false;
+	bool resetSC1Length = false;
 
 	Memory(); 
 	void PowerUpSequence();

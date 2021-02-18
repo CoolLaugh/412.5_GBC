@@ -3,6 +3,7 @@
 #include <queue>
 #include "memory.h"
 #include "ppu.h"
+#include "APU.h"
 
 typedef unsigned char byte;
 typedef unsigned short word;
@@ -54,6 +55,7 @@ public:
 	};
 
 	PPU* graphics;
+	APU* apu;
 
 	Registers registers;
 	bool halted = false;

@@ -10,6 +10,8 @@ Gameboy::Gameboy(std::string Filename) {
 	ppu.ColorGameBoyMode = memory.ColorGameBoyMode;
 	cpu.PowerUpSequence();
 	ppu.memory = &memory;
+	apu.memory = &memory;
+	cpu.apu = &apu;
 }
 
 Gameboy::~Gameboy() {
