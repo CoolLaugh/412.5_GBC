@@ -2,6 +2,9 @@
 #include <SFML/Audio.hpp>
 #include "CommonDefinitions.h"
 #include "memory.h"
+#include "BufferedSoundStream.h"
+#include <deque>
+
 
 struct Channel {
 
@@ -18,8 +21,10 @@ struct Channel {
 	bool envelopeEnabled = true;
 	int amp = 0;
 	int pcc = 95;
-	std::vector<float> buffer;
-	std::vector<float> lastBuffer;
+	int waveIndex = 0;
+	word lfsr = 0;
+	std::vector<int> buffer;
+	std::vector<float> displayBuffer;
 };
 
 class APU {
@@ -28,7 +33,11 @@ public:
 	Memory* memory;
 	Channel channel1;
 	Channel channel2;
+	Channel channel3;
+	Channel channel4;
+	BufferedSoundStream bufferedSoundStream;
 	int scale = 500;
+	int BufferAmount = (44100 / 10);
 
 	APU();
 
@@ -54,14 +63,22 @@ public:
 
 	void resetSC1Length(byte val);
 	void resetSC2Length(byte val);
+	void resetSC3Length(byte val);
+	void resetSC4Length(byte val);
 
 private:
 
-	void channel1FrameSequencer(Channel& channel, word FrequencyHigh);
-	void channel1Sweep(Channel& channel);
-	void channel1Timer(Channel& channel, word FrequencyHigh, word FrequencyLow);
-	void channel1Duty(Channel& channel, word dutyAddress);
-	void channel1Envelope(Channel& channel, word volumeEnvelopeAddress);
-	void channel1buffer(Channel& channel);
+	void frameSequencer(Channel& channel, word FrequencyHigh);
+	void sweep(Channel& channel);
+	void SquareTimer(Channel& channel, word FrequencyHigh, word FrequencyLow);
+	void squareDuty(Channel& channel, word dutyAddress);
+	void envelope(Channel& channel, word volumeEnvelopeAddress);
+	void squareBuffer(Channel& channel);
+	void waveTimer(Channel& channel, word FrequencyHigh, word FrequencyLow);
+	void wave(Channel& channel);
+	void noiseTimer(Channel& channel);
+	void noiseBuffer(Channel& channel);
+
+	void fillDisplayBuffer(Channel& channel);
 };
 

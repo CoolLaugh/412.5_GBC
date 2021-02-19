@@ -130,6 +130,7 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="APU.cpp" />
+    <ClCompile Include="BufferedSoundStream.cpp" />
     <ClCompile Include="CommonDefinitions.cpp" />
     <ClCompile Include="cpu.cpp" />
     <ClCompile Include="cpuOpcodeSwitch.cpp" />
@@ -145,6 +146,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="APU.h" />
+    <ClInclude Include="BufferedSoundStream.h" />
     <ClInclude Include="CommonDefinitions.h" />
     <ClInclude Include="cpu.h" />
     <ClInclude Include="Emulator.h" />

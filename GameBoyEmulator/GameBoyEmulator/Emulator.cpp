@@ -414,10 +414,14 @@ void Emulator::Channel() {
 	}
 
 	ImGui::Begin("Audio Channels", &showAudioWindow, 0);
-	if (gameboy != nullptr) {
-		ImGui::PlotLines("Channel 1", &gameboy->apu.channel1.lastBuffer[0], gameboy->apu.channel1.lastBuffer.size());
-		ImGui::PlotLines("Channel 2", &gameboy->apu.channel2.lastBuffer[0], gameboy->apu.channel2.lastBuffer.size());
+	if (gameboy != nullptr && 
+		gameboy->apu.channel1.displayBuffer.size() > 0) {
+		ImGui::PlotLines("Channel 1", &gameboy->apu.channel1.displayBuffer[0], gameboy->apu.channel1.displayBuffer.size());
+		ImGui::PlotLines("Channel 2", &gameboy->apu.channel2.displayBuffer[0], gameboy->apu.channel2.displayBuffer.size());
+		ImGui::PlotLines("Channel 3", &gameboy->apu.channel3.displayBuffer[0], gameboy->apu.channel3.displayBuffer.size());
+		ImGui::PlotLines("Channel 4", &gameboy->apu.channel4.displayBuffer[0], gameboy->apu.channel4.displayBuffer.size());
 		ImGui::SliderInt("Volume", &gameboy->apu.scale, 0, 10000);
+		ImGui::SliderInt("Sound Buffer", &gameboy->apu.BufferAmount, 1000, 44100);
 	}
 
 	ImGui::End();
