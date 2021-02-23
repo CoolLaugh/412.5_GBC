@@ -4,6 +4,7 @@ Emulator::Emulator() {
 
 	ImGui::SFML::Init(*graphics.window); 
 	LoadSettings();
+	spriteTextures.resize(40);
 
 	//keybindings[Gameboy::Buttons::up] = sf::Keyboard::Key::Up;
 	//keybindings[Gameboy::Buttons::down] = sf::Keyboard::Key::Down;
@@ -114,6 +115,7 @@ void Emulator::MainMenuBar(sf::Keyboard::Key keyPresse) {
 	TileWindow();
 	BackgroundWindow();
 	ColorPaletteWindow();
+	SpriteWindow();
 	about();
 	Channel();
 	SettingsMenu();
@@ -236,6 +238,7 @@ void Emulator::ToolBar() {
 			ImGui::MenuItem("Tiles", NULL, &showTileWindow);
 			ImGui::MenuItem("Background Map", NULL, &showBackgroundWindow);
 			ImGui::MenuItem("ColorPalette(CGB)", NULL, &showColorPalettteWindow);
+			ImGui::MenuItem("Sprites", NULL, &showSpriteWindow);
 			ImGui::MenuItem("Audio", NULL, &showAudioWindow);
 			ImGui::EndMenu();
 		}
@@ -438,6 +441,38 @@ void Emulator::ColorPaletteWindow() {
 		image.create(4, 16, colors);
 		ColorTexture.loadFromImage(image);
 		ImGui::Image(ColorTexture, ImVec2(4 * 12, 16 * 12));
+	}
+
+	ImGui::End();
+}
+
+void Emulator::SpriteWindow() {
+
+	if (showSpriteWindow == false) {
+		return;
+	}
+
+	ImGui::Begin("Sprite Table", &showSpriteWindow, 0);
+
+	if (gameboy != nullptr) {
+
+		gameboy->ppu.updateSpriteImage();
+
+		for (size_t i = 0; i < 40; i++) {
+			sf::Image image;
+			image.create(8, 16, gameboy->ppu.spritePixels[i]);
+			spriteTextures[i].loadFromImage(image);
+			ImGui::BeginChildFrame(i, ImVec2(8 * 4 + 1 * 4, 16 * 4 + 18 * 4), ImGuiWindowFlags_NoScrollbar);
+			ImGui::Image(spriteTextures[i], ImVec2(8 * 4, 16 * 4));
+			ImGui::Text(("X:" + ToHex(gameboy->memory.Read(Address::SpriteAttributes + i * 4 + 0))).c_str());
+			ImGui::Text(("Y:" + ToHex(gameboy->memory.Read(Address::SpriteAttributes + i * 4 + 1))).c_str());
+			ImGui::Text(("N:" + ToHex(gameboy->memory.Read(Address::SpriteAttributes + i * 4 + 2))).c_str());
+			ImGui::Text(("A:" + ToHex(gameboy->memory.Read(Address::SpriteAttributes + i * 4 + 3))).c_str());
+			ImGui::EndChildFrame();
+			if ((i + 1) % 10 != 0) {
+				ImGui::SameLine();
+			}
+		}
 	}
 
 	ImGui::End();

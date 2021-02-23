@@ -19,3 +19,13 @@ void BitReset(byte& value, int bit) {
 bool BitTest(word value, int bit) {
 	return (value & (1 << bit)) != 0;
 }
+
+std::string ToHex(byte value) {
+
+	std::vector<std::string> hex = { "0", "1", "2" , "3" , "4" , "5" , "6" , "7" , "8" , "9", "A", "B", "C", "D", "E", "F" };
+
+	byte lowNibble = value & 0x0F;
+	byte highNibble = value >> 4;
+
+	return hex[highNibble] + hex[lowNibble];
+}

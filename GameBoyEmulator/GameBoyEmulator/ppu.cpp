@@ -9,8 +9,14 @@ PPU::PPU() {
 	memset(BGMapBackgroundPixels, 0x88, 256 * 256 * 4);
 	ColorPalettePixels = new byte[4 * 16 * 4];
 	memset(ColorPalettePixels, 0x88, 4 * 16 * 4);
-
 	backgroundPixelsColorIndex = new byte[ScreenWidth * ScreenHeight];
+	memset(backgroundPixelsColorIndex, 0, ScreenWidth * ScreenHeight);
+
+	for (size_t i = 0; i < 40; i++) {
+		byte* pixels = new byte[8 * 16 * 4];
+		memset(pixels, 0x88, 8 * 16 * 4);
+		spritePixels.push_back(pixels);
+	}
 }
 
 PPU::~PPU() {
@@ -19,6 +25,9 @@ PPU::~PPU() {
 	delete[] BGMapBackgroundPixels;
 	delete[] ColorPalettePixels;
 	delete[] backgroundPixelsColorIndex;
+	for (size_t i = 0; i < spritePixels.size(); i++) {
+		delete[] spritePixels[i];
+	}
 }
 
 void PPU::updateTileImage() {
@@ -163,6 +172,80 @@ void PPU::updateColorPaletteImage() {
 	}
 }
 
+void PPU::updateSpriteImage() {
+
+	word spriteAttributeTable = Address::SpriteAttributes;
+	byte LCDC = memory->Read(Address::LCDC);
+	for (word i = 0; i < 40; i++) {
+
+		byte patternNumber = memory->Read(spriteAttributeTable + (i * 4) + 2);
+		byte flags = memory->Read(spriteAttributeTable + (i * 4) + 3);
+
+		bool Yflip = BitTest(flags, 6);
+		bool Xflip = BitTest(flags, 5);
+
+		byte spriteHeight = 8;
+		if (BitTest(LCDC, 2) == true) {
+			spriteHeight = 16;
+			patternNumber &= ~Bits::b0;
+		}
+
+		byte OGP = memory->Read(Address::OBJPalette0);
+		if (BitTest(flags, 4) == true) {
+			OGP = memory->Read(Address::OBJPalette1);
+		}
+
+		int vramBank = 0;
+		if (ColorGameBoyMode == true) {
+			if (BitTest(flags, 3) == true) {
+				vramBank = 1;
+			}
+		}
+
+		word tileLocation = Address::TilePattern0 + (patternNumber * 16);
+
+		for (int y = 0; y < spriteHeight; y++) {
+
+			int yPos = y;
+			if (Yflip == true) {
+				yPos -= (spriteHeight - 1);
+				yPos *= -1;
+			}
+
+			byte pixelDataLow = memory->Read(tileLocation + y * 2, vramBank);
+			byte pixelDataHigh = memory->Read(tileLocation + y * 2 + 1, vramBank);
+
+			for (int x = 0; x < 8; x++) {
+
+				byte pixel = GetPixelIndex(pixelDataLow, pixelDataHigh, x);
+
+				int xPos = x;
+				if (Xflip == true) {
+					xPos -= 7;
+					xPos *= -1;
+				}
+
+				if (ColorGameBoyMode == true) {
+
+					byte CGBPaletteNumber = flags & 0x7;
+					byte vRamBank = flags & Bits::b3;
+
+					Color* palette = GetColorSpritePalette(CGBPaletteNumber);
+					SetPixel(spritePixels[i], 8 * 16 * 4, xPos, yPos, 8, palette[pixel]);
+				}
+				else {
+
+					byte offset = pixel * 2;
+					byte color = (OGP & (0x3 << offset)) >> offset;
+
+					SetPixel(spritePixels[i], 8 * 16 * 4, xPos, yPos, 8, BWPalette[color]);
+				}
+			}
+		}
+	}
+
+}
+
 void PPU::update(word cyclesThisUpdate, int speedMode) {
 
 	cyclesThisLine += cyclesThisUpdate;
@@ -247,18 +330,18 @@ void PPU::drawSprites() {
 	int spritesThisLine = 0;
 	for (word i = 0; i < 40; i++) {
 
-		int positionY = memory->Read(spriteAttributeTable + (i * 4));
+		int positionY = memory->Read(spriteAttributeTable + ((39 - i) * 4));
 		if (positionY <= 0 || positionY >= 160) { // off-screen
 			continue;
 		}
-		int positionX = memory->Read(spriteAttributeTable + (i * 4) + 1);
+		int positionX = memory->Read(spriteAttributeTable + ((39 - i) * 4) + 1);
 		if (positionX <= 0 || positionX >= 168) { // off-screen
 			continue;
 		}
 		positionY -= 16;
 		positionX -= 8;
-		byte patternNumber = memory->Read(spriteAttributeTable + (i * 4) + 2);
-		byte flags = memory->Read(spriteAttributeTable + (i * 4) + 3);
+		byte patternNumber = memory->Read(spriteAttributeTable + ((39 - i) * 4) + 2);
+		byte flags = memory->Read(spriteAttributeTable + ((39 - i) * 4) + 3);
 
 		bool Yflip = BitTest(flags, 6);
 		bool Xflip = BitTest(flags, 5);
@@ -278,7 +361,7 @@ void PPU::drawSprites() {
 
 		if (LY < positionY + spriteHeight && LY >= positionY && spritesThisLine < 10) {
 
-			spritesThisLine++;
+			//spritesThisLine++;
 			int drawLine = LY - positionY;
 			if (Yflip == true) {
 				drawLine -= (spriteHeight - 1);

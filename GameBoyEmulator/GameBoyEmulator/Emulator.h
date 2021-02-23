@@ -23,6 +23,7 @@ class Emulator {
 	sf::Texture BackgroundTexture;
 	sf::Texture TileTexture;
 	sf::Texture ColorTexture;
+	std::vector<sf::Texture> spriteTextures;
 	int elapsedFrames = 0;
 	int scale = 4;
 	int framerateLimit = 60;
@@ -33,6 +34,7 @@ class Emulator {
 	bool showTileWindow = false;
 	bool showBackgroundWindow = false;
 	bool showColorPalettteWindow = false;
+	bool showSpriteWindow = false;
 	bool showAbout = false;
 	bool showAudioWindow = false;
 
@@ -60,6 +62,7 @@ public:
 	void TileWindow();
 	void BackgroundWindow();
 	void ColorPaletteWindow();
+	void SpriteWindow();
 	void Channel();
 
 	void SaveSettings();

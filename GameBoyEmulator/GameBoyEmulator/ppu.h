@@ -22,6 +22,7 @@ public:
 	byte* tileMemoryPixels;
 	byte* BGMapBackgroundPixels;
 	byte* ColorPalettePixels;
+	std::vector<byte*> spritePixels;
 
 private:
 
@@ -51,6 +52,7 @@ public:
 	void updateTileImage();
 	void updateBGMapImage();
 	void updateColorPaletteImage();
+	void updateSpriteImage();
 
 	void update(word cyclesThisUpdate, int speedMode);
 	void drawScanLine();
