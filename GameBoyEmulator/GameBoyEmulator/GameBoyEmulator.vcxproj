@@ -151,6 +151,7 @@
     <ClInclude Include="cpu.h" />
     <ClInclude Include="Emulator.h" />
     <ClInclude Include="Gameboy.h" />
+    <ClInclude Include="json.hpp" />
     <ClInclude Include="ppu.h" />
     <ClInclude Include="memory.h" />
     <ClInclude Include="SFMLGraphics.h" />

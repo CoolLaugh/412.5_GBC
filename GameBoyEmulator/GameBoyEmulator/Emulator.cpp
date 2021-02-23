@@ -2,23 +2,21 @@
 
 Emulator::Emulator() {
 
-	//gameboy = new Gameboy(Filename);
+	ImGui::SFML::Init(*graphics.window); 
+	LoadSettings();
 
-	//graphics.setPixelPointers(gameboy->GetScreenPixels(), gameboy->GetTilePixels(), gameboy->GetBackgroundPixels(), gameboy->GetColorPalettePixels());
-
-	ImGui::SFML::Init(*graphics.window);
-
-	keybindings[Gameboy::Buttons::up] = sf::Keyboard::Key::Up;
-	keybindings[Gameboy::Buttons::down] = sf::Keyboard::Key::Down;
-	keybindings[Gameboy::Buttons::left] = sf::Keyboard::Key::Left;
-	keybindings[Gameboy::Buttons::right] = sf::Keyboard::Key::Right;
-	keybindings[Gameboy::Buttons::B] = sf::Keyboard::Key::Z;
-	keybindings[Gameboy::Buttons::A] = sf::Keyboard::Key::X;
-	keybindings[Gameboy::Buttons::select] = sf::Keyboard::Key::C;
-	keybindings[Gameboy::Buttons::start] = sf::Keyboard::Key::V;
+	//keybindings[Gameboy::Buttons::up] = sf::Keyboard::Key::Up;
+	//keybindings[Gameboy::Buttons::down] = sf::Keyboard::Key::Down;
+	//keybindings[Gameboy::Buttons::left] = sf::Keyboard::Key::Left;
+	//keybindings[Gameboy::Buttons::right] = sf::Keyboard::Key::Right;
+	//keybindings[Gameboy::Buttons::B] = sf::Keyboard::Key::Z;
+	//keybindings[Gameboy::Buttons::A] = sf::Keyboard::Key::X;
+	//keybindings[Gameboy::Buttons::select] = sf::Keyboard::Key::C;
+	//keybindings[Gameboy::Buttons::start] = sf::Keyboard::Key::V;
 }
 
 Emulator::~Emulator() {
+	SaveSettings();
 	ImGui::SFML::Shutdown();
 	if (gameboy != nullptr) {
 		delete gameboy;
@@ -35,13 +33,12 @@ void Emulator::Loop() {
 		sf::Keyboard::Key keyPressed = sf::Keyboard::Key::Unknown;
 		while (graphics.window->pollEvent(event)) {
 
+			ImGui::SFML::ProcessEvent(event);
+
 			if (event.type == sf::Event::Closed) {
 				graphics.window->close();
 			}
-
-			ImGui::SFML::ProcessEvent(event);
-
-			if (event.type == sf::Event::KeyPressed || event.type == sf::Event::KeyReleased) {
+			else if (event.type == sf::Event::KeyPressed || event.type == sf::Event::KeyReleased) {
 
 				bool pressed = false;
 				if (event.type == sf::Event::KeyPressed) {
@@ -151,14 +148,17 @@ void Emulator::FileSelectWindow() {
 	sf::Clock deltaClock;
 
 	sf::Event event;
-	while (Filename == "") {
+	while (Filename == "" && graphics.window->isOpen()) {
 
 		sf::Keyboard::Key keyPressed = sf::Keyboard::Key::Unknown;
 		while (graphics.window->pollEvent(event)) {
 
 			ImGui::SFML::ProcessEvent(event); 
 
-			if (event.type == sf::Event::KeyPressed) {
+			if (event.type == sf::Event::Closed) {
+				graphics.window->close();
+			}
+			else if (event.type == sf::Event::KeyPressed) {
 				keyPressed = event.key.code;
 			}
 		}
@@ -193,6 +193,12 @@ void Emulator::ToolBar() {
 
 		if (ImGui::BeginMenu("File")) {
 			ImGui::MenuItem("Open", NULL, &showFileOpen);
+			if (ImGui::BeginMenu("Recent")) {
+				for (size_t i = 0; i < recentFiles.size(); i++) {
+					RecentFileMenuItem(recentFiles[i]);
+				}
+				ImGui::EndMenu();
+			}
 			if (ImGui::MenuItem("Reset", NULL, false)) {
 				if (gameboy != nullptr) {
 					graphics.clearPixelPointers();
@@ -268,7 +274,16 @@ void Emulator::FileOpen() {
 	if (ImGui::Button("Open")) {
 		showFileOpen = false;
 		Filename = files[item];
-		delete gameboy;
+
+		auto iter = std::find(std::begin(recentFiles), std::end(recentFiles), Filename);
+		if (iter != std::end(recentFiles)) {
+			recentFiles.erase(iter);
+		}
+		recentFiles.push_back(Filename);
+
+		if (gameboy != nullptr) {
+			delete gameboy;
+		}
 		gameboy = new Gameboy(Filename);
 		graphics.setPixelPointers(gameboy->GetScreenPixels(), gameboy->GetTilePixels(), gameboy->GetBackgroundPixels(), gameboy->GetColorPalettePixels());
 		graphics.window->setTitle(TitleName + " - " + Filename);
@@ -330,6 +345,19 @@ void Emulator::SetKey(std::string buttonName, std::string currentKey, Gameboy::B
 		if (ImGui::Button(SFMLKeyNames[keybindings[button]].c_str())) {
 			keyListening[button] = true;
 		}
+	}
+}
+
+void Emulator::RecentFileMenuItem(std::string filename) {
+
+	if (ImGui::MenuItem(filename.c_str(), NULL, false)) {
+		if (gameboy != nullptr) {
+			delete gameboy;
+		}
+		Filename = filename;
+		gameboy = new Gameboy(Filename);
+		graphics.setPixelPointers(gameboy->GetScreenPixels(), gameboy->GetTilePixels(), gameboy->GetBackgroundPixels(), gameboy->GetColorPalettePixels());
+		graphics.window->setTitle(TitleName + " - " + Filename);
 	}
 }
 
@@ -442,4 +470,75 @@ void Emulator::Channel() {
 	}
 
 	ImGui::End();
+}
+
+void Emulator::SaveSettings() {
+
+	nlohmann::json settings;
+
+	nlohmann::json keyBingings;
+
+	keyBingings["up"] = keybindings[Gameboy::Buttons::up];
+	keyBingings["down"] = keybindings[Gameboy::Buttons::down];
+	keyBingings["left"] = keybindings[Gameboy::Buttons::left];
+	keyBingings["right"] = keybindings[Gameboy::Buttons::right];
+	keyBingings["start"] = keybindings[Gameboy::Buttons::start];
+	keyBingings["select"] = keybindings[Gameboy::Buttons::select];
+	keyBingings["A"] = keybindings[Gameboy::Buttons::A];
+	keyBingings["B"] = keybindings[Gameboy::Buttons::B];
+
+	settings["keys"] = keyBingings;
+	settings["pixelScale"] = scale;
+	if (gameboy != nullptr) {
+		settings["muteAll"] = gameboy->apu.muteAll;
+		settings["muteC1"] = gameboy->apu.channel1.mute;
+		settings["muteC2"] = gameboy->apu.channel2.mute;
+		settings["muteC3"] = gameboy->apu.channel3.mute;
+		settings["muteC4"] = gameboy->apu.channel4.mute;
+		settings["volume"] = gameboy->apu.scale;
+		settings["soundBuffer"] = gameboy->apu.BufferAmount;
+	}
+
+	nlohmann::json recentFilesJson;
+	for (size_t i = 0; i < recentFiles.size(); i++) {
+		recentFilesJson[i] = recentFiles[i];
+	}
+	settings["recent"] = recentFilesJson;
+
+	std::ofstream out("Settings.json");
+	out << settings;
+	out.close();
+}
+
+void Emulator::LoadSettings() {
+
+	std::ifstream in("Settings.json");
+	nlohmann::json settings;
+	in >> settings;
+
+	keybindings[Gameboy::Buttons::up] = settings["keys"]["up"];
+	keybindings[Gameboy::Buttons::down] = settings["keys"]["down"];
+	keybindings[Gameboy::Buttons::left] = settings["keys"]["left"];
+	keybindings[Gameboy::Buttons::right] = settings["keys"]["right"];
+	keybindings[Gameboy::Buttons::start] = settings["keys"]["start"];
+	keybindings[Gameboy::Buttons::select] = settings["keys"]["select"];
+	keybindings[Gameboy::Buttons::A] = settings["keys"]["A"];
+	keybindings[Gameboy::Buttons::B] = settings["keys"]["B"];
+
+	scale = settings["pixelScale"]; 
+	graphics.window->setSize(sf::Vector2u(ScreenWidth * scale, ScreenHeight * scale + 20));
+	if (gameboy != nullptr) {
+		gameboy->apu.muteAll = settings["muteAll"];
+		gameboy->apu.channel1.mute = settings["muteC1"];
+		gameboy->apu.channel2.mute = settings["muteC2"];
+		gameboy->apu.channel3.mute = settings["muteC3"];
+		gameboy->apu.channel4.mute = settings["muteC4"];
+		gameboy->apu.scale = settings["volume"];
+		gameboy->apu.BufferAmount = settings["soundBuffer"];
+	}
+
+	recentFiles.clear();
+	for (size_t i = 0; i < settings["recent"].size(); i++) {
+		recentFiles.push_back(settings["recent"][i]);
+	}
 }

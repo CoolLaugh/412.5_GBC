@@ -7,6 +7,7 @@
 #include "imgui.h"
 #include "imgui-SFML.h"
 #include <filesystem>
+#include "json.hpp"
 
 namespace fs = std::experimental::filesystem;
 
@@ -16,6 +17,7 @@ class Emulator {
 	SFMLGraphics graphics;
 
 	std::string Filename = "";
+	std::vector<std::string> recentFiles;
 	std::map<Gameboy::Buttons, sf::Keyboard::Key> keybindings;
 	std::map<Gameboy::Buttons, bool> keyListening;
 	sf::Texture BackgroundTexture;
@@ -53,11 +55,14 @@ public:
 	void SetKey(std::string buttonName, std::string currentKey, Gameboy::Buttons button, sf::Keyboard::Key keyPressed);
 	void SaveStateMenuItem(int number);
 	void LoadStateMenuItem(int number);
+	void RecentFileMenuItem(std::string filename);
 
 	void TileWindow();
 	void BackgroundWindow();
 	void ColorPaletteWindow();
 	void Channel();
 
+	void SaveSettings();
+	void LoadSettings();
 };
 
