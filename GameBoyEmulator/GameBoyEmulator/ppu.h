@@ -2,6 +2,8 @@
 #include "memory.h"
 #include "CommonDefinitions.h"
 
+
+
 struct Color {
 	byte red;
 	byte green;
@@ -44,10 +46,11 @@ public:
 	Memory* memory;
 
 	PPU();
+	~PPU();
 
-	void updateTileWindow();
-	void updateBGMapWindow();
-	void updateColorPaletteWindow();
+	void updateTileImage();
+	void updateBGMapImage();
+	void updateColorPaletteImage();
 
 	void update(word cyclesThisUpdate, int speedMode);
 	void drawScanLine();
@@ -55,10 +58,10 @@ public:
 	byte bitData(byte val, byte bit);
 	void drawSprites();
 
-	void DrawBackgroundLine(int startX, int row, int screenY, int screenWidth, byte* screen, bool mainScreen = false);
+	void DrawBackgroundLine(int startX, int row, int screenY, int screenWidth, byte* screen, int screenSize, bool mainScreen = false);
 	void DrawWindowLine();
 
-	void SetPixel(byte* screen, int x, int y, int screenWidth, Color color);
+	void SetPixel(byte* screen, int screenSize, int x, int y, int screenWidth, Color color);
 	byte GetPixelIndex(byte dataLow, byte dataHigh, byte pixelX);
 	word GetTileDataAddress(byte LCDC, word address);
 

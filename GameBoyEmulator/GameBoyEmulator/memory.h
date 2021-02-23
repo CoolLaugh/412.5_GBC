@@ -68,7 +68,8 @@ public:
 	bool resetSC3Length = false;
 	bool resetSC4Length = false;
 
-	Memory(); 
+	Memory();
+	~Memory();
 	void PowerUpSequence();
 	bool LoadRom(const std::string fileName);
 	void CreateRamBanks();

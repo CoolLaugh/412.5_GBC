@@ -32,7 +32,7 @@ class Emulator {
 	bool showBackgroundWindow = false;
 	bool showColorPalettteWindow = false;
 	bool showAbout = false;
-	bool showAudioWindow = true;
+	bool showAudioWindow = false;
 
 	bool menuTest = false;
 

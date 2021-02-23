@@ -4,55 +4,91 @@
 typedef unsigned char byte;
 typedef unsigned short word;
 
+const std::string TitleName = "412.5_GBC";
 const int ScreenWidth = 160;
 const int ScreenHeight = 144;
-const int DisplayScale = 4;
+const int BackgroundLayerSize = 256;
+const int DefaultDisplayScale = 4;
+const int FrameRate = 60; // real gameboy hardware is 59.72 but 60 is used because of SFML and it matches most monitors
+const int ClocksPerFrame = 70224;
+const int ClocksPerScanLine = 456;
+const int AudioFrequency = 44100;
+const int ClocksPerSample = 95; // sound is 44100 hz thus ClocksPerFrame * Framerate / 44100 = 95
 
-enum Address {
+struct Address {
+	typedef enum {
 
-	CGBFlag = 0x0143,
-	CartridgeType = 0x0147,
-	RomSize = 0x0148,
-	RamSize = 0x0149,
+		CGBFlag = 0x0143,
+		CartridgeType = 0x0147,
+		RomSize = 0x0148,
+		RamSize = 0x0149,
 
-	TilePattern0 = 0x8000,
-	TilePattern1 = 0x8800,
+		TilePattern0 = 0x8000,
+		TilePattern1 = 0x8800,
 
-	BGWTileInfo0 = 0x9800,
-	BGWTileInfo1 = 0x9C00,
+		BGWTileInfo0 = 0x9800,
+		BGWTileInfo1 = 0x9C00,
 
-	SpriteAttributes = 0xFE00,
+		SpriteAttributes = 0xFE00,
 
-	Joypad = 0xFF00,
-	SerialTransfer = 0xFF01,
-	SIOControl = 0xFF02,
-	DIVRegister = 0xFF04,
-	Timer = 0xFF05,
-	TimerModulo = 0xFF06,
-	TimerControl = 0xFF07,
-	InteruptFlag = 0xFF0F,
-	LCDC = 0xFF40,
-	LCDCStatus = 0xFF41,
-	ScrollY = 0xFF42,
-	ScrollX = 0xFF43,
-	LY = 0xFF44,
-	LYCompare = 0xFF45,
-	DMA = 0xFF46,
-	BGWPalette = 0xFF47,
-	OBJPalette0 = 0xFF48,
-	OBJPalette1 = 0xFF49,
-	WindowY = 0xFF4A,
-	WindowX = 0xFF4B,
-	PrepareSpeedSwitch = 0xFF4D,
-	VRAMBank = 0xFF4F,
-	InfraredPort = 0xFF56,
-	GBColorBackgroundPaletteIndex = 0xFF68,
-	GBColorBackgroundPaletteData = 0xFF69,
-	GBColorSpritePaletteIndex = 0xFF68,
-	GBColorSpritePaletteData = 0xFF69,
-	WramBank = 0xFF70,
-	InteruptEnable = 0xFFFF
+		Joypad = 0xFF00,
+		SerialTransfer = 0xFF01,
+		SIOControl = 0xFF02,
+		DIVRegister = 0xFF04,
+		Timer = 0xFF05,
+		TimerModulo = 0xFF06,
+		TimerControl = 0xFF07,
+		InteruptFlag = 0xFF0F,
 
+		Channel1Sweep = 0xFF10,
+		Channel1SoundLengthWavePatternDuty = 0xFF11,
+		Channel1VolumeEnvlope = 0xFF12,
+		Channel1FrequencyLow = 0xFF13,
+		Channel1FrequencyHigh = 0xFF14,
+
+		Channel2Tone = 0xFF16,
+		Channel2VolumeEnvlope = 0xFF17,
+		Channel2FrequencyLow = 0xFF18,
+		Channel2FrequencyHigh = 0xFF19,
+
+		Channel3SoundOnOFF = 0xFF1A,
+		Channel3SoundLength = 0xFF1B,
+		Channel3SelectOutputLevel = 0xFF1C,
+		Channel3FrequencyLow = 0xFF1D,
+		Channel3FrequencyHigh = 0xFF1E,
+		Channel3WavePatternRam = 0xFF30,
+
+		Channel4SoundLength = 0xFF20,
+		Channel4VolumeEnvlope = 0xFF21,
+		Channel4PolynomialCounter = 0xFF22,
+		Channel4Counter = 0xFF23,
+		ChannelControl = 0xFF24,
+		SoundOutputSelection = 0xFF25,
+		SoundOnOFF = 0xFF26,
+
+		LCDC = 0xFF40,
+		LCDCStatus = 0xFF41,
+		ScrollY = 0xFF42,
+		ScrollX = 0xFF43,
+		LY = 0xFF44,
+		LYCompare = 0xFF45,
+		DMA = 0xFF46,
+		BGWPalette = 0xFF47,
+		OBJPalette0 = 0xFF48,
+		OBJPalette1 = 0xFF49,
+		WindowY = 0xFF4A,
+		WindowX = 0xFF4B,
+		PrepareSpeedSwitch = 0xFF4D,
+		VRAMBank = 0xFF4F,
+		InfraredPort = 0xFF56,
+		GBColorBackgroundPaletteIndex = 0xFF68,
+		GBColorBackgroundPaletteData = 0xFF69,
+		GBColorSpritePaletteIndex = 0xFF68,
+		GBColorSpritePaletteData = 0xFF69,
+		WramBank = 0xFF70,
+		InteruptEnable = 0xFFFF
+
+	} Type;
 };
 
 

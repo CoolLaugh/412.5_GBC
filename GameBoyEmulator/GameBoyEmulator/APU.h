@@ -25,6 +25,8 @@ struct Channel {
 	word lfsr = 0;
 	std::vector<int> buffer;
 	std::vector<float> displayBuffer;
+	int number = 0;
+	bool mute = false;
 };
 
 class APU {
@@ -35,11 +37,14 @@ public:
 	Channel channel2;
 	Channel channel3;
 	Channel channel4;
-	BufferedSoundStream bufferedSoundStream;
+
+	bool muteAll = false;
+
 	int scale = 500;
 	int BufferAmount = (44100 / 10);
 
 	APU();
+	~APU();
 
 private:
 

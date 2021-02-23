@@ -134,7 +134,8 @@ void Gameboy::SaveState(int stateNumber) {
 	variablesState[variablesIndex++] = memory.currentRamBank;
 	variablesState[variablesIndex++] = memory.currentWramBank;
 	variablesState[variablesIndex++] = memory.currentVramBank;
-	variablesState[variablesIndex++] = memory.currentRomBank;
+	variablesState[variablesIndex++] = cpu.splitBytes(memory.currentRomBank).first;
+	variablesState[variablesIndex++] = cpu.splitBytes(memory.currentRomBank).second;
 	variablesState[variablesIndex++] = memory.numberOfRamBanks;
 	variablesState[variablesIndex++] = memory.ramBankEnabled;
 	variablesState[variablesIndex++] = memory.mbc;
@@ -145,9 +146,9 @@ void Gameboy::SaveState(int stateNumber) {
 	variablesState[variablesIndex++] = memory.oldBit;
 
 	int sizeOfVariables = variablesIndex;
-	int sizeOfVram = memory.vramBank.size() * 0x2000;
-	int sizeOfMemorySpaceBank = memory.ramBank.size() * 0x2000;
-	int sizeOfWram = memory.wramBank.size() * 0x1000;
+	int sizeOfVram = (int)memory.vramBank.size() * 0x2000;
+	int sizeOfMemorySpaceBank = (int)memory.ramBank.size() * 0x2000;
+	int sizeOfWram = (int)memory.wramBank.size() * 0x1000;
 	int sizeOfMemorySpace = 0x10000;
 	int sizeOfColorPalette = 0x40 + 0x40;
 
@@ -215,7 +216,7 @@ void Gameboy::LoadState(int stateNumber) {
 	std::ifstream stateFile(stateFilename, std::ifstream::binary);
 
 	stateFile.seekg(0, std::ios::end);
-	int length = stateFile.tellg();
+	int length = (int)stateFile.tellg();
 	stateFile.seekg(0, std::ios::beg);
 
 	byte* state = new byte[length];
@@ -259,7 +260,8 @@ void Gameboy::LoadState(int stateNumber) {
 	memory.currentRamBank = state[index++];
 	memory.currentWramBank = state[index++];
 	memory.currentVramBank = state[index++];
-	memory.currentRomBank = state[index++];
+	memory.currentRomBank = cpu.Combinebytes(state[index], state[index + 1]);
+	index += 2;
 	memory.numberOfRamBanks = state[index++];
 	memory.ramBankEnabled = state[index++];
 	memory.mbc = state[index++];

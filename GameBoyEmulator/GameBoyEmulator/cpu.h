@@ -54,6 +54,7 @@ public:
 		word pc = 0x100;
 	};
 
+	Memory* memory;
 	PPU* graphics;
 	APU* apu;
 
@@ -68,7 +69,6 @@ public:
 	byte speedMode = 1;
 
 	bool logState = false;
-	Memory* memory;
 	byte lastLY = 0;
 
 	bool flagTest(flagType flag);

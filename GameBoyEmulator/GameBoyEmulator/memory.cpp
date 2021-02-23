@@ -9,6 +9,26 @@ Memory::Memory() {
 	memset(memorySpace, 0, memorySize);
 }
 
+Memory::~Memory() {
+	delete[] memorySpace;
+	delete[] cartridge;
+	delete[] BGColorPalette;
+	delete[] SpriteColorPalette;
+
+	for (size_t i = 0; i < ramBank.size(); i++) {
+		byte* ptr = ramBank[i];
+		delete[] ptr;
+	}
+	for (size_t i = 0; i < wramBank.size(); i++) {
+		byte* ptr = wramBank[i];
+		delete[] ptr;
+	}
+	for (size_t i = 0; i < vramBank.size(); i++) {
+		byte* ptr = vramBank[i];
+		delete[] ptr;
+	}
+}
+
 void Memory::PowerUpSequence() {
 
 	memorySpace[0xFF05] = 0x00;
@@ -80,7 +100,7 @@ bool Memory::LoadRom(const std::string fileName) {
 	std::ifstream romFile(fileName, std::ios::in, std::ios::binary);
 
 	romFile.seekg(0, std::ios::end);
-	int cartridgeLength = romFile.tellg();
+	int cartridgeLength = (int)romFile.tellg();
 	romFile.seekg(0, std::ios::beg);
 
 	cartridge = new byte[cartridgeLength];
@@ -167,12 +187,9 @@ void Memory::CreateRamBanks() {
 	}
 
 
-	int wramBankSize = 0;
+	int wramBankSize = 2;
 	if (ColorGameBoyMode == true) {
 		wramBankSize = 8;
-	}
-	else {
-		wramBankSize = 2;
 	}
 
 	for (size_t i = 0; i < wramBank.size(); i++) {
@@ -328,6 +345,14 @@ void Memory::Write(word address, byte data) {
 		memorySpace[address] = data;
 		resetSC4Length = true;
 	}
+	else if (address == 0xFF26) {
+		if (BitTest(data, 7) == true) {
+			BitSet(memorySpace[address], 7);
+		}
+		else {
+			BitReset(memorySpace[address], 7);
+		}
+	}
 	else if (address == 0xFF44) {
 		memorySpace[address] = 0;
 	}
@@ -369,7 +394,7 @@ void Memory::Write(word address, byte data) {
 			vramDMATransferLength *= 0x10;
 
 			if ((data & Bits::b7) == 0) {
-				for (size_t i = 0; i < vramDMATransferLength; i++) {
+				for (word i = 0; i < vramDMATransferLength; i++) {
 					Write(vramDMATransferDestination + i, Read(vramDMATransferSource + i));
 				}
 				vramDMATransferLength = 0;
@@ -675,7 +700,7 @@ void Memory::DumpMemory(std::string fileName) {
 
 	for (size_t i = 0; i <= 0xFFFF; i++) {
 
-		byte value = Read(i);
+		byte value = Read((word)i);
 		out << value;
 	}
 	out.close();
@@ -737,7 +762,7 @@ void Memory::LoadExternalRam(std::string fileName) {
 
 	if (fs::exists(saveFileName)) {
 
-		int saveFileSize = fs::file_size(saveFileName);
+		int saveFileSize = (int)fs::file_size(saveFileName);
 
 		std::ifstream saveFileStream(saveFileName, std::ios::in | std::ios::binary);
 

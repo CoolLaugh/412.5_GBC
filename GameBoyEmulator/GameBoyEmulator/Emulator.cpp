@@ -20,7 +20,9 @@ Emulator::Emulator() {
 
 Emulator::~Emulator() {
 	ImGui::SFML::Shutdown();
-	delete gameboy;
+	if (gameboy != nullptr) {
+		delete gameboy;
+	}
 }
 
 void Emulator::Loop() {
@@ -33,12 +35,13 @@ void Emulator::Loop() {
 		sf::Keyboard::Key keyPressed = sf::Keyboard::Key::Unknown;
 		while (graphics.window->pollEvent(event)) {
 
-			ImGui::SFML::ProcessEvent(event);
-
 			if (event.type == sf::Event::Closed) {
 				graphics.window->close();
 			}
-			else if (event.type == sf::Event::KeyPressed || event.type == sf::Event::KeyReleased) {
+
+			ImGui::SFML::ProcessEvent(event);
+
+			if (event.type == sf::Event::KeyPressed || event.type == sf::Event::KeyReleased) {
 
 				bool pressed = false;
 				if (event.type == sf::Event::KeyPressed) {
@@ -113,6 +116,7 @@ void Emulator::MainMenuBar(sf::Keyboard::Key keyPresse) {
 	Keybindings(keyPresse);
 	TileWindow();
 	BackgroundWindow();
+	ColorPaletteWindow();
 	about();
 	Channel();
 	SettingsMenu();
@@ -130,13 +134,13 @@ namespace ImGui {
 	bool Combo(const char* label, int* currIndex, std::vector<std::string>& values) {
 		if (values.empty()) { return false; }
 		return Combo(label, currIndex, vector_getter,
-					 static_cast<void*>(&values), values.size());
+					 static_cast<void*>(&values), (int)values.size());
 	}
 
 	bool ListBox(const char* label, int* currIndex, std::vector<std::string>& values, int heightInItems) {
 		if (values.empty()) { return false; }
 		return ListBox(label, currIndex, vector_getter,
-					   static_cast<void*>(&values), values.size(), heightInItems);
+					   static_cast<void*>(&values), (int)values.size(), heightInItems);
 	}
 
 }
@@ -190,9 +194,12 @@ void Emulator::ToolBar() {
 		if (ImGui::BeginMenu("File")) {
 			ImGui::MenuItem("Open", NULL, &showFileOpen);
 			if (ImGui::MenuItem("Reset", NULL, false)) {
-				delete gameboy;
-				gameboy = new Gameboy(Filename);
-				graphics.setPixelPointers(gameboy->GetScreenPixels(), gameboy->GetTilePixels(), gameboy->GetBackgroundPixels(), gameboy->GetColorPalettePixels());
+				if (gameboy != nullptr) {
+					graphics.clearPixelPointers();
+					delete gameboy;
+					gameboy = new Gameboy(Filename);
+					graphics.setPixelPointers(gameboy->GetScreenPixels(), gameboy->GetTilePixels(), gameboy->GetBackgroundPixels(), gameboy->GetColorPalettePixels());
+				}
 			}
 			if (ImGui::MenuItem("Exit", NULL, false)) {
 				graphics.window->close();
@@ -201,13 +208,13 @@ void Emulator::ToolBar() {
 		}
 		if (ImGui::BeginMenu("State")) {
 			if (ImGui::BeginMenu("Save State")) {
-				for (size_t i = 0; i < 10; i++) {
+				for (int i = 0; i < 10; i++) {
 					SaveStateMenuItem(i);
 				}
 				ImGui::EndMenu();
 			}
 			if (ImGui::BeginMenu("Load State")) {
-				for (size_t i = 0; i < 10; i++) {
+				for (int i = 0; i < 10; i++) {
 					LoadStateMenuItem(i);
 				}
 				ImGui::EndMenu();
@@ -250,7 +257,7 @@ void Emulator::FileOpen() {
 		std::string file = entry.path().string();
 		if (file.find(".gb") != std::string::npos) {
 
-			int pos = file.find_last_of("\\") + 1;
+			int pos = (int)file.find_last_of("\\") + 1;
 			file = file.substr(pos, file.length() - pos);
 			files.push_back(file);
 		}
@@ -264,6 +271,7 @@ void Emulator::FileOpen() {
 		delete gameboy;
 		gameboy = new Gameboy(Filename);
 		graphics.setPixelPointers(gameboy->GetScreenPixels(), gameboy->GetTilePixels(), gameboy->GetBackgroundPixels(), gameboy->GetColorPalettePixels());
+		graphics.window->setTitle(TitleName + " - " + Filename);
 	}
 
 
@@ -356,7 +364,7 @@ void Emulator::TileWindow() {
 	ImGui::Begin("Tile Memory", &showTileWindow, 0);
 
 	if (gameboy != nullptr) {
-		gameboy->ppu.updateTileWindow();
+		gameboy->ppu.updateTileImage();
 		byte* tiles = gameboy->GetTilePixels();
 		sf::Image image;
 		image.create(256, 192, tiles);
@@ -376,7 +384,7 @@ void Emulator::BackgroundWindow() {
 	ImGui::Begin("Background Map Memory", &showBackgroundWindow, 0);
 
 	if (gameboy != nullptr) {
-		gameboy->ppu.updateBGMapWindow();
+		gameboy->ppu.updateBGMapImage();
 		sf::Image image;
 		image.create(256, 256, gameboy->GetBackgroundPixels());
 		BackgroundTexture.loadFromImage(image);
@@ -396,7 +404,7 @@ void Emulator::ColorPaletteWindow() {
 
 	if (gameboy != nullptr) {
 
-		gameboy->ppu.updateColorPaletteWindow();
+		gameboy->ppu.updateColorPaletteImage();
 		byte* colors = gameboy->GetColorPalettePixels();
 		sf::Image image;
 		image.create(4, 16, colors);
@@ -416,11 +424,20 @@ void Emulator::Channel() {
 	ImGui::Begin("Audio Channels", &showAudioWindow, 0);
 	if (gameboy != nullptr && 
 		gameboy->apu.channel1.displayBuffer.size() > 0) {
-		ImGui::PlotLines("Channel 1", &gameboy->apu.channel1.displayBuffer[0], gameboy->apu.channel1.displayBuffer.size());
-		ImGui::PlotLines("Channel 2", &gameboy->apu.channel2.displayBuffer[0], gameboy->apu.channel2.displayBuffer.size());
-		ImGui::PlotLines("Channel 3", &gameboy->apu.channel3.displayBuffer[0], gameboy->apu.channel3.displayBuffer.size());
-		ImGui::PlotLines("Channel 4", &gameboy->apu.channel4.displayBuffer[0], gameboy->apu.channel4.displayBuffer.size());
-		ImGui::SliderInt("Volume", &gameboy->apu.scale, 0, 10000);
+		ImGui::Checkbox("Mute All", &gameboy->apu.muteAll);
+		ImGui::PlotLines("Channel 1", &gameboy->apu.channel1.displayBuffer[0], (int)gameboy->apu.channel1.displayBuffer.size());
+		ImGui::SameLine();
+		ImGui::Checkbox("Mute##1", &gameboy->apu.channel1.mute);
+		ImGui::PlotLines("Channel 2", &gameboy->apu.channel2.displayBuffer[0], (int)gameboy->apu.channel2.displayBuffer.size());
+		ImGui::SameLine();
+		ImGui::Checkbox("Mute##2", &gameboy->apu.channel2.mute);
+		ImGui::PlotLines("Channel 3", &gameboy->apu.channel3.displayBuffer[0], (int)gameboy->apu.channel3.displayBuffer.size());
+		ImGui::SameLine();
+		ImGui::Checkbox("Mute##3", &gameboy->apu.channel3.mute);
+		ImGui::PlotLines("Channel 4", &gameboy->apu.channel4.displayBuffer[0], (int)gameboy->apu.channel4.displayBuffer.size());
+		ImGui::SameLine();
+		ImGui::Checkbox("Mute##4", &gameboy->apu.channel4.mute);
+		ImGui::SliderInt("Volume", &gameboy->apu.scale, 0, 1000);
 		ImGui::SliderInt("Sound Buffer", &gameboy->apu.BufferAmount, 1000, 44100);
 	}
 

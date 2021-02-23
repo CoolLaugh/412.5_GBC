@@ -13,16 +13,24 @@ PPU::PPU() {
 	backgroundPixelsColorIndex = new byte[ScreenWidth * ScreenHeight];
 }
 
-void PPU::updateTileWindow() {
+PPU::~PPU() {
+	delete[] backgroundPixels;
+	delete[] tileMemoryPixels;
+	delete[] BGMapBackgroundPixels;
+	delete[] ColorPalettePixels;
+	delete[] backgroundPixelsColorIndex;
+}
+
+void PPU::updateTileImage() {
 
 	byte BGP = memory->Read(Address::BGWPalette);
 
-	int vramBankCount = 1;
+	byte vramBankCount = 1;
 	if (ColorGameBoyMode == true) {
 		vramBankCount = 2;
 	}
 	byte preserveBankNumber = memory->currentVramBank;
-	for (size_t bank = 0; bank < vramBankCount; bank++) {
+	for (byte bank = 0; bank < vramBankCount; bank++) {
 
 		memory->currentVramBank = bank;
 		for (word y = 0; y < 24; y++) {
@@ -54,7 +62,7 @@ void PPU::updateTileWindow() {
 						if (ColorGameBoyMode) {
 
 							//tileMemoryBackground->setPixel((bank * 128) + tileX + j, tileY + i, palette[pixel]);
-							SetPixel(tileMemoryPixels, (bank * 128) + tileX + j, tileY + i, 256, palette[pixel]);
+							SetPixel(tileMemoryPixels, 256 * 192 * 4, (bank * 128) + tileX + j, tileY + i, 256, palette[pixel]);
 						}
 						else {
 
@@ -62,7 +70,7 @@ void PPU::updateTileWindow() {
 							byte color = (BGP & (0x3 << offset)) >> offset;
 
 							//tileMemoryBackground->setPixel((bank * 128) + tileX + j, tileY + i, BWPalette[color]);
-							SetPixel(tileMemoryPixels, (bank * 128) + tileX + j, tileY + i, 256, palette[pixel]);
+							SetPixel(tileMemoryPixels, 256 * 192 * 4, (bank * 128) + tileX + j, tileY + i, 256, palette[pixel]);
 						}
 					}
 
@@ -73,16 +81,17 @@ void PPU::updateTileWindow() {
 	memory->currentVramBank = preserveBankNumber;
 }
 
-void PPU::updateBGMapWindow() {
+void PPU::updateBGMapImage() {
 
-	for (size_t i = 0; i < 256; i++) {
-		DrawBackgroundLine(0, i, i, 256, BGMapBackgroundPixels);
-	}	
+	for (int i = 0; i < 256; i++) {
+		DrawBackgroundLine(0, i, i, 256, BGMapBackgroundPixels, 256 * 256 * 4);
+	}
 	
 	//draw gameboy screen outline
 	byte scrollX = memory->Read(Address::ScrollX);
 	byte scrollY = memory->Read(Address::ScrollY);
 
+	// horizontal lines
 	for (size_t i = 0; i < 2; i++) {
 
 		int y = (scrollY + (i * ScreenHeight)) % 256;
@@ -91,10 +100,10 @@ void PPU::updateBGMapWindow() {
 
 			int x = (scrollX + xPos) % 256;
 
-			SetPixel(BGMapBackgroundPixels, x, y, 256, { 0xFF, 0x00, 0x00 });
+			SetPixel(BGMapBackgroundPixels, 256 * 256 * 4, x, y, 256, { 0xFF, 0x00, 0x00 });
 		}
 	}
-
+	// vertical lines
 	for (size_t i = 0; i < 2; i++) {
 
 		int x = (scrollX + (ScreenWidth * i)) % 256;
@@ -103,19 +112,19 @@ void PPU::updateBGMapWindow() {
 
 			int y = (scrollY + yPos) % 256;
 
-			SetPixel(BGMapBackgroundPixels, x, y, 256, { 0xFF, 0x00, 0x00 });
+			SetPixel(BGMapBackgroundPixels, 256 * 256 * 4, x, y, 256, { 0xFF, 0x00, 0x00 });
 		}
 	}
 }
 
-void PPU::updateColorPaletteWindow() {
+void PPU::updateColorPaletteImage() {
 
 	if (ColorGameBoyMode == false) {
 		return;
 	}
 
-	for (size_t y = 0; y < 8; y++) {
-		for (size_t x = 0; x < 4; x++) {
+	for (int y = 0; y < 8; y++) {
+		for (int x = 0; x < 4; x++) {
 
 			int index = (y * 8) + (x * 2);
 			byte low = memory->BGColorPalette[index];
@@ -130,12 +139,12 @@ void PPU::updateColorPaletteWindow() {
 			blue <<= 3;
 
 			//ColorPaletteBackground->setPixel(x, y, sf::Color(red, green, blue));
-			SetPixel(BGMapBackgroundPixels, x, y, 256, { red, green, blue });
+			SetPixel(ColorPalettePixels, 4 * 16 * 4, x, y, 4, { red, green, blue });
 		}
 	}
 
-	for (size_t y = 0; y < 8; y++) {
-		for (size_t x = 0; x < 4; x++) {
+	for (int y = 0; y < 8; y++) {
+		for (int x = 0; x < 4; x++) {
 
 			int index = (y * 8) + (x * 2);
 			byte low = memory->SpriteColorPalette[index];
@@ -149,8 +158,7 @@ void PPU::updateColorPaletteWindow() {
 			green <<= 3;
 			blue <<= 3;
 
-			//ColorPaletteBackground->setPixel(x, y + 8, sf::Color(red, green, blue));
-			SetPixel(BGMapBackgroundPixels, x, y, 256, { red, green, blue });
+			SetPixel(ColorPalettePixels, 4 * 16 * 4, x, y + 8, 4, { red, green, blue });
 		}
 	}
 }
@@ -193,8 +201,8 @@ void PPU::drawScanLine() {
 		byte lcd = memory->Read(Address::LCDC);
 		if (BitTest(lcd, 7) == false){
 			byte LY = memory->Read(Address::LY);
-			for (size_t i = 0; i < ScreenWidth; i++) {
-				SetPixel(backgroundPixels, i, LY, ScreenWidth, { 0xFF, 0xFF, 0xFF });
+			for (int i = 0; i < ScreenWidth; i++) {
+				SetPixel(backgroundPixels, ScreenWidth * ScreenHeight * 4, i, LY, ScreenWidth, { 0xFF, 0xFF, 0xFF });
 			}
 		}
 		else {
@@ -213,7 +221,7 @@ void PPU::drawBackground() {
 	byte scrollX = memory->Read(Address::ScrollX);
 	byte LY = memory->Read(Address::LY); 
 
-	DrawBackgroundLine(scrollX, (scrollY + LY) % 256, LY, ScreenWidth, backgroundPixels, true);
+	DrawBackgroundLine(scrollX, (scrollY + LY) % 256, LY, ScreenWidth, backgroundPixels, ScreenWidth * ScreenHeight * 4, true);
 }
 
 byte PPU::bitData(byte val, byte bit) {
@@ -302,7 +310,7 @@ void PPU::drawSprites() {
 				int pixelX = positionX + pixelOffsetX;
 
 				if (BitTest(flags, 7) == true && backgroundPixelsColorIndex[(LY * ScreenWidth) + pixelX] > 0 ||
-					backgroundPixelsColorIndex[(LY * ScreenWidth) + pixelX] == 0x10) {
+					backgroundPixelsColorIndex[(LY * ScreenWidth) + pixelX] == 0x10 && BitTest(LCDC, 0) == true) {
 					continue;
 				}
 
@@ -314,14 +322,14 @@ void PPU::drawSprites() {
 						byte vRamBank = flags & Bits::b3;
 
 						Color* palette = GetColorSpritePalette(CGBPaletteNumber);
-						SetPixel(backgroundPixels, pixelX, LY, ScreenWidth, palette[pixel]);
+						SetPixel(backgroundPixels, ScreenWidth * ScreenHeight * 4, pixelX, LY, ScreenWidth, palette[pixel]);
 					}
 					else {
 
 						byte offset = pixel * 2;
 						byte color = (OGP & (0x3 << offset)) >> offset;
 
-						SetPixel(backgroundPixels, pixelX, LY, ScreenWidth, BWPalette[color]);
+						SetPixel(backgroundPixels, ScreenWidth * ScreenHeight * 4, pixelX, LY, ScreenWidth, BWPalette[color]);
 					}
 				}
 			}
@@ -330,13 +338,13 @@ void PPU::drawSprites() {
 
 }
 
-void PPU::DrawBackgroundLine(int startX, int row, int screenY, int screenWidth, byte* screen, bool mainScreen) {
+void PPU::DrawBackgroundLine(int startX, int row, int screenY, int screenWidth, byte* screen, int screenSize, bool mainScreen) {
 
 	byte LCDC = memory->Read(Address::LCDC);
 
-	word backgroundMapAddressRowStart = BGWTileInfo0;
+	word backgroundMapAddressRowStart = Address::BGWTileInfo0;
 	if (BitTest(LCDC, 3) == true) {
-		backgroundMapAddressRowStart = BGWTileInfo1;
+		backgroundMapAddressRowStart = Address::BGWTileInfo1;
 	}
 	backgroundMapAddressRowStart += (row / 8) * 32;
 
@@ -404,8 +412,8 @@ void PPU::DrawBackgroundLine(int startX, int row, int screenY, int screenWidth, 
 			int screenIndex = ((screenY * screenWidth) + screenX) * 4;
 			if (ColorGameBoyMode) {
 
-				SetPixel(screen, screenX, screenY, screenWidth, palette[pixel]);
-				if (mainScreen == true) {
+				SetPixel(screen, screenSize, screenX, screenY, screenWidth, palette[pixel]);
+				if (mainScreen == true && screenIndex / 4 < ScreenWidth * ScreenHeight) {
 					if (BGtoOAMPriority == true) {
 						backgroundPixelsColorIndex[screenIndex / 4] = 0x10; // special BG has priority value
 					}
@@ -419,14 +427,14 @@ void PPU::DrawBackgroundLine(int startX, int row, int screenY, int screenWidth, 
 				byte offset = pixel * 2;
 				byte color = (BGP & (0x3 << offset)) >> offset;
 
-				SetPixel(screen, screenX, screenY, screenWidth, BWPalette[color]);
-				if (mainScreen == true) {
+				SetPixel(screen, screenSize, screenX, screenY, screenWidth, BWPalette[color]);
+				if (mainScreen == true && screenIndex / 4 < ScreenWidth * ScreenHeight) {
 					backgroundPixelsColorIndex[screenIndex / 4] = color;
 				}
 			}
 
 			screenX++;
-		} while (((startX + screenX) % 8) != 0);
+		} while (((startX + screenX) % 8) != 0 && ((screenY * screenWidth) + screenX) * 4 < screenSize);
 	}
 }
 
@@ -520,7 +528,7 @@ void PPU::DrawWindowLine() {
 			if (ColorGameBoyMode) {
 
 				Color* palette = GetBGPalette(CGBAttributes);
-				SetPixel(backgroundPixels, screenX, LY, ScreenWidth, palette[pixel]);
+				SetPixel(backgroundPixels, ScreenWidth * ScreenHeight * 4, screenX, LY, ScreenWidth, palette[pixel]);
 				if (BGtoOAMPriority == true) {
 					backgroundPixelsColorIndex[screenIndex] = 0x10; // special BG has priority value
 				}
@@ -533,23 +541,27 @@ void PPU::DrawWindowLine() {
 				byte offset = pixel * 2;
 				byte color = (BGP & (0x3 << offset)) >> offset;
 
-				SetPixel(backgroundPixels, screenX, LY, ScreenWidth, BWPalette[pixel]);
+				SetPixel(backgroundPixels, ScreenWidth * ScreenHeight * 4, screenX, LY, ScreenWidth, BWPalette[pixel]);
 				backgroundPixelsColorIndex[screenIndex] = color;
 			}
 
 			screenX++;
 			xPosInWindow++;
-		} while ((xPosInWindow % 8) != 0);
+		} while ((xPosInWindow % 8) != 0 && screenX < ScreenWidth);
 	}
 }
 
-void PPU::SetPixel(byte* screen, int x, int y, int screenWidth, Color color) {
+void PPU::SetPixel(byte* screen, int screenSize, int x, int y, int screenWidth, Color color) {
 
 	int screenIndex = ((y * screenWidth) + x) * 4;
-	screen[screenIndex + 0] = color.red;
-	screen[screenIndex + 1] = color.green;
-	screen[screenIndex + 2] = color.blue;
-	screen[screenIndex + 3] = 0xFF;
+
+	if (screenIndex + 3 < screenSize) {
+
+		screen[screenIndex + 0] = color.red;
+		screen[screenIndex + 1] = color.green;
+		screen[screenIndex + 2] = color.blue;
+		screen[screenIndex + 3] = 0xFF;
+	}
 }
 
 byte PPU::GetPixelIndex(byte dataLow, byte dataHigh, byte pixelX) {

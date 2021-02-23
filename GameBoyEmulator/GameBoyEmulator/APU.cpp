@@ -1,12 +1,19 @@
 #include "APU.h"
 
 APU::APU() {
-	bufferedSoundStream.Start();
+	channel1.number = 1;
+	channel2.number = 2;
+	channel3.number = 3;
+	channel4.number = 4;
+}
+
+APU::~APU() {
+
 }
 
 word APU::frequencyChange(word lastFrequency) {
 
-	byte sweep = memory->Read(0xFF10);
+	byte sweep = memory->Read(Address::Channel1Sweep);
 
 	bool increase = true;
 	if (BitTest(sweep, 3) == true) {
@@ -33,42 +40,42 @@ void APU::step(int clocks) {
 
 	if (memory->resetSC1Length == true) {
 		memory->resetSC1Length = false;
-		resetSC1Length(memory->Read(0xFF11) & 0x3F);
+		resetSC1Length(memory->Read(Address::Channel1SoundLengthWavePatternDuty) & 0x3F);
 	}
 	if (memory->resetSC2Length == true) {
 		memory->resetSC2Length = false;
-		resetSC2Length(memory->Read(0xFF16) & 0x3F);
+		resetSC2Length(memory->Read(Address::Channel2Tone) & 0x3F);
 	}
 	if (memory->resetSC3Length == true) {
 		memory->resetSC3Length = false;
-		resetSC3Length(memory->Read(0xFF1B));
+		resetSC3Length(memory->Read(Address::Channel3SoundLength));
 	}
 	if (memory->resetSC4Length == true) {
 		memory->resetSC4Length = false;
-		resetSC4Length(memory->Read(0xFF20) & 0x3F);
+		resetSC4Length(memory->Read(Address::Channel4SoundLength) & 0x3F);
 	}
 
 	for (size_t i = 0; i < clocks; i++) {
 
-		frameSequencer(channel1, 0xFF14);
+		frameSequencer(channel1, Address::Channel1FrequencyHigh);
 		sweep(channel1);
-		SquareTimer(channel1, 0xFF14, 0xFF13);
-		squareDuty(channel1, 0xFF11);
-		envelope(channel1, 0xFF12);
+		SquareTimer(channel1, Address::Channel1FrequencyHigh, Address::Channel1FrequencyLow);
+		squareDuty(channel1, Address::Channel1SoundLengthWavePatternDuty);
+		envelope(channel1, Address::Channel1VolumeEnvlope);
 		squareBuffer(channel1);
 
-		frameSequencer(channel2, 0xFF19);
-		SquareTimer(channel2, 0xFF19, 0xFF18);
-		squareDuty(channel2, 0xFF16);
-		envelope(channel2, 0xFF17);
+		frameSequencer(channel2, Address::Channel2FrequencyHigh);
+		SquareTimer(channel2, Address::Channel2FrequencyHigh, Address::Channel2FrequencyLow);
+		squareDuty(channel2, Address::Channel2Tone);
+		envelope(channel2, Address::Channel2VolumeEnvlope);
 		squareBuffer(channel2);
 
-		waveTimer(channel3, 0xFF1E, 0xFF1D); 
+		waveTimer(channel3, Address::Channel3FrequencyHigh, Address::Channel3FrequencyLow);
 		wave(channel3);
-		frameSequencer(channel3, 0xFF1E);
+		frameSequencer(channel3, Address::Channel3FrequencyHigh);
 
-		frameSequencer(channel4, 0xFF23);
-		envelope(channel4, 0xFF21);
+		frameSequencer(channel4, Address::Channel4Counter);
+		envelope(channel4, Address::Channel4PolynomialCounter);
 		noiseTimer(channel4);
 		noiseBuffer(channel4);
 
@@ -78,10 +85,29 @@ void APU::step(int clocks) {
 
 		samples.clear();
 		for (size_t i = 0; i < channel1.buffer.size(); i++) {
-			samples.push_back((channel1.buffer[i] + channel2.buffer[i] + channel3.buffer[i] + channel4.buffer[i]) * scale);
+
+			int sample = 0;
+			if (channel1.mute == false) {
+				sample += channel1.buffer[i];
+			}
+			if (channel2.mute == false) {
+				sample += channel2.buffer[i];
+			}
+			if (channel3.mute == false) {
+				sample += channel3.buffer[i];
+			}
+			if (channel4.mute == false) {
+				sample += channel4.buffer[i];
+			}
+
+			if (muteAll == true) {
+				sample = 0;
+			}
+
+			samples.push_back(sample * scale);
 		}
 
-		buffer.loadFromSamples(&samples[0], samples.size(), 1, 44100);
+		buffer.loadFromSamples(&samples[0], samples.size(), 1, AudioFrequency);
 
 		sound.setBuffer(buffer);
 		sound.play();
@@ -100,18 +126,18 @@ void APU::resetSC1Length(byte val) {
 	}
 
 	channel1.enabled = true;
-	channel1.amp = memory->Read(0xFF12) >> 4;
-	channel1.envelope = memory->Read(0xFF12) & 0x7;
+	channel1.amp = memory->Read(Address::Channel1VolumeEnvlope) >> 4;
+	channel1.envelope = memory->Read(Address::Channel1VolumeEnvlope) & 0x7;
 	channel1.envelopeEnabled = true; 
 	
-	word freq = (memory->Read(0xFF14) & 0x7) << 8 | memory->Read((0xFF13));
+	word freq = (memory->Read(Address::Channel1FrequencyHigh) & 0x7) << 8 | memory->Read((Address::Channel1FrequencyLow));
 	int hz = 131072 / (2048 - freq); // hz, number of times per second the wave duty will repeat
-	channel1.timer = ((70224 * 60) / hz) / 8; // 70224 clocks per frame, 60 frames per second, 8 parts per wave duty
+	channel1.timer = ((ClocksPerFrame * FrameRate) / hz) / 8; // 70224 clocks per frame, 60 frames per second, 8 parts per wave duty
 
-	channel1.sweepPeriod = (memory->Read(0xFF10) >> 4) & 7;
-	int SC1sweepShift = memory->Read(0xff10) & 7;
+	channel1.sweepPeriod = (memory->Read(Address::Channel1Sweep) >> 4) & 7;
+	int SC1sweepShift = memory->Read(Address::Channel1Sweep) & 7;
 	int SC1sweepNegate = 1;
-	if (BitTest(memory->Read(0xff10), 3) == true) {
+	if (BitTest(memory->Read(Address::Channel1Sweep), 3) == true) {
 		SC1sweepNegate = -1;
 	}
 
@@ -124,7 +150,7 @@ void APU::resetSC1Length(byte val) {
 		channel1.sweepEnabled = true;
 	}
 
-	if (memory->Read(0xFF12) >> 3 == 0x0) {
+	if (memory->Read(Address::Channel1VolumeEnvlope) >> 3 == 0x0) {
 		channel1.enabled = false;
 	}
 }
@@ -135,11 +161,11 @@ void APU::resetSC2Length(byte val) {
 		channel2.length = 64 - val;
 	}
 	channel2.enabled = true;
-	channel2.amp = memory->Read(0xFF17) >> 4;
-	channel2.envelope = memory->Read(0xFF17) & 7;
+	channel2.amp = memory->Read(Address::Channel2VolumeEnvlope) >> 4;
+	channel2.envelope = memory->Read(Address::Channel2VolumeEnvlope) & 7;
 	channel2.envelopeEnabled = true;
 
-	if (memory->Read(0xFF17) >> 3 == 0x0) {
+	if (memory->Read(Address::Channel2VolumeEnvlope) >> 3 == 0x0) {
 		channel2.enabled = false;
 	}
 }
@@ -153,11 +179,11 @@ void APU::resetSC3Length(byte val) {
 	channel3.enabled = true;
 	channel3.waveIndex = 0;
 
-	word freq = (memory->Read(0xFF1E) & 0x7) << 8 | memory->Read((0xFF1D));
+	word freq = (memory->Read(Address::Channel3FrequencyHigh) & 0x7) << 8 | memory->Read((Address::Channel3FrequencyLow));
 	int hz = 131072 / (2048 - freq); // hz, number of times per second the wave duty will repeat
-	channel3.timer = ((70224 * 60) / hz) / 16; // 70224 clocks per frame, 60 frames per second, 16 parts of wave data
+	channel3.timer = ((ClocksPerFrame * FrameRate) / hz) / 16; // 70224 clocks per frame, 60 frames per second, 16 parts of wave data
 
-	if (memory->Read(0xFF1A) >> 6 == 0x0) {
+	if (memory->Read(Address::Channel3SoundOnOFF) >> 6 == 0x0) {
 		channel3.enabled = false;
 	}
 }
@@ -171,11 +197,11 @@ void APU::resetSC4Length(byte val) {
 	channel3.enabled = true;
 	//channel4.timer = SC4divisor[readFromMem(0xff22) & 0x7] << (readFromMem(0xff22) >> 4);
 	//SC4lfsr = 0x7fff;
-	channel4.amp = memory->Read(0xff21) >> 4;
-	channel4.envelope = memory->Read(0xff21) & 7;
+	channel4.amp = memory->Read(Address::Channel4VolumeEnvlope) >> 4;
+	channel4.envelope = memory->Read(Address::Channel4VolumeEnvlope) & 7;
 	channel4.envelopeEnabled = true;
 
-	if (memory->Read(0xFF21) >> 3 == 0x0) {
+	if (memory->Read(Address::Channel4VolumeEnvlope) >> 3 == 0x0) {
 		channel4.enabled = false;
 	}
 
@@ -210,7 +236,7 @@ void APU::sweep(Channel & channel) {
 		return;
 	}
 
-	byte sweep = memory->Read(0xFF10);
+	byte sweep = memory->Read(Address::Channel1Sweep);
 
 	if (((sweep >> 4) & 0x7) == 0) { // sweep off - no frequency change
 		return;
@@ -228,8 +254,8 @@ void APU::sweep(Channel & channel) {
 		if (channel.sweepEnabled == true) {
 
 			int shift = sweep & 7;
-			byte frequencyHi = memory->Read(0xFF14);
-			word frequency = memory->Read(0xFF13) | ((frequencyHi & 0x7) << 8);
+			byte frequencyHi = memory->Read(Address::Channel1FrequencyHigh);
+			word frequency = memory->Read(Address::Channel1FrequencyLow) | ((frequencyHi & 0x7) << 8);
 			int frequencyChange = frequency / pow(2, shift);
 			word newFrequency = frequency;
 
@@ -242,10 +268,10 @@ void APU::sweep(Channel & channel) {
 			if (newFrequency < 2048 &&
 				shift != 0) {
 
-				memory->Write(0xFF13, newFrequency & 0xFF);
+				memory->Write(Address::Channel1FrequencyLow, newFrequency & 0xFF);
 				frequencyHi &= 0xC0;
 				frequencyHi |= (newFrequency >> 8) & 0x07;
-				memory->Write(0xFF14, frequencyHi);
+				memory->Write(Address::Channel1FrequencyHigh, frequencyHi);
 			}
 
 			if (newFrequency >= 2048 ||
@@ -264,7 +290,7 @@ void APU::SquareTimer(Channel & channel, word FrequencyHigh, word FrequencyLow) 
 
 		word freq = (memory->Read(FrequencyHigh) & 0x7) << 8 | memory->Read((FrequencyLow));
 		int hz = 131072 / (2048 - freq); // hz, number of times per second the wave duty will repeat
-		channel.timer = ((70224 * 60) / hz) / 8; // 70224 clocks per frame, 60 frames per second, 8 parts per wave duty
+		channel.timer = ((ClocksPerFrame * FrameRate) / hz) / 8; // 70224 clocks per frame, 60 frames per second, 8 parts per wave duty
 		
 		channel.dutyIndex++;
 		channel.dutyIndex %= 8;
@@ -318,7 +344,7 @@ void APU::squareBuffer(Channel & channel) {
 
 	channel.pcc--;
 	if (channel.pcc <= 0) {
-		channel.pcc = 95;
+		channel.pcc = ClocksPerSample;
 
 		if (channel.enabled == false ||
 			channel.duty == false/* ||
@@ -341,7 +367,7 @@ void APU::waveTimer(Channel & channel, word FrequencyHigh, word FrequencyLow) {
 
 		word freq = (memory->Read(FrequencyHigh) & 0x7) << 8 | memory->Read((FrequencyLow));
 		int hz = 131072 / (2048 - freq); // hz, number of times per second the wave duty will repeat
-		channel.timer = ((70224 * 60) / hz) / 16; // 70224 clocks per frame, 60 frames per second, 16 parts of wave data
+		channel.timer = ((ClocksPerFrame * FrameRate) / hz) / 16; // 70224 clocks per frame, 60 frames per second, 16 parts of wave data
 
 		channel.waveIndex++;
 		channel.waveIndex %= 32;
@@ -356,17 +382,17 @@ void APU::wave(Channel & channel) {
 
 	channel.pcc--;
 	if (channel.pcc <= 0) {
-		channel.pcc = 95;
+		channel.pcc = ClocksPerSample;
 
 		if (channel.enabled == false ||
-			BitTest(memory->Read(0xFF1A), 7) == false ||
-			BitTest(memory->Read(0xFF25), 2) == false && BitTest(memory->Read(0xFF25), 6) == false) {
+			BitTest(memory->Read(Address::Channel3SoundOnOFF), 7) == false ||
+			BitTest(memory->Read(Address::SoundOutputSelection), 2) == false && BitTest(memory->Read(Address::SoundOutputSelection), 6) == false) {
 
 			channel.buffer.push_back(0);
 		}
 		else {
 
-			byte wave = memory->Read(0xFF30 + (channel.waveIndex / 2));
+			byte wave = memory->Read(Address::Channel3WavePatternRam + (channel.waveIndex / 2));
 			if (channel.waveIndex % 2 == 0) {
 				wave &= 0xF;
 			}
@@ -374,7 +400,7 @@ void APU::wave(Channel & channel) {
 				wave >>= 4;
 			}
 
-			byte volume = (memory->Read(0xFF1C) >> 5) & 3;
+			byte volume = (memory->Read(Address::Channel3SelectOutputLevel) >> 5) & 3;
 			if (volume != 0) {
 				wave >>= (volume - 1);
 			}
@@ -391,21 +417,21 @@ void APU::noiseTimer(Channel & channel) {
 
 	if (channel.timer <= 0) {
 
-		byte s = memory->Read(0xFF22) & 0xF0;
-		float r = memory->Read(0xFF22) & 0x07;
+		byte s = memory->Read(Address::Channel4PolynomialCounter) & 0xF0;
+		float r = memory->Read(Address::Channel4PolynomialCounter) & 0x07;
 
 		if (r == 0) {
 			r = 0.5f;
 		}
 
 		float hz = 526680.0f / r / pow(2, s + 1);
-		channel.timer = ((70224 * 60) / hz);
+		channel.timer = ((ClocksPerFrame * FrameRate) / hz);
 
 		byte xorRes = (channel.lfsr & 0x1) ^ ((channel.lfsr & 0x2) >> 1);
 		channel.lfsr >>= 1;
 		channel.lfsr |= xorRes << 14;
 
-		if (BitTest(memory->Read(0xFF22), 3) == true) {
+		if (BitTest(memory->Read(Address::Channel4PolynomialCounter), 3) == true) {
 			channel.lfsr |= xorRes << 6;
 			channel.lfsr &= 0x7F;
 		}
@@ -419,7 +445,7 @@ void APU::noiseBuffer(Channel & channel) {
 
 	channel.pcc--;
 	if (channel.pcc <= 0) {
-		channel.pcc = 95;
+		channel.pcc = ClocksPerSample;
 
 		if (channel.enabled == false ||
 			channel.duty == false) {
