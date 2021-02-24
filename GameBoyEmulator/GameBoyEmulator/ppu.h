@@ -14,7 +14,7 @@ class PPU {
 
 public:
 
-	word cyclesThisLine = 0;
+	word clocksThisLine = 0;
 	byte lastLY = 0;
 	bool ColorGameBoyMode = false;
 
@@ -28,7 +28,7 @@ private:
 
 
 
-	const short cyclesPerLine = 456;
+	const short clocksPerLine = 456;
 
 	byte* backgroundPixelsColorIndex;
 
@@ -52,19 +52,18 @@ public:
 	void updateTileImage();
 	void updateBGMapImage();
 	void updateColorPaletteImage();
-	void updateSpriteImage();
+	void updateSpriteImages();
 
-	void update(word cyclesThisUpdate, int speedMode);
+	void update(word clocksThisUpdate, int speedMode);
 	void drawScanLine();
 	void drawBackground();
-	byte bitData(byte val, byte bit);
 	void drawSprites();
 
 	void DrawBackgroundLine(int startX, int row, int screenY, int screenWidth, byte* screen, int screenSize, bool mainScreen = false);
 	void DrawWindowLine();
 
 	void SetPixel(byte* screen, int screenSize, int x, int y, int screenWidth, Color color);
-	byte GetPixelIndex(byte dataLow, byte dataHigh, byte pixelX);
+	byte GetPixelColorIndex(byte dataLow, byte dataHigh, byte pixelX);
 	word GetTileDataAddress(byte LCDC, word address);
 
 	Color* GetBGPalette(byte CGBMapAttributes);

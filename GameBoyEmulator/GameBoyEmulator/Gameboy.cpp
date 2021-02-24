@@ -32,7 +32,7 @@ void Gameboy::Advance(int clockCount) {
 			cpu.AdvanceClocks(4);
 		}
 
-		cpu.LCDStatusRegister(ppu.cyclesThisLine);
+		cpu.LCDStatusRegister(ppu.clocksThisLine);
 		cpu.performInterupts();
 
 		if (memory.Read(Address::LY) == 144 && LY == 143) {
@@ -126,8 +126,8 @@ void Gameboy::SaveState(int stateNumber) {
 	variablesState[variablesIndex++] = cpu.speedMode;
 
 
-	variablesState[variablesIndex++] = cpu.splitBytes(ppu.cyclesThisLine).first;
-	variablesState[variablesIndex++] = cpu.splitBytes(ppu.cyclesThisLine).second;
+	variablesState[variablesIndex++] = cpu.splitBytes(ppu.clocksThisLine).first;
+	variablesState[variablesIndex++] = cpu.splitBytes(ppu.clocksThisLine).second;
 
 
 	variablesState[variablesIndex++] = memory.stopHblankDMA;
@@ -253,7 +253,7 @@ void Gameboy::LoadState(int stateNumber) {
 	cpu.speedMode = state[index++];
 
 
-	ppu.cyclesThisLine = cpu.Combinebytes(state[index], state[index + 1]);
+	ppu.clocksThisLine = cpu.Combinebytes(state[index], state[index + 1]);
 	index += 2;
 
 	memory.stopHblankDMA = state[index++];

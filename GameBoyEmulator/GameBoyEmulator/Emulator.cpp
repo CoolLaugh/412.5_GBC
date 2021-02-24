@@ -438,9 +438,9 @@ void Emulator::ColorPaletteWindow() {
 		gameboy->ppu.updateColorPaletteImage();
 		byte* colors = gameboy->GetColorPalettePixels();
 		sf::Image image;
-		image.create(4, 16, colors);
+		image.create(8, 8, colors);
 		ColorTexture.loadFromImage(image);
-		ImGui::Image(ColorTexture, ImVec2(4 * 12, 16 * 12));
+		ImGui::Image(ColorTexture, ImVec2(8 * 12, 8 * 12));
 	}
 
 	ImGui::End();
@@ -456,7 +456,7 @@ void Emulator::SpriteWindow() {
 
 	if (gameboy != nullptr) {
 
-		gameboy->ppu.updateSpriteImage();
+		gameboy->ppu.updateSpriteImages();
 
 		for (size_t i = 0; i < 40; i++) {
 			sf::Image image;
