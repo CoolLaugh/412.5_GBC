@@ -21,19 +21,19 @@ void SFMLGraphics::clearPixelPointers() {
 
 void SFMLGraphics::setupWindow() {
 
-	window = new sf::RenderWindow(sf::VideoMode(ScreenWidth * DefaultDisplayScale, ScreenHeight * DefaultDisplayScale), TitleName);
+	window = new sf::RenderWindow(sf::VideoMode(kScreenWidth * kDefaultDisplayScale, kScreenHeight * kDefaultDisplayScale), kTitleName);
 	window->setPosition(sf::Vector2i(950, 150));
 	window->setVerticalSyncEnabled(false);
 	window->setFramerateLimit(60);
 
-	view = new sf::View(sf::FloatRect(0, 0, ScreenWidth, ScreenHeight));
+	view = new sf::View(sf::FloatRect(0, 0, kScreenWidth, kScreenHeight));
 	window->setView(*view);
 }
 
 void SFMLGraphics::updateWindow(int scale) {
-	float offset = 20.f / (ScreenHeight * scale + 20 / scale);
+	float offset = 20.f / (kScreenHeight * scale + 20 / scale);
 	view->setViewport(sf::FloatRect(0.f, offset, 1.f, 1.f - offset));
-	updateWindowGeneric(window, view, backgroundPixels, ScreenWidth, ScreenHeight,false);
+	updateWindowGeneric(window, view, backgroundPixels, kScreenWidth, kScreenHeight,false);
 }
 
 void SFMLGraphics::updateWindowGeneric(sf::RenderWindow * screen, sf::View * view, sf::Uint8 * pixels, int x, int y, bool display) {

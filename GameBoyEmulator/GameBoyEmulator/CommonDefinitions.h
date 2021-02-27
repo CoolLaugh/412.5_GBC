@@ -5,19 +5,89 @@
 typedef unsigned char byte;
 typedef unsigned short word;
 
-const std::string TitleName = "412.5_GBC";
-const int ScreenWidth = 160;
-const int ScreenHeight = 144;
-const int BackgroundLayerSize = 256;
-const int DefaultDisplayScale = 4;
-const int FrameRate = 60; // real gameboy hardware is 59.72 but 60 is used because of SFML and it matches most monitors
-const int ClocksPerFrame = 70224;
-const int ClocksPerScanLine = 456;
-const int AudioFrequency = 44100;
-const int ClocksPerSample = 95; // sound is 44100 hz thus ClocksPerFrame * Framerate / 44100 = 95
+const std::string kTitleName = "412.5_GBC";
+const int kScreenWidth = 160;
+const int kScreenHeight = 144;
+const int kBackgroundLayerSize = 256;
+const int kDefaultDisplayScale = 4;
+const int kFrameRate = 60; // real gameboy hardware is 59.72 but 60 is used because of SFML and it matches most monitors
+const int kClocksPerFrame = 70224;
+const int kClocksPerScanLine = 456;
+const int kAudioFrequency = 44100;
+const int kClocksPerSample = 95; // sound is 44100 hz thus ClocksPerFrame * Framerate / 44100 = 95
+const int kRGBASize = 4;
+const int kNumberOfSprites = 40;
+const int kSpriteSize = 8;
+const int kNumberOfColorPalettes = 8;
+const int kColorsPerPalette = 4;
+const int kTileSize = 8;
+const int kBGPriority = 0x10;
+const int kLastScanLine = 153;
+const int kClocksPerCycle = 4;
+const int kRomBankSize = 0x4000;
+
+
+
+struct Bit {
+	struct LCDC {
+		typedef enum {
+			BackgroundWindowDisplayPriority,
+			SpriteDisplayEnable,
+			SpriteSize,
+			BGTileMapDisplaySelect,
+			BGWindowTileDataSelect,
+			WindowDisplayEnable,
+			WindowTileMapDisplaySelect,
+			LCDDisplayEnable
+		} Type;
+	};
+	struct LCDSTAT {
+		typedef enum {
+			CoincidenceFlag = 2,
+			Mode0HBlankInterrupt,
+			Mode1VBlankInterrupt,
+			Mode2OAMInterrupt,
+			LYCLYCoincidenceInterrupt
+		} Type;
+	};
+	struct Sprite {
+		typedef enum {
+			VRamBank = 3,
+			PaletteNumber,
+			XFlip,
+			YFlip,
+			SpritetoBGPriority
+		} Type;
+	};
+	struct Tile {
+		typedef enum {
+			VRamBank = 3,
+			XFlip = 5,
+			YFlip,
+			BGtoOAMPriority
+		} Type;
+	};
+};
 
 struct Address {
 	typedef enum {
+
+		CartridgeStart = 0x0000,
+		CartridgeBank0End = 0x3FFF,
+		CartridgeBankNStart = 0x4000,
+		CartridgeEnd = 0x7FFF,
+		VramStart = 0x8000,
+		VramEnd = 0x9FFF,
+		ExternalRamStart = 0xA000,
+		ExternalRamEnd = 0xBFFF,
+		WorkRamBank0Start = 0xC000,
+		WorkRamBank0End = 0xCFFF,
+		WorkRamBankNStart = 0xD000,
+		WorkRamBankNEnd = 0xDFFF,
+		OAMStart = 0xFE00,
+		OAMEnd = 0xFE9F,
+		NonBankMemoryStart = 0xFF00,
+
 
 		CGBFlag = 0x0143,
 		CartridgeType = 0x0147,
@@ -63,6 +133,7 @@ struct Address {
 		Channel4VolumeEnvlope = 0xFF21,
 		Channel4PolynomialCounter = 0xFF22,
 		Channel4Counter = 0xFF23,
+
 		ChannelControl = 0xFF24,
 		SoundOutputSelection = 0xFF25,
 		SoundOnOFF = 0xFF26,
@@ -81,11 +152,12 @@ struct Address {
 		WindowX = 0xFF4B,
 		PrepareSpeedSwitch = 0xFF4D,
 		VRAMBank = 0xFF4F,
+		VRAMDMA = 0xFF55,
 		InfraredPort = 0xFF56,
 		GBColorBackgroundPaletteIndex = 0xFF68,
 		GBColorBackgroundPaletteData = 0xFF69,
-		GBColorSpritePaletteIndex = 0xFF68,
-		GBColorSpritePaletteData = 0xFF69,
+		GBColorSpritePaletteIndex = 0xFF6A,
+		GBColorSpritePaletteData = 0xFF6B,
 		WramBank = 0xFF70,
 		InteruptEnable = 0xFFFF
 

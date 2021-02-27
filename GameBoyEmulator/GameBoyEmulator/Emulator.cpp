@@ -4,7 +4,7 @@ Emulator::Emulator() {
 
 	ImGui::SFML::Init(*graphics.window); 
 	LoadSettings();
-	spriteTextures.resize(40);
+	spriteTextures.resize(kNumberOfSprites);
 
 	//keybindings[Gameboy::Buttons::up] = sf::Keyboard::Key::Up;
 	//keybindings[Gameboy::Buttons::down] = sf::Keyboard::Key::Down;
@@ -59,9 +59,6 @@ void Emulator::Loop() {
 				else if (event.key.code == sf::Keyboard::F2 && pressed == true) {
 					gameboy->LoadState(1);
 				}
-				else if (event.key.code == sf::Keyboard::F3 && pressed == true) {
-					gameboy->memory.DumpMemory();
-				}
 				else if (event.key.code == sf::Keyboard::F5 && pressed == true) {
 					gameboy->cpu.logState = !gameboy->cpu.logState;
 					if (gameboy->cpu.logState == true) {
@@ -91,7 +88,7 @@ void Emulator::Loop() {
 		}
 		for (size_t i = 0; i < 54; i++) { // run the gameboy for 1 frame before checking the inputs again
 
-			gameboy->Advance(456);
+			gameboy->Advance(kClocksPerScanLine);
 			if (gameboy->redrawScreen == true) {
 
 				graphics.updateWindow(scale);
@@ -183,7 +180,7 @@ void Emulator::SettingsMenu() {
 
 	ImGui::Text("Settings");
 	if (ImGui::SliderInt("Scale", &scale, 2, 9)) {
-		graphics.window->setSize(sf::Vector2u(ScreenWidth * scale, ScreenHeight * scale + 20));
+		graphics.window->setSize(sf::Vector2u(kScreenWidth * scale, kScreenHeight * scale + 20));
 	}
 	ImGui::End();
 
@@ -289,7 +286,7 @@ void Emulator::FileOpen() {
 		}
 		gameboy = new Gameboy(Filename);
 		graphics.setPixelPointers(gameboy->GetScreenPixels(), gameboy->GetTilePixels(), gameboy->GetBackgroundPixels(), gameboy->GetColorPalettePixels());
-		graphics.window->setTitle(TitleName + " - " + Filename);
+		graphics.window->setTitle(kTitleName + " - " + Filename);
 	}
 
 
@@ -334,9 +331,11 @@ void Emulator::about() {
 void Emulator::SetKey(std::string buttonName, std::string currentKey, Gameboy::Buttons button, sf::Keyboard::Key keyPressed) {
 
 	ImGui::Text((buttonName + ": ").c_str());
-	ImGui::SameLine();
 	if (keyListening[button] == true) {
 
+		float font_size = ImGui::GetFontSize() * 9.f / 1.9f;
+		ImGui::SameLine(ImGui::GetWindowSize().x -
+						font_size - 15);
 		ImGui::Button("Listening");
 		if (keyPressed != sf::Keyboard::Key::Unknown) {
 			keybindings[button] = keyPressed;
@@ -345,7 +344,12 @@ void Emulator::SetKey(std::string buttonName, std::string currentKey, Gameboy::B
 	}
 	else {
 
-		if (ImGui::Button(SFMLKeyNames[keybindings[button]].c_str())) {
+		float font_size = ImGui::GetFontSize() * SFMLKeyNames[keybindings[button]].size() / 1.9f;
+		ImGui::SameLine(ImGui::GetWindowSize().x - 
+						font_size - 15);
+
+
+		if (ImGui::Button((SFMLKeyNames[keybindings[button]] + "##" + buttonName).c_str())) {
 			keyListening[button] = true;
 		}
 	}
@@ -360,7 +364,7 @@ void Emulator::RecentFileMenuItem(std::string filename) {
 		Filename = filename;
 		gameboy = new Gameboy(Filename);
 		graphics.setPixelPointers(gameboy->GetScreenPixels(), gameboy->GetTilePixels(), gameboy->GetBackgroundPixels(), gameboy->GetColorPalettePixels());
-		graphics.window->setTitle(TitleName + " - " + Filename);
+		graphics.window->setTitle(kTitleName + " - " + Filename);
 	}
 }
 
@@ -467,9 +471,9 @@ void Emulator::SpriteWindow() {
 			ImGui::Text(("X:" + ToHex(gameboy->memory.Read(Address::SpriteAttributes + i * 4 + 0))).c_str());
 			ImGui::Text(("Y:" + ToHex(gameboy->memory.Read(Address::SpriteAttributes + i * 4 + 1))).c_str());
 			ImGui::Text(("N:" + ToHex(gameboy->memory.Read(Address::SpriteAttributes + i * 4 + 2))).c_str());
-			ImGui::Text(("A:" + ToHex(gameboy->memory.Read(Address::SpriteAttributes + i * 4 + 3))).c_str());
+			ImGui::Text(("F:" + ToHex(gameboy->memory.Read(Address::SpriteAttributes + i * 4 + 3))).c_str());
 			ImGui::EndChildFrame();
-			if ((i + 1) % 10 != 0) {
+			if ((i + 1) % 10 != 0) { // stay on the same line for 10 sprites
 				ImGui::SameLine();
 			}
 		}
@@ -487,6 +491,7 @@ void Emulator::Channel() {
 	ImGui::Begin("Audio Channels", &showAudioWindow, 0);
 	if (gameboy != nullptr && 
 		gameboy->apu.channel1.displayBuffer.size() > 0) {
+		ImGui::Checkbox("Enabled", &gameboy->apu.enabled);
 		ImGui::Checkbox("Mute All", &gameboy->apu.muteAll);
 		ImGui::PlotLines("Channel 1", &gameboy->apu.channel1.displayBuffer[0], (int)gameboy->apu.channel1.displayBuffer.size());
 		ImGui::SameLine();
@@ -561,7 +566,7 @@ void Emulator::LoadSettings() {
 	keybindings[Gameboy::Buttons::B] = settings["keys"]["B"];
 
 	scale = settings["pixelScale"]; 
-	graphics.window->setSize(sf::Vector2u(ScreenWidth * scale, ScreenHeight * scale + 20));
+	graphics.window->setSize(sf::Vector2u(kScreenWidth * scale, kScreenHeight * scale + 20));
 	if (gameboy != nullptr) {
 		gameboy->apu.muteAll = settings["muteAll"];
 		gameboy->apu.channel1.mute = settings["muteC1"];

@@ -188,8 +188,8 @@ void Gameboy::SaveState(int stateNumber) {
 		}
 	}
 
-	for (size_t i = 0x0000; i <= 0xFFFF; i++) {
-		state[index++] = memory.memorySpace[i];
+	for (size_t i = 0; i <= 0x100; i++) {
+		state[index++] = memory.Read(i + 0xFF00);
 	}
 
 	for (size_t i = 0x00; i < 0x40; i++) {
@@ -300,7 +300,7 @@ void Gameboy::LoadState(int stateNumber) {
 		}
 	}
 
-	for (size_t i = 0x0000; i <= 0xFFFF; i++) {
+	for (size_t i = 0; i < 0x100; i++) {
 		memory.memorySpace[i] = state[index++];
 	}
 

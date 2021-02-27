@@ -38,6 +38,14 @@ word APU::frequencyChange(word lastFrequency) {
 
 void APU::step(int clocks) {
 
+	if (enabled == false) {
+		channel1.buffer.clear();
+		channel2.buffer.clear();
+		channel3.buffer.clear();
+		channel4.buffer.clear();
+		return;
+	}
+
 	if (memory->resetSC1Length == true) {
 		memory->resetSC1Length = false;
 		resetSC1Length(memory->Read(Address::Channel1SoundLengthWavePatternDuty) & 0x3F);
@@ -107,7 +115,7 @@ void APU::step(int clocks) {
 			samples.push_back(sample * scale);
 		}
 
-		buffer.loadFromSamples(&samples[0], samples.size(), 1, AudioFrequency);
+		buffer.loadFromSamples(&samples[0], samples.size(), 1, kAudioFrequency);
 
 		sound.setBuffer(buffer);
 		sound.play();
@@ -132,7 +140,7 @@ void APU::resetSC1Length(byte val) {
 	
 	word freq = (memory->Read(Address::Channel1FrequencyHigh) & 0x7) << 8 | memory->Read((Address::Channel1FrequencyLow));
 	int hz = 131072 / (2048 - freq); // hz, number of times per second the wave duty will repeat
-	channel1.timer = ((ClocksPerFrame * FrameRate) / hz) / 8; // 70224 clocks per frame, 60 frames per second, 8 parts per wave duty
+	channel1.timer = ((kClocksPerFrame * kFrameRate) / hz) / 8; // 70224 clocks per frame, 60 frames per second, 8 parts per wave duty
 
 	channel1.sweepPeriod = (memory->Read(Address::Channel1Sweep) >> 4) & 7;
 	int SC1sweepShift = memory->Read(Address::Channel1Sweep) & 7;
@@ -181,7 +189,7 @@ void APU::resetSC3Length(byte val) {
 
 	word freq = (memory->Read(Address::Channel3FrequencyHigh) & 0x7) << 8 | memory->Read((Address::Channel3FrequencyLow));
 	int hz = 131072 / (2048 - freq); // hz, number of times per second the wave duty will repeat
-	channel3.timer = ((ClocksPerFrame * FrameRate) / hz) / 16; // 70224 clocks per frame, 60 frames per second, 16 parts of wave data
+	channel3.timer = ((kClocksPerFrame * kFrameRate) / hz) / 16; // 70224 clocks per frame, 60 frames per second, 16 parts of wave data
 
 	if (memory->Read(Address::Channel3SoundOnOFF) >> 6 == 0x0) {
 		channel3.enabled = false;
@@ -290,7 +298,7 @@ void APU::SquareTimer(Channel & channel, word FrequencyHigh, word FrequencyLow) 
 
 		word freq = (memory->Read(FrequencyHigh) & 0x7) << 8 | memory->Read((FrequencyLow));
 		int hz = 131072 / (2048 - freq); // hz, number of times per second the wave duty will repeat
-		channel.timer = ((ClocksPerFrame * FrameRate) / hz) / 8; // 70224 clocks per frame, 60 frames per second, 8 parts per wave duty
+		channel.timer = ((kClocksPerFrame * kFrameRate) / hz) / 8; // 70224 clocks per frame, 60 frames per second, 8 parts per wave duty
 		
 		channel.dutyIndex++;
 		channel.dutyIndex %= 8;
@@ -344,7 +352,7 @@ void APU::squareBuffer(Channel & channel) {
 
 	channel.pcc--;
 	if (channel.pcc <= 0) {
-		channel.pcc = ClocksPerSample;
+		channel.pcc = kClocksPerSample;
 
 		if (channel.enabled == false ||
 			channel.duty == false/* ||
@@ -367,7 +375,7 @@ void APU::waveTimer(Channel & channel, word FrequencyHigh, word FrequencyLow) {
 
 		word freq = (memory->Read(FrequencyHigh) & 0x7) << 8 | memory->Read((FrequencyLow));
 		int hz = 131072 / (2048 - freq); // hz, number of times per second the wave duty will repeat
-		channel.timer = ((ClocksPerFrame * FrameRate) / hz) / 16; // 70224 clocks per frame, 60 frames per second, 16 parts of wave data
+		channel.timer = ((kClocksPerFrame * kFrameRate) / hz) / 16; // 70224 clocks per frame, 60 frames per second, 16 parts of wave data
 
 		channel.waveIndex++;
 		channel.waveIndex %= 32;
@@ -382,7 +390,7 @@ void APU::wave(Channel & channel) {
 
 	channel.pcc--;
 	if (channel.pcc <= 0) {
-		channel.pcc = ClocksPerSample;
+		channel.pcc = kClocksPerSample;
 
 		if (channel.enabled == false ||
 			BitTest(memory->Read(Address::Channel3SoundOnOFF), 7) == false ||
@@ -425,7 +433,7 @@ void APU::noiseTimer(Channel & channel) {
 		}
 
 		float hz = 526680.0f / r / pow(2, s + 1);
-		channel.timer = ((ClocksPerFrame * FrameRate) / hz);
+		channel.timer = ((kClocksPerFrame * kFrameRate) / hz);
 
 		byte xorRes = (channel.lfsr & 0x1) ^ ((channel.lfsr & 0x2) >> 1);
 		channel.lfsr >>= 1;
@@ -445,7 +453,7 @@ void APU::noiseBuffer(Channel & channel) {
 
 	channel.pcc--;
 	if (channel.pcc <= 0) {
-		channel.pcc = ClocksPerSample;
+		channel.pcc = kClocksPerSample;
 
 		if (channel.enabled == false ||
 			channel.duty == false) {

@@ -12,7 +12,7 @@ class Memory {
 private:
 
 
-	const int memorySize = 0x10000;
+	const int memorySize = 0x100;
 	const int RamBankSize = 0x2000;
 
 	struct Buttons {
@@ -37,6 +37,7 @@ public:
 	};
 
 	byte* cartridge;
+	byte* OAM;
 	byte* memorySpace;
 	byte* BGColorPalette;
 	byte* SpriteColorPalette;
@@ -73,6 +74,8 @@ public:
 	void PowerUpSequence();
 	bool LoadRom(const std::string fileName);
 	void CreateRamBanks();
+	void WriteMemorySpace(word address, byte value);
+	byte ReadMemorySpace(word address);
 
 	byte Read(word address, int vRamBank = -1);
 
@@ -94,8 +97,6 @@ public:
 
 	byte GetJoypadState();
 	void IncrementDivAndTimerRegisters(byte clocks);
-	void DumpMemory(std::string fileName = "MemoryDump");
-	void DumpStack(word spAddress, std::string fileName = "StackDump");
 
 	void SaveExternalRam(std::string fileName);
 	void LoadExternalRam(std::string fileName);

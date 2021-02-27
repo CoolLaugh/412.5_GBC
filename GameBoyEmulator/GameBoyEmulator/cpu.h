@@ -76,9 +76,6 @@ public:
 	void flagSet(flagType flag, bool value);
 	void flagReset(flagType flag);
 
-	bool bitTest(byte value, Bits bit);
-	void bitSet(byte& value, Bits bit);
-	void bitReset(byte& value, Bits bit);
 	void setInterrupt(interruptFlags flag);
 
 	void PowerUpSequence();

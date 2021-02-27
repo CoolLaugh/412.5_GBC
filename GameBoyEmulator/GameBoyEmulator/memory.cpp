@@ -3,14 +3,26 @@
 
 
 
+void Memory::WriteMemorySpace(word address, byte value) {
+	memorySpace[address - Address::NonBankMemoryStart] = value;
+}
+
+byte Memory::ReadMemorySpace(word address) {
+	return memorySpace[address - Address::NonBankMemoryStart];
+}
+
 Memory::Memory() {
 
 	memorySpace = new byte[memorySize];
 	memset(memorySpace, 0, memorySize);
+
+	OAM = new byte[0xA0];
+	memset(OAM, 0, 0xA0);
 }
 
 Memory::~Memory() {
 	delete[] memorySpace;
+	delete[] OAM;
 	delete[] cartridge;
 	delete[] BGColorPalette;
 	delete[] SpriteColorPalette;
@@ -31,37 +43,38 @@ Memory::~Memory() {
 
 void Memory::PowerUpSequence() {
 
-	memorySpace[0xFF05] = 0x00;
-	memorySpace[0xFF06] = 0x00;
-	memorySpace[0xFF07] = 0x00;
-	memorySpace[0xFF10] = 0x80;
-	memorySpace[0xFF11] = 0xBF;
-	memorySpace[0xFF12] = 0xF3;
-	memorySpace[0xFF14] = 0xBF;
-	memorySpace[0xFF16] = 0x3F;
-	memorySpace[0xFF17] = 0x00;
-	memorySpace[0xFF19] = 0xBF;
-	memorySpace[0xFF1A] = 0x7F;
-	memorySpace[0xFF1B] = 0xFF;
-	memorySpace[0xFF1C] = 0x9F;
-	memorySpace[0xFF1E] = 0xBF;
-	memorySpace[0xFF20] = 0xFF;
-	memorySpace[0xFF21] = 0x00;
-	memorySpace[0xFF22] = 0x00;
-	memorySpace[0xFF23] = 0xBF;
-	memorySpace[0xFF24] = 0x77;
-	memorySpace[0xFF25] = 0xF3;
-	memorySpace[0xFF26] = 0xF1;
-	memorySpace[0xFF40] = 0x91;
-	memorySpace[0xFF42] = 0x00;
-	memorySpace[0xFF43] = 0x00;
-	memorySpace[0xFF45] = 0x00;
-	memorySpace[0xFF47] = 0xFC;
-	memorySpace[0xFF48] = 0xFF;
-	memorySpace[0xFF49] = 0xFF;
-	memorySpace[0xFF4A] = 0x00;
-	memorySpace[0xFF4B] = 0x00;
-	memorySpace[0xFFFF] = 0x00;
+	WriteMemorySpace(0xFF05, 0x00);
+	WriteMemorySpace(0xFF05, 0x00);
+	WriteMemorySpace(0xFF06, 0x00);
+	WriteMemorySpace(0xFF07, 0x00);
+	WriteMemorySpace(0xFF10, 0x80);
+	WriteMemorySpace(0xFF11, 0xBF);
+	WriteMemorySpace(0xFF12, 0xF3);
+	WriteMemorySpace(0xFF14, 0xBF);
+	WriteMemorySpace(0xFF16, 0x3F);
+	WriteMemorySpace(0xFF17, 0x00);
+	WriteMemorySpace(0xFF19, 0xBF);
+	WriteMemorySpace(0xFF1A, 0x7F);
+	WriteMemorySpace(0xFF1B, 0xFF);
+	WriteMemorySpace(0xFF1C, 0x9F);
+	WriteMemorySpace(0xFF1E, 0xBF);
+	WriteMemorySpace(0xFF20, 0xFF);
+	WriteMemorySpace(0xFF21, 0x00);
+	WriteMemorySpace(0xFF22, 0x00);
+	WriteMemorySpace(0xFF23, 0xBF);
+	WriteMemorySpace(0xFF24, 0x77);
+	WriteMemorySpace(0xFF25, 0xF3);
+	WriteMemorySpace(0xFF26, 0xF1);
+	WriteMemorySpace(0xFF40, 0x91);
+	WriteMemorySpace(0xFF42, 0x00);
+	WriteMemorySpace(0xFF43, 0x00);
+	WriteMemorySpace(0xFF45, 0x00);
+	WriteMemorySpace(0xFF47, 0xFC);
+	WriteMemorySpace(0xFF48, 0xFF);
+	WriteMemorySpace(0xFF49, 0xFF);
+	WriteMemorySpace(0xFF4A, 0x00);
+	WriteMemorySpace(0xFF4B, 0x00);
+	WriteMemorySpace(0xFFFF, 0x00);
 
 	// cycle accurate docs initial value
 	if (ColorGameBoyMode == false) {
@@ -91,7 +104,7 @@ void Memory::PowerUpSequence() {
 	};
 
 	if (ColorGameBoyMode == true) {
-		memcpy(&memorySpace[0xFF00], ColorGameboyFFXXValues, 256);
+		memcpy(&memorySpace[0], ColorGameboyFFXXValues, 256);
 	}
 }
 
@@ -109,7 +122,6 @@ bool Memory::LoadRom(const std::string fileName) {
 	romFile.read((char*)cartridge, cartridgeLength);
 	romFile.close();
 
-	memcpy(memorySpace, cartridge, 0x8000);
 	currentRomBank = 1;
 
 	if (cartridge[Address::CGBFlag] == 0x80 || cartridge[Address::CGBFlag] == 0xC0) {
@@ -227,51 +239,60 @@ byte Memory::Read(word address, int vRamBank) {
 	//	return 0x00;
 	//}
 
-	// rom bank 0x4000 - 0x7FFF
-	if (address >= 0x4000 && address <= 0x7FFF) {
+	if (address >= Address::CartridgeStart && address <= Address::CartridgeBank0End) {
+		return cartridge[address];
+	}
+	if (address >= Address::CartridgeBankNStart && address <= Address::CartridgeEnd) {
 
-		word offset = address - 0x4000;
-		int memoryBankOffset = 0x4000 * currentRomBank;
+		word offset = address - Address::CartridgeBankNStart;
+		int memoryBankOffset = kRomBankSize * currentRomBank;
 		return cartridge[memoryBankOffset + offset];
 	}
-	else if (address >= 0x8000 && address <= 0x9FFF) {
+	else if (address >= Address::VramStart && address <= Address::VramEnd) {
 		if (vRamBank == -1) {
-			return vramBank[currentVramBank][address - 0x8000];
+			return vramBank[currentVramBank][address - Address::VramStart];
 		}
 		else {
-			return vramBank[vRamBank][address - 0x8000];
+			return vramBank[vRamBank][address - Address::VramStart];
 		}
 	}
 	// Ram bank 0xA000 - 0xBFFF
-	else if (address >= 0xA000 && address <= 0xBFFF) {
-		return ramBank[currentRamBank][address - 0xA000];
+	else if (address >= Address::ExternalRamStart && address <= Address::ExternalRamEnd) {
+		return ramBank[currentRamBank][address - Address::ExternalRamStart];
 	}
-	else if (address >= 0xC000 && address <= 0xCFFF) {
-		return wramBank[0][address - 0xC000];
+	else if (address >= Address::WorkRamBank0Start && address <= Address::WorkRamBank0End) {
+		return wramBank[0][address - Address::WorkRamBank0Start];
 	}
-	else if (address >= 0xD000 && address <= 0xDFFF) {
-		return wramBank[currentWramBank][address - 0xD000];
+	else if (address >= Address::WorkRamBankNStart && address <= Address::WorkRamBankNEnd) {
+		return wramBank[currentWramBank][address - Address::WorkRamBankNStart];
 	}
-	else if (address == 0xFF04) {
-		return (byte)((dividerRegister >> 8) & 0xFF);
+	else if (address >= Address::OAMStart && address <= Address::OAMEnd) {
+		return OAM[address - Address::OAMStart];
 	}
-	else if (address == 0xFF55 && ColorGameBoyMode == true) {
-		if (vramDMATransferProgress == 0 && vramDMATransferLength == 0) {
-			return 0xFF;
+	else if (address >= Address::NonBankMemoryStart) {
+		if (address == Address::DIVRegister) {
+			return (byte)((dividerRegister >> 8) & 0xFF);
+		}
+		else if (address == Address::VRAMDMA && ColorGameBoyMode == true) {
+			if (vramDMATransferProgress == 0 && vramDMATransferLength == 0) {
+				return 0xFF;
+			}
+			else {
+				byte lengthRemaining = ((vramDMATransferLength - vramDMATransferProgress) / 10) - 1;
+				if (stopHblankDMA == true) {
+					lengthRemaining |= Bits::b7;
+				}
+				return lengthRemaining;
+			}
+		}
+		// controls 0xFF00
+		else if (address == Address::Joypad) {
+			return GetJoypadState();
 		}
 		else {
-			byte lengthRemaining = ((vramDMATransferLength - vramDMATransferProgress) / 10) - 1;
-			if (stopHblankDMA == true) {
-				lengthRemaining |= Bits::b7;
-			}
-			return lengthRemaining;
+			return ReadMemorySpace(address);
 		}
 	}
-	// controls 0xFF00
-	else if (address == Address::Joypad) {
-		return GetJoypadState();
-	}
-	return memorySpace[address];
 }
 
 
@@ -279,171 +300,179 @@ byte Memory::Read(word address, int vRamBank) {
 void Memory::Write(word address, byte data) {
 
 	// 0 - 7FFF cartrigde
-	if (address >= 0x0000 && address <= 0x7FFF) {
+	if (address >= Address::CartridgeStart && address <= Address::CartridgeEnd) {
 		WriteMBCSwitch(address, data);
 	}
 	// 0x8000 - 0x9FFF 8kb video ram (vram) (1 for gameboy, 2 switchable for gameboy color)
-	else if (address >= 0x8000 && address <= 0x9FFF) {
-		vramBank.at(currentVramBank)[address - 0x8000] = data;
+	else if (address >= Address::VramStart && address <= Address::VramEnd) {
+		vramBank.at(currentVramBank)[address - Address::VramStart] = data;
 		TileChanged = true;
 	}
-	else if (address >= 0xA000 && address <= 0xBFFF) { // 8kb external ram
+	else if (address >= Address::ExternalRamStart && address <= Address::ExternalRamEnd) { // 8kb external ram
 		externalRamChanged = true;
 		if (ramBankEnabled == true && mbc == 1 || mbc == 3 || mbc == 5) {
-			word newAddress = address - 0xA000;
+			word newAddress = address - Address::ExternalRamStart;
 			ramBank.at(currentRamBank)[newAddress] = data;
 		}
 		if (mbc == 2 && address < 0xA200) {
-			word newAddress = address - 0xA000;
+			word newAddress = address - Address::ExternalRamStart;
 			ramBank.at(currentRamBank)[newAddress] = data;
 		}
 	}
 	// 0xC000 - 0xCFFF 4KB Work RAM (WRAM) bank 0
-	else if (address >= 0xC000 && address <= 0xCFFF) {
-		wramBank.at(0)[address - 0xC000] = data;
+	else if (address >= Address::WorkRamBank0Start && address <= Address::WorkRamBank0End) {
+		wramBank.at(0)[address - Address::WorkRamBank0Start] = data;
 	}
 	// 0xD000 - 0xDFFF 4KB Work RAM (WRAM) bank 1~N (1 for gameboy, 1-7 for gameboy color)
-	else if (address >= 0xD000 && address <= 0xDFFF) {
-		wramBank.at(currentWramBank)[address - 0xD000] = data;
+	else if (address >= Address::WorkRamBankNStart && address <= Address::WorkRamBankNEnd) {
+		wramBank.at(currentWramBank)[address - Address::WorkRamBankNStart] = data;
 	}
 	// 0xE000 - 0xFDFF Mirror of C000~DDFF (ECHO RAM) typically not used
 	// 0xFE00 - 0xFE9F Sprite attribute table
-	// 0xFEA0 - 0xFEFF Not Usable
-	else if (address == 0xFF02) { // serial control
-		memorySpace[address] = data;
-		if (data == 0x81) { // output for test rom
-			std::cout << memorySpace[0xFF01];
-		}
+	else if (address >= Address::OAMStart && address <= Address::OAMEnd) {
+		OAM[address - Address::OAMStart] = data;
 	}
-	else if (address == 0xFF04) { // DIV register
-		dividerRegister = 0;
-	}
-	else if (address == 0xFF05) { // TIMA 
-		if (writingToTIMA == false) { // writing will fail when TMA is being written to TIMA
-			memorySpace[address] = data;
-		}
-	}
-	else if (address == 0xFF06) { // TMA / Timer Module
-		memorySpace[address] = data;
-		if (writingToTIMA == true) { // writing to TMA in the same cycle as TMA is being loaded into TIMA causes the same value to be written to TIMA
-			memorySpace[Address::Timer] = data;
-		}
-	}
-	else if (address == 0xFF14) {
-		memorySpace[address] = data;
-		resetSC1Length = true;
-	}
-	else if (address == 0xFF19) {
-		memorySpace[address] = data;
-		resetSC2Length = true;
-	}
-	else if (address == 0xFF1E) {
-		memorySpace[address] = data;
-		resetSC3Length = true;
-	}
-	else if (address == 0xFF23) {
-		memorySpace[address] = data;
-		resetSC4Length = true;
-	}
-	else if (address == 0xFF26) {
-		if (BitTest(data, 7) == true) {
-			BitSet(memorySpace[address], 7);
-		}
-		else {
-			BitReset(memorySpace[address], 7);
-		}
-	}
-	else if (address == 0xFF44) {
-		memorySpace[address] = 0;
-	}
-	else if (address == 0xFF46) { // DMA
+	else if (address >= Address::NonBankMemoryStart) {
 
-		word DMAAddress = data;
-		DMAAddress <<= 8;
-
-		for (word i = 0; i < 0xA0; i++) {
-			memorySpace[0xFE00 + i] = Read(DMAAddress + i);
+		if (address == Address::SIOControl) { // serial control
+			WriteMemorySpace(address, data);
 		}
-	}
-	else if (address == 0xFF4D) {
-		memorySpace[address] = data | 0x7E;
-	}
-	else if (address == 0xFF4F) {
-		if (ColorGameBoyMode == true) {
-			currentVramBank = data & Bits::b0;
-			memorySpace[address] = (~Bits::b0) | (data & Bits::b0);
+		else if (address == Address::DIVRegister) { // DIV register
+			dividerRegister = 0;
 		}
-		else {
-			memorySpace[address] = data;
-		}
-	}
-	else if (address == 0xFF55) {
-		memorySpace[address] = data;
-		if (ColorGameBoyMode == true) {
-
-			if (vramDMATransferLength != 0 && (data & Bits::b7) == 0) {
-				vramDMATransferLength = 0;
-				vramDMATransferProgress = 0;
-				return;
+		else if (address == Address::Timer) { // TIMA 
+			if (writingToTIMA == false) { // writing will fail when TMA is being written to TIMA
+				WriteMemorySpace(address, data);
 			}
-
-			vramDMATransferSource = (memorySpace[0xFF51] << 8) | (memorySpace[0xFF52] & 0xF0);
-			vramDMATransferDestination = (memorySpace[0xFF53] << 8) | (memorySpace[0xFF54] & 0xF0);
-			vramDMATransferLength = data & 0x7F;
-			vramDMATransferLength++;
-			vramDMATransferLength *= 0x10;
-
-			if ((data & Bits::b7) == 0) {
-				for (word i = 0; i < vramDMATransferLength; i++) {
-					Write(vramDMATransferDestination + i, Read(vramDMATransferSource + i));
-				}
-				vramDMATransferLength = 0;
+		}
+		else if (address == Address::TimerModulo) { // TMA / Timer Module
+			WriteMemorySpace(address, data);
+			if (writingToTIMA == true) { // writing to TMA in the same cycle as TMA is being loaded into TIMA causes the same value to be written to TIMA
+				WriteMemorySpace(Address::Timer, data);
+			}
+		}
+		else if (address == Address::Channel1FrequencyHigh) {
+			WriteMemorySpace(address, data);
+			resetSC1Length = true;
+		}
+		else if (address == Address::Channel2FrequencyHigh) {
+			WriteMemorySpace(address, data);
+			resetSC2Length = true;
+		}
+		else if (address == Address::Channel3FrequencyHigh) {
+			WriteMemorySpace(address, data);
+			resetSC3Length = true;
+		}
+		else if (address == Address::Channel4Counter) {
+			WriteMemorySpace(address, data);
+			resetSC4Length = true;
+		}
+		else if (address == Address::SoundOnOFF) {
+			if (BitTest(data, 7) == true) {
+				byte val = ReadMemorySpace(address);
+				BitSet(val, 7);
+				WriteMemorySpace(address, val);
 			}
 			else {
-				vramDMATransferProgress = 0;
+				byte val = ReadMemorySpace(address);
+				BitReset(val, 7);
+				WriteMemorySpace(address, val);
 			}
 		}
-	}
-	else if (address == 0xFF69) {
-		if (ColorGameBoyMode == true) {
-			
-			byte index = memorySpace[0xFF68] & 0x3F;
-			BGColorPalette[index] = data;
-			
-			if ((memorySpace[0xFF68] & Bits::b7) != 0) {
-				memorySpace[0xFF68] = (memorySpace[0xFF68] + 1) & 0xBF;
-			}
+		else if (address == Address::LY) {
+			WriteMemorySpace(address, 0);
 		}
-		else {
-			memorySpace[address] = data;
-		}
-	}
-	else if (address == 0xFF6B) {
-		if (ColorGameBoyMode == true) {
+		else if (address == Address::DMA) { // DMA
 
-			byte index = memorySpace[0xFF6A] & 0x3F;
-			SpriteColorPalette[index] = data;
+			word DMAAddress = data;
+			DMAAddress <<= 8;
 
-			if ((memorySpace[0xFF6A] & Bits::b7) != 0) {
-				memorySpace[0xFF6A] = (memorySpace[0xFF6A] + 1) & 0xBF;
+			for (word i = 0; i < 0xA0; i++) {
+				OAM[i] = Read(DMAAddress + i);
+			}
+		}
+		else if (address == Address::PrepareSpeedSwitch) {
+			WriteMemorySpace(address, data | 0x7E);
+		}
+		else if (address == Address::VRAMBank) {
+			if (ColorGameBoyMode == true) {
+				currentVramBank = data & Bits::b0;
+				WriteMemorySpace(address, (~Bits::b0) | (data & Bits::b0));
+			}
+			else {
+				WriteMemorySpace(address, data);
+			}
+		}
+		else if (address == Address::VRAMDMA) {
+			WriteMemorySpace(address, data);
+			if (ColorGameBoyMode == true) {
+
+				if (vramDMATransferLength != 0 && (data & Bits::b7) == 0) {
+					vramDMATransferLength = 0;
+					vramDMATransferProgress = 0;
+					return;
+				}
+
+				vramDMATransferSource = (ReadMemorySpace(0xFF51) << 8) | (ReadMemorySpace(0xFF52) & 0xF0);
+				vramDMATransferDestination = (ReadMemorySpace(0xFF53) << 8) | (ReadMemorySpace(0xFF54) & 0xF0);
+				vramDMATransferLength = data & 0x7F;
+				vramDMATransferLength++;
+				vramDMATransferLength *= 0x10;
+
+				if ((data & Bits::b7) == 0) {
+					for (word i = 0; i < vramDMATransferLength; i++) {
+						Write(vramDMATransferDestination + i, Read(vramDMATransferSource + i));
+					}
+					vramDMATransferLength = 0;
+				}
+				else {
+					vramDMATransferProgress = 0;
+				}
+			}
+		}
+		else if (address == Address::GBColorBackgroundPaletteData) {
+			if (ColorGameBoyMode == true) {
+
+				byte index = ReadMemorySpace(Address::GBColorBackgroundPaletteIndex) & 0x3F;
+				BGColorPalette[index] = data;
+
+				if ((ReadMemorySpace(Address::GBColorBackgroundPaletteIndex) & Bits::b7) != 0) {
+					WriteMemorySpace(Address::GBColorBackgroundPaletteIndex, (ReadMemorySpace(Address::GBColorBackgroundPaletteIndex) + 1) & 0xBF);
+				}
+			}
+			else {
+				WriteMemorySpace(address, data);
+			}
+		}
+		else if (address == Address::GBColorSpritePaletteData) {
+			if (ColorGameBoyMode == true) {
+
+				byte index = ReadMemorySpace(Address::GBColorSpritePaletteIndex) & 0x3F;
+				SpriteColorPalette[index] = data;
+
+				if ((ReadMemorySpace(Address::GBColorSpritePaletteIndex) & Bits::b7) != 0) {
+					WriteMemorySpace(Address::GBColorSpritePaletteIndex, (ReadMemorySpace(Address::GBColorSpritePaletteIndex) + 1) & 0xBF);
+				}
+			}
+			else {
+				WriteMemorySpace(address, data);
+			}
+		}
+		else if (address == Address::WramBank) {
+			if (ColorGameBoyMode == true) {
+				currentWramBank = (data & 0x7);
+				if (currentWramBank == 0) { 
+					currentWramBank = 1;
+				}
+				WriteMemorySpace(address, data);
+			}
+			else {
+				WriteMemorySpace(address, data);
 			}
 		}
 		else {
-			memorySpace[address] = data;
+			WriteMemorySpace(address, data); // no special behaviour
 		}
-	}
-	else if (address == 0xFF70) {
-		if (ColorGameBoyMode == true) {
-			currentWramBank = (data & 0x7);
-			if(currentWramBank == 0) currentWramBank = 1;
-			memorySpace[address] = data;
-		}
-		else {
-			memorySpace[address] = data;
-		}
-	}
-	else {
-		memorySpace[address] = data; // no special behaviour
 	}
 }
 
@@ -608,8 +637,8 @@ void Memory::mbc5_40005FFF(byte data) {
 
 
 byte Memory::GetJoypadState() {
-
-	byte selectedKeys = memorySpace[Address::Joypad];
+	
+	byte selectedKeys = ReadMemorySpace(Address::Joypad);
 
 	selectedKeys = ~selectedKeys;
 	selectedKeys &= 0x30;
@@ -623,7 +652,7 @@ byte Memory::GetJoypadState() {
 		if (buttons.buttonB == true) buttonsPressed &= ~(1 << 1);
 		if (buttons.buttonA == true) buttonsPressed &= ~(1 << 0);
 
-		buttonsPressed &= ~Bits::b5;
+		buttonsPressed &= ~(1 << 5);
 	}
 	else if ((selectedKeys & 0x10) != 0) { // direction keys
 
@@ -632,7 +661,7 @@ byte Memory::GetJoypadState() {
 		if (buttons.left == true) buttonsPressed &= ~(1 << 1);
 		if (buttons.right == true) buttonsPressed &= ~(1 << 0);
 
-		buttonsPressed &= ~Bits::b4;
+		buttonsPressed &= ~(1 << 4);
 	}
 
 	return buttonsPressed;
@@ -648,7 +677,7 @@ void Memory::IncrementDivAndTimerRegisters(byte clocks) {
 
 		if (writingToTIMA == true) {
 			writingToTIMACounter++;
-			if (writingToTIMACounter > 4) { // it takes one cycle (4 clocks) to write TMA to TIMA
+			if (writingToTIMACounter > kClocksPerCycle) { // it takes one cycle (4 clocks) to write TMA to TIMA
 				writingToTIMA = false;
 			}
 		}
@@ -656,33 +685,35 @@ void Memory::IncrementDivAndTimerRegisters(byte clocks) {
 		dividerRegister++;
 
 		bool newBit = false;
-		switch (memorySpace[Address::TimerControl] & 0x3) {
+		switch (ReadMemorySpace(Address::TimerControl) & 0x3) {
 		case 0: newBit = BitTest(dividerRegister, 9); break;
 		case 1: newBit = BitTest(dividerRegister, 3); break;
 		case 2: newBit = BitTest(dividerRegister, 5); break;
 		case 3: newBit = BitTest(dividerRegister, 7); break;
 		}
 
-		newBit &= BitTest(memorySpace[Address::TimerControl], 2);
+		newBit &= BitTest(ReadMemorySpace(Address::TimerControl), 2);
 
 		if ((!newBit) & oldBit) {
-			if (memorySpace[Address::Timer] == 0xFF) { // about to overflow
+			if (ReadMemorySpace(Address::Timer) == 0xFF) { // about to overflow
 				timerOverflow = true;
 			}
-			memorySpace[Address::Timer]++;
+			WriteMemorySpace(Address::Timer, ReadMemorySpace(Address::Timer) + 1);
 		}
 
 		if (timerOverflow == true) {
 			timerOverflowCounter++;
-			if (timerOverflowCounter > 4) { // there is a one cycle (4 clocks) delay to detect if the timer overflows
+			if (timerOverflowCounter > kClocksPerCycle) { // there is a one cycle (4 clocks) delay to detect if the timer overflows
 
 				timerOverflow = false;
 
 				// if a value is written right after the timer overflows then timer isn't reset and the interupt flag register is unchanged
-				if (memorySpace[Address::Timer] == 0) {
+				if (ReadMemorySpace(Address::Timer) == 0) {
 
-					memorySpace[Address::Timer] = memorySpace[Address::TimerModulo];
-					BitSet(memorySpace[Address::InteruptFlag], 2);
+					WriteMemorySpace(Address::Timer, ReadMemorySpace(Address::TimerModulo));
+					byte flags = ReadMemorySpace(Address::InteruptFlag);
+					BitSet(flags, 2);
+					WriteMemorySpace(Address::InteruptFlag, flags);
 				}
 				writingToTIMA = true; // writing will fail when TMA is being written to TIMA
 			}
@@ -693,52 +724,7 @@ void Memory::IncrementDivAndTimerRegisters(byte clocks) {
 
 }
 
-void Memory::DumpMemory(std::string fileName) {
 
-	std::ofstream out;
-	out.open(fileName + ".dmp", std::ios::binary | std::ios::out | std::ios::trunc);
-
-	for (size_t i = 0; i <= 0xFFFF; i++) {
-
-		byte value = Read((word)i);
-		out << value;
-	}
-	out.close();
-}
-
-void Memory::DumpStack(word spAddress, std::string fileName) {
-
-	char hex[16] = { '0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'A', 'B', 'C', 'D', 'E', 'F' };
-
-	std::ofstream out;
-	out.open(fileName + ".dmp", std::ios::out | std::ios::trunc);
-
-	byte SPaddress1 = (spAddress & 0xF000) >> 4 * 3;
-	byte SPaddress2 = (spAddress & 0x0F00) >> 4 * 2;
-	byte SPaddress3 = (spAddress & 0x00F0) >> 4 * 1;
-	byte SPaddress4 = (spAddress & 0x000F);
-
-	out << "current: " << hex[SPaddress1] << hex[SPaddress2] << hex[SPaddress3] << hex[SPaddress4] << "\n";
-
-	for (size_t i = (spAddress + 1) - 0xFF; i <= (spAddress + 1) + 0xFF; i += 2) {
-
-		byte address1 = (i & 0xF000) >> 4 * 3;
-		byte address2 = (i & 0x0F00) >> 4 * 2;
-		byte address3 = (i & 0x00F0) >> 4 * 1;
-		byte address4 = (i & 0x000F);
-
-		byte value1 = (memorySpace[i] & 0xF0) >> 4;
-		byte value2 = memorySpace[i] & 0x0F;
-		byte value3 = (memorySpace[i + 1] & 0xF0) >> 4;
-		byte value4 = memorySpace[i + 1] & 0x0F;
-
-		out << hex[address1] << hex[address2] << hex[address3] << hex[address4] << ": ";
-		out << hex[value1] << hex[value2] << hex[value3] << hex[value4] << "\n";
-	}
-	out.close();
-
-
-}
 
 void Memory::SaveExternalRam(std::string fileName) {
 
@@ -755,6 +741,8 @@ void Memory::SaveExternalRam(std::string fileName) {
 
 	externalRamChanged = false;
 }
+
+
 
 void Memory::LoadExternalRam(std::string fileName) {
 

@@ -32,21 +32,6 @@ void CPU::flagReset(flagType flag) {
 	registers.f &= ~flag;
 }
 
-bool CPU::bitTest(byte value, Bits bit) {
-
-	return (value & bit) != 0;
-}
-
-void CPU::bitSet(byte& value, Bits bit) {
-
-	value |= bit;
-}
-
-void CPU::bitReset(byte& value, Bits bit) {
-
-	value &= ~bit;
-}
-
 void CPU::setInterrupt(interruptFlags flag) {
 	
 	byte interuptFlags = memory->Read(Address::InteruptFlag);
@@ -723,11 +708,11 @@ word CPU::STOP() {
 		if ((speedSwitch & Bits::b0) != 0) {
 			if (speedMode == 1) {
 				speedMode = 2;
-				bitSet(speedSwitch, Bits::b7);
+				BitSet(speedSwitch, 7);
 			}
 			else {
 				speedMode = 1;
-				bitReset(speedSwitch, Bits::b7);
+				BitReset(speedSwitch, 7);
 			}
 			speedSwitch &= ~Bits::b0;
 			memory->Write(Address::PrepareSpeedSwitch, speedSwitch);
@@ -763,11 +748,11 @@ word CPU::RLC(byte& reg, bool isRegisterA, int clocks) {
 
 	byte result = reg;
 
-	bool bit7 = bitTest(result, Bits::b7);
+	bool bit7 = BitTest(result, 7);
 
 	result <<= 1;
 	if (bit7 == true) {
-		bitSet(result, Bits::b0);
+		BitSet(result, 0);
 	}
 
 	if (isRegisterA == true) {
@@ -794,11 +779,11 @@ word CPU::RLC(word address) {
 	byte result = memory->Read(address);
 	AdvanceClocks(4);
 
-	bool bit7 = bitTest(result, Bits::b7);
+	bool bit7 = BitTest(result, 7);
 
 	result <<= 1;
 	if (bit7 == true) {
-		bitSet(result, Bits::b0);
+		BitSet(result, 0);
 	}
 
 	zeroFlag(result);
@@ -817,11 +802,11 @@ word CPU::RL(byte & reg, bool isRegisterA, int clocks) {
 
 	byte result = reg;
 
-	bool bit7 = bitTest(result, Bits::b7);
+	bool bit7 = BitTest(result, 7);
 
 	result <<= 1;
 	if (flagTest(flagType::carry) == true) {
-		bitSet(result, Bits::b0);
+		BitSet(result, 0);
 	}
 
 	if (isRegisterA == true) {
@@ -848,11 +833,11 @@ word CPU::RL(word address) {
 	byte result = memory->Read(address);
 	AdvanceClocks(4);
 
-	bool bit7 = bitTest(result, Bits::b7);
+	bool bit7 = BitTest(result, 7);
 
 	result <<= 1;
 	if (flagTest(flagType::carry) == true) {
-		bitSet(result, Bits::b0);
+		BitSet(result, 0);
 	}
 
 	zeroFlag(result);
@@ -871,11 +856,11 @@ word CPU::RRC(byte & reg, bool isRegisterA, int clocks) {
 
 	byte result = reg;
 
-	bool bit0 = bitTest(result, Bits::b0);
+	bool bit0 = BitTest(result, 0);
 
 	result >>= 1;
 	if (bit0 == true) {
-		bitSet(result, Bits::b7);
+		BitSet(result, 7);
 	}
 
 	if (isRegisterA == true) {
@@ -902,11 +887,11 @@ word CPU::RRC(word address) {
 	byte result = memory->Read(address);
 	AdvanceClocks(4);
 
-	bool bit0 = bitTest(result, Bits::b0);
+	bool bit0 = BitTest(result, 0);
 
 	result >>= 1;
 	if (bit0 == true) {
-		bitSet(result, Bits::b7);
+		BitSet(result, 7);
 	}
 
 	zeroFlag(result);
@@ -925,11 +910,11 @@ word CPU::RR(byte & reg, bool isRegisterA, int clocks) {
 
 	byte result = reg;
 
-	bool bit0 = bitTest(result, Bits::b0);
+	bool bit0 = BitTest(result, 0);
 
 	result >>= 1;
 	if (flagTest(flagType::carry) == true) {
-		bitSet(result, Bits::b7);
+		BitSet(result, 7);
 	}
 
 	if (isRegisterA == true) {
@@ -956,7 +941,7 @@ word CPU::RR(word address) {
 	byte result = memory->Read(address);
 	AdvanceClocks(4);
 
-	bool bit0 = bitTest(result, Bits::b0);
+	bool bit0 = BitTest(result, 0);
 
 	result >>= 1;
 	if (flagTest(flagType::carry) == true) {
@@ -979,10 +964,10 @@ word CPU::SLA(byte & reg) {
 
 	byte result = reg;
 
-	bool bit7 = bitTest(result, Bits::b7);
+	bool bit7 = BitTest(result, 7);
 
 	result <<= 1;
-	bitReset(result, Bits::b0);
+	BitReset(result, 0);
 
 	zeroFlag(result);
 	flagReset(flagType::negative);
@@ -1002,10 +987,10 @@ word CPU::SLA(word address) {
 	byte result = memory->Read(address);
 	AdvanceClocks(4);
 
-	bool bit7 = bitTest(result, Bits::b7);
+	bool bit7 = BitTest(result, 7);
 
 	result <<= 1;
-	bitReset(result, Bits::b0);
+	BitReset(result, 0);
 
 	zeroFlag(result);
 	flagReset(flagType::negative);
@@ -1023,12 +1008,12 @@ word CPU::SRA(byte & reg) {
 
 	byte result = reg;
 
-	bool bit7 = bitTest(result, Bits::b7);
-	bool bit0 = bitTest(result, Bits::b0);
+	bool bit7 = BitTest(result, 7);
+	bool bit0 = BitTest(result, 0);
 
 	result >>= 1;
 	if (bit7 == true) {
-		bitSet(result, Bits::b7); // keep MSB the same
+		BitSet(result, 7); // keep MSB the same
 	}
 
 	zeroFlag(result);
@@ -1049,12 +1034,12 @@ word CPU::SRA(word address) {
 	byte result = memory->Read(address);
 	AdvanceClocks(4);
 
-	bool bit7 = bitTest(result, Bits::b7);
-	bool bit0 = bitTest(result, Bits::b0);
+	bool bit7 = BitTest(result, 7);
+	bool bit0 = BitTest(result, 0);
 
 	result >>= 1;
 	if (bit7 == true) {
-		bitSet(result, Bits::b7); // keep MSB the same
+		BitSet(result, 7); // keep MSB the same
 	}
 
 	zeroFlag(result);
@@ -1073,10 +1058,10 @@ word CPU::SRL(byte & reg) {
 
 	byte result = reg;
 
-	bool bit0 = bitTest(result, Bits::b0);
+	bool bit0 = BitTest(result, 0);
 
 	result >>= 1;
-	bitReset(result, Bits::b7);
+	BitReset(result, 7);
 
 	zeroFlag(result);
 	flagReset(flagType::negative);
@@ -1096,10 +1081,10 @@ word CPU::SRL(word address) {
 	byte result = memory->Read(address);
 	AdvanceClocks(4);
 
-	bool bit0 = bitTest(result, Bits::b0);
+	bool bit0 = BitTest(result, 0);
 
 	result >>= 1;
-	bitReset(result, Bits::b7);
+	BitReset(result, 7);
 
 	zeroFlag(result);
 	flagReset(flagType::negative);
@@ -1587,9 +1572,9 @@ void CPU::LCDStatusRegister(word& cyclesThisLine) {
 	byte LCDC = memory->Read(Address::LCDC);
 	byte LCDCStatus = memory->Read(Address::LCDCStatus);
 
-	if (bitTest(LCDC, Bits::b7) == false) {
+	if (BitTest(LCDC, 7) == false) {
 
-		memory->memorySpace[Address::LY] = 0;
+		memory->Write(Address::LY, 0);
 		cyclesThisLine = 0;
 		LCDCStatus &= ~0x03;
 	}
@@ -1598,32 +1583,32 @@ void CPU::LCDStatusRegister(word& cyclesThisLine) {
 		byte LY = memory->Read(Address::LY);
 		byte mode = LCDCStatus & 0x3;
 
-		if (LY >= 144 && mode != 0x1) { // mode 1
+		if (LY >= kScreenHeight && mode != 0x1) { // mode 1
 
-			bitSet(LCDCStatus, Bits::b0);
-			bitReset(LCDCStatus, Bits::b1);
-			if (bitTest(LCDCStatus, Bits::b4) == true) {
+			BitSet(LCDCStatus, 0);
+			BitReset(LCDCStatus, 1);
+			if (BitTest(LCDCStatus, Bit::LCDSTAT::Mode1VBlankInterrupt) == true) {
 				setInterrupt(interruptFlags::LCDSTAT);
 			}
 		}
 		else if ((cyclesThisLine < 80) && mode != 0x2) { // mode 2
 
-			bitReset(LCDCStatus, Bits::b0);
-			bitSet(LCDCStatus, Bits::b1);
-			if (bitTest(LCDCStatus, Bits::b5) == true) {
+			BitReset(LCDCStatus, 0);
+			BitSet(LCDCStatus, 1);
+			if (BitTest(LCDCStatus, Bit::LCDSTAT::Mode2OAMInterrupt) == true) {
 				setInterrupt(interruptFlags::LCDSTAT);
 			}
 		}
 		else if ((cyclesThisLine < (80 + 168)) && mode != 0x3) { // mode 3
 
-			bitSet(LCDCStatus, Bits::b0);
-			bitSet(LCDCStatus, Bits::b1);
+			BitSet(LCDCStatus, 0);
+			BitSet(LCDCStatus, 1);
 		}
 		else if (mode != 0x0) { // mode 0
 
-			bitReset(LCDCStatus, Bits::b0);
-			bitReset(LCDCStatus, Bits::b1);
-			if (bitTest(LCDCStatus, Bits::b3) == true) {
+			BitReset(LCDCStatus, 0);
+			BitReset(LCDCStatus, 1);
+			if (BitTest(LCDCStatus, Bit::LCDSTAT::Mode0HBlankInterrupt) == true) {
 				setInterrupt(interruptFlags::LCDSTAT);
 			}
 		}
@@ -1633,7 +1618,7 @@ void CPU::LCDStatusRegister(word& cyclesThisLine) {
 	byte LY = memory->Read(Address::LY);
 	int lastLine = LY - 1;
 	if (lastLine < 0) {
-		lastLine = 153;
+		lastLine = kLastScanLine;
 	}
 
 	if (LY == LYCompare && lastLY == lastLine) {

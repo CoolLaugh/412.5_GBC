@@ -42,6 +42,7 @@ public:
 
 	int scale = 500;
 	int BufferAmount = (44100 / 10);
+	bool enabled = true;
 
 	APU();
 	~APU();
