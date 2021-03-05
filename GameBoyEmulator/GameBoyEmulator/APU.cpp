@@ -36,7 +36,7 @@ word APU::frequencyChange(word lastFrequency) {
 	return frequency;
 }
 
-void APU::step(int clocks) {
+void APU::step(int clocks, int speedmode) {
 
 	if (enabled == false) {
 		channel1.buffer.clear();
@@ -63,7 +63,7 @@ void APU::step(int clocks) {
 		resetSC4Length(memory->Read(Address::Channel4SoundLength) & 0x3F);
 	}
 
-	for (size_t i = 0; i < clocks; i++) {
+	for (size_t i = 0; i < (clocks / speedmode); i++) {
 
 		frameSequencer(channel1, Address::Channel1FrequencyHigh);
 		sweep(channel1);

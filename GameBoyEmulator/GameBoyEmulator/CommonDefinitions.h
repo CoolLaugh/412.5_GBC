@@ -25,6 +25,7 @@ const int kBGPriority = 0x10;
 const int kLastScanLine = 153;
 const int kClocksPerCycle = 4;
 const int kRomBankSize = 0x4000;
+const int kExtendedOpcodes = 0xCB;
 
 
 
@@ -71,7 +72,7 @@ struct Bit {
 
 struct Address {
 	typedef enum {
-
+		// regions of memory that belong to different purposes
 		CartridgeStart = 0x0000,
 		CartridgeBank0End = 0x3FFF,
 		CartridgeBankNStart = 0x4000,
@@ -88,20 +89,20 @@ struct Address {
 		OAMEnd = 0xFE9F,
 		NonBankMemoryStart = 0xFF00,
 
-
+		// cartridge header information
 		CGBFlag = 0x0143,
 		CartridgeType = 0x0147,
 		RomSize = 0x0148,
 		RamSize = 0x0149,
 
+		// graphics areas
 		TilePattern0 = 0x8000,
 		TilePattern1 = 0x8800,
-
 		BGWTileInfo0 = 0x9800,
 		BGWTileInfo1 = 0x9C00,
-
 		SpriteAttributes = 0xFE00,
 
+		// IO registers
 		Joypad = 0xFF00,
 		SerialTransfer = 0xFF01,
 		SIOControl = 0xFF02,
@@ -111,6 +112,7 @@ struct Address {
 		TimerControl = 0xFF07,
 		InteruptFlag = 0xFF0F,
 
+		// audio IO
 		Channel1Sweep = 0xFF10,
 		Channel1SoundLengthWavePatternDuty = 0xFF11,
 		Channel1VolumeEnvlope = 0xFF12,
@@ -138,6 +140,7 @@ struct Address {
 		SoundOutputSelection = 0xFF25,
 		SoundOnOFF = 0xFF26,
 
+		// more IO registers
 		LCDC = 0xFF40,
 		LCDCStatus = 0xFF41,
 		ScrollY = 0xFF42,
@@ -176,14 +179,22 @@ enum Bits {
 	b7 = (1 << 7)
 };
 
-bool BitTest(byte value, int bit);
+struct SplitWord {
+
+	byte lsb;
+	byte msb;
+};
+
+bool BitTest(byte value, int bit); // right to left, return true if bit is set (1)
 bool BitTestReverse(byte value, int bit); // order of bits is reversed
 void BitSet(byte& value, int bit);
 void BitReset(byte& value, int bit);
-
 bool BitTest(word value, int bit);
 
 std::string ToHex(byte value);
+
+word Combinebytes(byte value1, byte value2);
+SplitWord SplitBytes(word value);
 
 
 static std::string OpcodeNames[] = {	"NOP", "LD16 BC", "A->(BC)", "INC16 BC" , "INC B" , "DEC B" , "LD B" , "RLC A" , "SP->(NN)" , "ADDHL BC" , "(BC)->A" , "DEC16 BC" , "INC C" , "DEC C" , "LD C" , "RRC A", // 0

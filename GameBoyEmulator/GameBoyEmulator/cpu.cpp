@@ -83,6 +83,8 @@ word CPU::LDreg(byte & reg1, byte & reg2) {
 	return 4; // cycles
 }
 
+
+
 // load value from memory address
 word CPU::LDRegFromMemory(byte & reg, word address) {
 
@@ -92,6 +94,8 @@ word CPU::LDRegFromMemory(byte & reg, word address) {
 	return 8; // cycles
 }
 
+
+// load (HL) into register
 word CPU::LDregHL(byte & reg) {
 
 	word address = Combinebytes(registers.l, registers.h);
@@ -100,6 +104,8 @@ word CPU::LDregHL(byte & reg) {
 	AdvanceClocks(8);
 	return 8; // cycles
 }
+
+
 
 // put stackpointer plus immediate value into hl
 word CPU::LDHL() {
@@ -120,6 +126,8 @@ word CPU::LDHL() {
 	return 12; // cycles
 }
 
+
+// write stackpointer to immediate address
 word CPU::WriteSP() {
 
 	word address = Combinebytes(memory->Read(registers.pc), memory->Read(registers.pc + 1));
@@ -133,6 +141,8 @@ word CPU::WriteSP() {
 	return 20;
 }
 
+
+
 // load immediate 16-bit value into register pair
 word CPU::LD16(byte & reg1, byte & reg2) {
 
@@ -143,6 +153,9 @@ word CPU::LD16(byte & reg1, byte & reg2) {
 	return 12;
 }
 
+
+
+// load immediate 16-bit value into register
 word CPU::LD16(word & reg1) {
 
 	reg1 = Combinebytes(memory->Read(registers.pc), memory->Read(registers.pc + 1));
@@ -151,6 +164,8 @@ word CPU::LD16(word & reg1) {
 	AdvanceClocks(12);
 	return 12;
 }
+
+
 
 // push two bytes onto the stack from a register pair
 word CPU::Push(byte & reg1, byte & reg2) {
@@ -164,6 +179,8 @@ word CPU::Push(byte & reg1, byte & reg2) {
 	return 16;
 }
 
+
+
 // pop two bytes off the stack into a register pair
 word CPU::Pop(byte & reg1, byte & reg2) {
 
@@ -176,6 +193,8 @@ word CPU::Pop(byte & reg1, byte & reg2) {
 	return 12;
 }
 
+
+
 // indicates if the carry flag is set after addition from bit 3
 void CPU::halfCarryFlag(byte value1, byte value2, bool carry) {
 
@@ -187,6 +206,8 @@ void CPU::halfCarryFlag(byte value1, byte value2, bool carry) {
 	flagSet(flagType::halfCarry, (value1 + value2) > 0xF);
 }
 
+
+
 // indicates if the carry flag is set after addition from bit 11
 void CPU::halfCarryFlag16(word value1, word value2) {
 
@@ -196,6 +217,8 @@ void CPU::halfCarryFlag16(word value1, word value2) {
 	flagSet(flagType::halfCarry, (value1 + value2) > 0xF);
 }
 
+
+
 void CPU::halfCarryFlag16Hi(word value1, word value2) {
 
 	value1 &= 0xFFF;
@@ -203,6 +226,8 @@ void CPU::halfCarryFlag16Hi(word value1, word value2) {
 
 	flagSet(flagType::halfCarry, (value1 + value2) > 0xFFF);
 }
+
+
 
 // indicates if the carry flag is set after addition from bit 7
 void CPU::carryFlag(byte value1, byte value2, bool carry) {
@@ -215,7 +240,9 @@ void CPU::carryFlag(byte value1, byte value2, bool carry) {
 	flagSet(flagType::carry, (Wvalue1 + Wvalue2) > 0xFF);
 }
 
-// indicates if the carry flag is set after 16-bit addition from bit 15
+
+
+// indicates if the carry flag is set after 16-bit addition from bit 7
 void CPU::carryFlag16(word value1, word value2) {
 
 	value1 &= 0xFF;
@@ -224,6 +251,8 @@ void CPU::carryFlag16(word value1, word value2) {
 	flagSet(flagType::carry, (value1 + value2) > 0xFF);
 }
 
+
+// indicates if the carry flag is set after 16-bit addition from bit 15
 void CPU::carryFlag16Hi(word value1, word value2) {
 
 	int result = value1;
@@ -231,6 +260,8 @@ void CPU::carryFlag16Hi(word value1, word value2) {
 
 	flagSet(flagType::carry, result > 0xFFFF);
 }
+
+
 
 // indicates if a bit is borrowed from bit 4 after a subtraction
 void CPU::halfNoBorrow(byte value1, byte value2, bool carry) {
@@ -242,6 +273,8 @@ void CPU::halfNoBorrow(byte value1, byte value2, bool carry) {
 	flagSet(flagType::halfCarry, value1 < value2);
 }
 
+
+
 // indicates if a bit is borrowed after a subtraction
 void CPU::noBorrow(byte value1, byte value2, bool carry) {
 
@@ -252,10 +285,15 @@ void CPU::noBorrow(byte value1, byte value2, bool carry) {
 	flagSet(flagType::carry, Wvalue1 < Wvalue2);
 }
 
+
+
+// sets the cpu zero flag based on the result
 void CPU::zeroFlag(byte val) {
 
 	flagSet(flagType::zero, val == 0);
 }
+
+
 
 // add value to a, ignore carry
 word CPU::ADD(byte value, int clocks) {
@@ -272,6 +310,8 @@ word CPU::ADD(byte value, int clocks) {
 	AdvanceClocks(clocks);
 	return clocks; // sometimes add is 8 cycles, check the manual
 }
+
+
 
 // add value to a, include carry
 word CPU::ADDC(byte value, int clocks) {
@@ -297,6 +337,8 @@ word CPU::ADDC(byte value, int clocks) {
 	return clocks;
 }
 
+
+
 // subtract value from a, ignore carry
 word CPU::SUB(byte value, int clocks) {
 
@@ -312,6 +354,8 @@ word CPU::SUB(byte value, int clocks) {
 	AdvanceClocks(clocks);
 	return clocks;
 }
+
+
 
 // subtract value from a, include carry
 word CPU::SUBC(byte value, int clocks) {
@@ -337,6 +381,8 @@ word CPU::SUBC(byte value, int clocks) {
 	return clocks;
 }
 
+
+
 // and value with register a
 word CPU::AND(byte value, int clocks) {
 
@@ -352,6 +398,8 @@ word CPU::AND(byte value, int clocks) {
 	AdvanceClocks(clocks);
 	return clocks;
 }
+
+
 
 // or value with register a
 word CPU::OR(byte value, int clocks) {
@@ -369,6 +417,8 @@ word CPU::OR(byte value, int clocks) {
 	return clocks;
 }
 
+
+
 // xor value with register a
 word CPU::XOR(byte value, int clocks) {
 
@@ -385,6 +435,8 @@ word CPU::XOR(byte value, int clocks) {
 	return clocks;
 }
 
+
+
 // compare value to register a and set flags accordingly
 word CPU::CP(byte value, int clocks) {
 
@@ -398,6 +450,8 @@ word CPU::CP(byte value, int clocks) {
 	AdvanceClocks(clocks);
 	return clocks;
 }
+
+
 
 // increment register
 word CPU::INC(byte& reg) {
@@ -413,6 +467,8 @@ word CPU::INC(byte& reg) {
 	AdvanceClocks(4);
 	return 4;
 }
+
+
 
 // increment memory location pointed to by register hl
 word CPU::INCMemory(word address) {
@@ -431,6 +487,8 @@ word CPU::INCMemory(word address) {
 	return 12;
 }
 
+
+
 // decrement register
 word CPU::DEC(byte& reg) {
 
@@ -445,6 +503,8 @@ word CPU::DEC(byte& reg) {
 	AdvanceClocks(4);
 	return 4;
 }
+
+
 
 // decrement memory location pointed to by register hl
 word CPU::DECMemory(word address) {
@@ -462,6 +522,8 @@ word CPU::DECMemory(word address) {
 	AdvanceClocks(8);
 	return 12; 
 }
+
+
 
 // add value to register combination hl
 word CPU::ADDHL(word value) {
@@ -482,6 +544,8 @@ word CPU::ADDHL(word value) {
 	return 8;
 }
 
+
+
 // add immediate signed value to stack pointer
 word CPU::ADDSP() {
 
@@ -501,6 +565,8 @@ word CPU::ADDSP() {
 	return 16;
 }
 
+
+
 // increment two registers as if they were one 16 bit register
 word CPU::INC16(byte & reg1, byte & reg2) {
 
@@ -517,6 +583,8 @@ word CPU::INC16(byte & reg1, byte & reg2) {
 	return 8;
 }
 
+
+
 // increment 16 bit register
 word CPU::INC16(word & reg) {
 
@@ -525,6 +593,8 @@ word CPU::INC16(word & reg) {
 	AdvanceClocks(8);
 	return 8;
 }
+
+
 
 // decrement two registers as if they were one 16 bit register
 word CPU::DEC16(byte & reg1, byte & reg2) {
@@ -543,6 +613,7 @@ word CPU::DEC16(byte & reg1, byte & reg2) {
 }
 
 
+
 // decrement 16 bit register
 word CPU::DEC16(word & reg) {
 
@@ -551,6 +622,8 @@ word CPU::DEC16(word & reg) {
 	AdvanceClocks(8);
 	return 8;
 }
+
+
 
 // swap the lower and upper nibbles
 word CPU::SWAP(byte & reg) {
@@ -573,6 +646,8 @@ word CPU::SWAP(byte & reg) {
 	AdvanceClocks(8);
 	return 8;
 }
+
+
 
 // swap the lower and upper nibbles (for memory)
 word CPU::SWAP(word address) {
@@ -600,6 +675,8 @@ word CPU::SWAP(word address) {
 	return 16;
 }
 
+
+
 // swap the lower and upper nibble of a byte in memory
 word CPU::SWAPMemory() {
 
@@ -614,6 +691,8 @@ word CPU::SWAPMemory() {
 	AdvanceClocks(16);
 	return 16;
 }
+
+
 
 // decimal adjust register A
 // copied https://www.reddit.com/r/EmuDev/comments/cdtuyw/gameboy_emulator_fails_blargg_daa_test/etwcyvy/
@@ -645,6 +724,8 @@ word CPU::DAA() {
 	return 4; // cycles
 }
 
+
+
 // complement A register
 word CPU::CPL() {
 
@@ -656,6 +737,8 @@ word CPU::CPL() {
 	AdvanceClocks(4);
 	return 4;
 }
+
+
 
 // complement carry flag
 word CPU::CCF() {
@@ -669,6 +752,8 @@ word CPU::CCF() {
 	return 4;
 }
 
+
+
 // set carry flag
 word CPU::SCF() {
 
@@ -680,12 +765,16 @@ word CPU::SCF() {
 	return 4;
 }
 
+
+
 // no operation
 word CPU::NOP() {
 	// does nothing
 	AdvanceClocks(4);
 	return 4;
 }
+
+
 
 // power down cpu until an interrupt occurs
 word CPU::HALT() {
@@ -694,6 +783,8 @@ word CPU::HALT() {
 	AdvanceClocks(4);
 	return 4;
 }
+
+
 
 // halt cpu and display until button push
 word CPU::STOP() {
@@ -727,6 +818,8 @@ word CPU::STOP() {
 	return 4;
 }
 
+
+
 // disable interupts
 word CPU::DI() {
 	interupt = false;
@@ -735,6 +828,8 @@ word CPU::DI() {
 	return 4;
 }
 
+
+
 // enable interupts
 // EI has a one cycle delay but DI and RETI do not
 word CPU::EI() {
@@ -742,6 +837,8 @@ word CPU::EI() {
 	AdvanceClocks(4);
 	return 4;
 }
+
+
 
 // rotate left bit 7 to carry
 word CPU::RLC(byte& reg, bool isRegisterA, int clocks) {
@@ -772,6 +869,8 @@ word CPU::RLC(byte& reg, bool isRegisterA, int clocks) {
 	return clocks;
 }
 
+
+
 // rotate left bit 7 to carry (for memory)
 word CPU::RLC(word address) {
 
@@ -796,6 +895,8 @@ word CPU::RLC(word address) {
 	AdvanceClocks(8);
 	return 16;
 }
+
+
 
 // rotate left through carry
 word CPU::RL(byte & reg, bool isRegisterA, int clocks) {
@@ -826,6 +927,8 @@ word CPU::RL(byte & reg, bool isRegisterA, int clocks) {
 	return clocks;
 }
 
+
+
 // rotate left through carry (for memory)
 word CPU::RL(word address) {
 
@@ -850,6 +953,8 @@ word CPU::RL(word address) {
 	AdvanceClocks(8);
 	return 16;
 }
+
+
 
 // rotate right bit 7 to carry
 word CPU::RRC(byte & reg, bool isRegisterA, int clocks) {
@@ -880,6 +985,8 @@ word CPU::RRC(byte & reg, bool isRegisterA, int clocks) {
 	return clocks;
 }
 
+
+
 // rotate right bit 7 to carry (for memory)
 word CPU::RRC(word address) {
 
@@ -904,6 +1011,8 @@ word CPU::RRC(word address) {
 	AdvanceClocks(8);
 	return 16;
 }
+
+
 
 // rotate right through carry
 word CPU::RR(byte & reg, bool isRegisterA, int clocks) {
@@ -934,6 +1043,8 @@ word CPU::RR(byte & reg, bool isRegisterA, int clocks) {
 	return clocks;
 }
 
+
+
 // rotate right through carry (for memory)
 word CPU::RR(word address) {
 
@@ -959,6 +1070,8 @@ word CPU::RR(word address) {
 	return 16;
 }
 
+
+
 // shift left into carry lsb set to 0
 word CPU::SLA(byte & reg) {
 
@@ -979,6 +1092,8 @@ word CPU::SLA(byte & reg) {
 	AdvanceClocks(8);
 	return 8;
 }
+
+
 
 // shift left into carry lsb set to 0 (for memory)
 word CPU::SLA(word address) {
@@ -1003,6 +1118,8 @@ word CPU::SLA(word address) {
 	return 16;
 }
 
+
+
 // shift right into carry, msb stays the same
 word CPU::SRA(byte & reg) {
 
@@ -1026,6 +1143,8 @@ word CPU::SRA(byte & reg) {
 	AdvanceClocks(8);
 	return 8;
 }
+
+
 
 // shift right into carry, msb stays the same (for memory)
 word CPU::SRA(word address) {
@@ -1053,6 +1172,8 @@ word CPU::SRA(word address) {
 	return 16;
 }
 
+
+
 // shift right into carry msb set to 0
 word CPU::SRL(byte & reg) {
 
@@ -1073,6 +1194,8 @@ word CPU::SRL(byte & reg) {
 	AdvanceClocks(8);
 	return 8;
 }
+
+
 
 // shift right into carry msb set to 0 (for memory)
 word CPU::SRL(word address) {
@@ -1097,6 +1220,8 @@ word CPU::SRL(word address) {
 	return 16;
 }
 
+
+
 // check bit and set flags
 word CPU::BIT(byte reg, byte bit) {
 
@@ -1111,6 +1236,8 @@ word CPU::BIT(byte reg, byte bit) {
 	return 8;
 }
 
+
+// evaluate a bit in the address pointed to by HL
 word CPU::BITHL(byte bit) {
 
 	AdvanceClocks(4);
@@ -1118,6 +1245,8 @@ word CPU::BITHL(byte bit) {
 
 	return BIT(memVal, bit);
 }
+
+
 
 // set bit
 word CPU::SET(byte& reg, byte bit) {
@@ -1130,7 +1259,9 @@ word CPU::SET(byte& reg, byte bit) {
 	return 8;
 }
 
-// set bit
+
+
+// set bit in memory
 word CPU::SET(word address, byte bit) {
 
 	byte bitmask = 1 << bit;
@@ -1147,6 +1278,8 @@ word CPU::SET(word address, byte bit) {
 	return 16;
 }
 
+
+
 // reset bit
 word CPU::RES(byte& reg, byte bit) {
 
@@ -1159,7 +1292,9 @@ word CPU::RES(byte& reg, byte bit) {
 	return 8;
 }
 
-// reset bit
+
+
+// reset bit in memory
 word CPU::RES(word address, byte bit) {
 
 	byte bitmask = 1 << bit;
@@ -1177,6 +1312,8 @@ word CPU::RES(word address, byte bit) {
 	return 16;
 }
 
+
+
 // jump
 word CPU::JP() {
 
@@ -1186,6 +1323,8 @@ word CPU::JP() {
 	AdvanceClocks(16);
 	return 16;
 }
+
+
 
 // conditional jump
 word CPU::JPcc(condition cdn) {
@@ -1206,6 +1345,8 @@ word CPU::JPcc(condition cdn) {
 	return cycles;
 }
 
+
+
 // jump to hl
 word CPU::JPHL() {
 
@@ -1215,6 +1356,8 @@ word CPU::JPHL() {
 	AdvanceClocks(4);
 	return 4;
 }
+
+
 
 // relative jump
 word CPU::JR() {
@@ -1226,6 +1369,8 @@ word CPU::JR() {
 	AdvanceClocks(12);
 	return 12;
 }
+
+
 
 // conditional relative jump
 word CPU::JRcc(condition cdn) {
@@ -1246,6 +1391,8 @@ word CPU::JRcc(condition cdn) {
 	return cycles;
 }
 
+
+
 // call
 word CPU::CALL() {
 
@@ -1262,6 +1409,8 @@ word CPU::CALL() {
 	AdvanceClocks(24);
 	return 24;
 }
+
+
 
 // conditional call
 word CPU::CALLcc(condition cdn) {
@@ -1297,6 +1446,8 @@ word CPU::CALLcc(condition cdn) {
 	return cycles;
 }
 
+
+
 // restart
 word CPU::RST(short offset) {
 
@@ -1312,6 +1463,8 @@ word CPU::RST(short offset) {
 	return 16;
 }
 
+
+
 // return
 word CPU::RET() {
 
@@ -1325,6 +1478,8 @@ word CPU::RET() {
 	AdvanceClocks(16);
 	return 16;
 }
+
+
 
 // conditional return
 word CPU::RETcc(condition cdn) {
@@ -1354,6 +1509,8 @@ word CPU::RETcc(condition cdn) {
 	return cycles;
 }
 
+
+
 // return and enable interrupts
 word CPU::RETI() {
 
@@ -1370,6 +1527,8 @@ word CPU::RETI() {
 	return 16;
 }
 
+
+
 // decrement two registers as one 16 bit registers
 void CPU::decrement16reg(byte & reg1, byte & reg2) {
 
@@ -1379,6 +1538,8 @@ void CPU::decrement16reg(byte & reg1, byte & reg2) {
 	reg1 = (combined >> 8);
 }
 
+
+
 // increment two registers as one 16 bit registers
 void CPU::increment16reg(byte & reg1, byte & reg2) {
 
@@ -1387,6 +1548,8 @@ void CPU::increment16reg(byte & reg1, byte & reg2) {
 	reg2 = (combined & 0xFF);
 	reg1 = (combined >> 8);
 }
+
+
 
 // combine multiple registers into word
 word CPU::Combinebytes(byte value1, byte value2) {
@@ -1398,6 +1561,8 @@ word CPU::Combinebytes(byte value1, byte value2) {
 	return combine;
 }
 
+
+
 // seperate word into seperate bytes for multiple registers
 std::pair<byte, byte> CPU::splitBytes(word value) {
 
@@ -1407,23 +1572,9 @@ std::pair<byte, byte> CPU::splitBytes(word value) {
 	return std::make_pair(first, second);
 }
 
-word CPU::CombinebytesR(byte value1, byte value2) {
 
-	word combine = value1;
-	combine <<= 8;
-	combine |= value2;
 
-	return combine;
-}
-
-std::pair<byte, byte> CPU::splitBytesR(word value) {
-
-	byte first = (value >> 8) & 0xFF;
-	byte second = value & 0xFF;
-
-	return std::make_pair(first, second);
-}
-
+// clear the log file
 void CPU::cleanOutputState() {
 
 	std::ofstream out;
@@ -1431,6 +1582,9 @@ void CPU::cleanOutputState() {
 	out.close();
 }
 
+
+
+// output the current state of the cpu including registers, memory pointed to by HL and PC, and DIV and Timer registers
 void CPU::outputState() {
 
 	if (logState == false) {
@@ -1481,14 +1635,15 @@ void CPU::outputState() {
 	outputStateBuffer += OpcodeNames[memory->Read(registers.pc)];
 	outputStateBufferOpcodesOnly += OpcodeNames[memory->Read(registers.pc)];
 
-	if (memory->Read(registers.pc) == 0xCB) {
+	if (memory->Read(registers.pc) == kExtendedOpcodes) {
 		outputStateBuffer += ExtendedOpcodeNames[memory->Read(registers.pc + 1)];
 		outputStateBufferOpcodesOnly += ExtendedOpcodeNames[memory->Read(registers.pc + 1)];
 	}
 	outputStateBuffer += "\n";
 	outputStateBufferOpcodesOnly += "\n";
 
-	if (outputStateBuffer.size() > 10000000) {
+	// wait to write to file because file access is slow
+	if (outputStateBuffer.size() > 10000000) { 
 
 		std::ofstream out;
 		out.open("CPUStateLog.txt", std::ios::out | std::ios::app);
@@ -1505,6 +1660,9 @@ void CPU::outputState() {
 
 }
 
+
+
+// check interrupts and jumps to interrupt instruction start
 int CPU::performInterupts() {
 
 	int clocks = 0;
@@ -1567,6 +1725,7 @@ int CPU::performInterupts() {
 
 
 
+// update the LCD status register based on the current progress through the current LY / screen render
 void CPU::LCDStatusRegister(word& cyclesThisLine) {
 
 	byte LCDC = memory->Read(Address::LCDC);
@@ -1637,9 +1796,12 @@ void CPU::LCDStatusRegister(word& cyclesThisLine) {
 	memory->Write(Address::LCDCStatus, LCDCStatus);
 }
 
+
+
+// advance the hardware through time by the given number of clocks (4/8 mhz)
 void CPU::AdvanceClocks(int clocks) {
 
 	memory->IncrementDivAndTimerRegisters(clocks);
 	graphics->update(clocks, speedMode);
-	apu->step(clocks);
+	apu->step(clocks, speedMode);
 }

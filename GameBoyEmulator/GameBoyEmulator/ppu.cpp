@@ -278,7 +278,7 @@ void PPU::update(word clocksThisUpdate, int speedMode) {
 
 	lastLY = memory->Read(Address::LY);
 
-	if (clocksThisLine >= (clocksPerLine * speedMode)) {
+	if (clocksThisLine >= (kClocksPerScanLine * speedMode)) {
 
 		memory->WriteMemorySpace(Address::LY, memory->ReadMemorySpace(Address::LY) + 1);
 		if (memory->ReadMemorySpace(Address::LY) > kLastScanLine) {
@@ -287,7 +287,7 @@ void PPU::update(word clocksThisUpdate, int speedMode) {
 		}
 
 		lineDrawn = false;
-		clocksThisLine -= (clocksPerLine * speedMode);
+		clocksThisLine -= (kClocksPerScanLine * speedMode);
 	}
 
 	// the screen is drawn 150-225? clocks into a given line, 
@@ -452,6 +452,9 @@ void PPU::DrawBackgroundLine(int startX, int row, int screenY, int screenWidth, 
 	if (BitTest(LCDC, Bit::LCDC::BGTileMapDisplaySelect) == true) {
 		backgroundMapAddressRowStart = Address::BGWTileInfo1;
 	}
+	if (mainScreen == false && debugMapLocation != 0) {
+		backgroundMapAddressRowStart = debugMapLocation;
+	}
 	backgroundMapAddressRowStart += (row / 8) * 32;
 
 	byte BGP = memory->Read(Address::BGWPalette);
@@ -462,6 +465,15 @@ void PPU::DrawBackgroundLine(int startX, int row, int screenY, int screenWidth, 
 		int backgroundX = (screenX + startX) % kBackgroundLayerSize; // controlls where the background pixel is drawn from
 		word backgroundMapAddress = backgroundMapAddressRowStart + (backgroundX / 8);
 		word memoryTileAddress = GetTileDataAddress(LCDC, backgroundMapAddress); // address of tile data
+
+		if (mainScreen == false && debugTileLocation != 0) {
+			if (debugTileLocation == Address::TilePattern0) {
+				memoryTileAddress = GetTileDataAddress(0x10, backgroundMapAddress);
+			}
+			else if (debugTileLocation == Address::TilePattern1) {
+				memoryTileAddress = GetTileDataAddress(0x00, backgroundMapAddress);
+			}
+		}
 
 		bool yFlip = false;
 		bool xFlip = false;

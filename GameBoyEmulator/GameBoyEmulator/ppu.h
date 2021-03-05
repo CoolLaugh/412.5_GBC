@@ -24,11 +24,10 @@ public:
 	byte* ColorPalettePixels;
 	std::vector<byte*> spritePixels;
 
+	word debugTileLocation = 0;
+	word debugMapLocation = 0;
+
 private:
-
-
-
-	const short clocksPerLine = 456;
 
 	byte* backgroundPixelsColorIndex;
 

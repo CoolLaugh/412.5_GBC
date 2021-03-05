@@ -1,5 +1,7 @@
 #include "Emulator.h"
 
+
+
 Emulator::Emulator() {
 
 	ImGui::SFML::Init(*graphics.window); 
@@ -16,6 +18,8 @@ Emulator::Emulator() {
 	//keybindings[Gameboy::Buttons::start] = sf::Keyboard::Key::V;
 }
 
+
+
 Emulator::~Emulator() {
 	SaveSettings();
 	ImGui::SFML::Shutdown();
@@ -24,6 +28,9 @@ Emulator::~Emulator() {
 	}
 }
 
+
+
+// loop endlessly executing instructions from the cartridge, processing inputs, drawing graphics, and processing the interface
 void Emulator::Loop() {
 
 	sf::Clock deltaClock;
@@ -76,6 +83,7 @@ void Emulator::Loop() {
 				}
 			}
 			else if (event.type == sf::Event::GainedFocus || event.type == sf::Event::LostFocus) {
+				// prevents keys from getting stuck down when clicking off the window
 				gameboy->SetButtonState(Gameboy::Buttons::up, false);
 				gameboy->SetButtonState(Gameboy::Buttons::down, false);
 				gameboy->SetButtonState(Gameboy::Buttons::left, false);
@@ -86,7 +94,7 @@ void Emulator::Loop() {
 				gameboy->SetButtonState(Gameboy::Buttons::start, false);
 			}
 		}
-		for (size_t i = 0; i < 54; i++) { // run the gameboy for 1 frame before checking the inputs again
+		for (size_t i = 0; i < 54; i++) { // run the gameboy for part of a frame before checking the inputs again
 
 			gameboy->Advance(kClocksPerScanLine);
 			if (gameboy->redrawScreen == true) {
@@ -104,6 +112,9 @@ void Emulator::Loop() {
 	}
 }
 
+
+
+// display and process the user interface
 void Emulator::MainMenuBar(sf::Keyboard::Key keyPresse) {
 
 	ToolBar();
@@ -118,6 +129,8 @@ void Emulator::MainMenuBar(sf::Keyboard::Key keyPresse) {
 	SettingsMenu();
 }
 
+
+// modify the listbox to work with string vectors instead of char*
 // https://eliasdaler.github.io/using-imgui-with-sfml-pt2/ 
 namespace ImGui {
 	static auto vector_getter = [](void* vec, int idx, const char** out_text) {
@@ -142,6 +155,9 @@ namespace ImGui {
 }
 
 
+
+// show the main window with interface but without executing any gameboy code
+// waits for the user to open a rom with the open file window
 void Emulator::FileSelectWindow() {
 
 	sf::Clock deltaClock;
@@ -170,6 +186,9 @@ void Emulator::FileSelectWindow() {
 
 }
 
+
+
+// show the settings menu for graphics scaling
 void Emulator::SettingsMenu() {
 
 	if (showSettings == false) {
@@ -186,6 +205,9 @@ void Emulator::SettingsMenu() {
 
 }
 
+
+
+// create the main menu tool bar and its sub menus
 void Emulator::ToolBar() {
 
 	if (ImGui::BeginMainMenuBar()) {
@@ -248,6 +270,9 @@ void Emulator::ToolBar() {
 	}
 }
 
+
+
+// shows a list of files from GB folder that can be opened as a rom
 void Emulator::FileOpen() {
 
 	if (showFileOpen == false) {
@@ -294,6 +319,9 @@ void Emulator::FileOpen() {
 
 }
 
+
+
+// allow the user to change the keybindings
 void Emulator::Keybindings(sf::Keyboard::Key keyPressed) {
 
 	if (showKeyBinds == false) {
@@ -312,6 +340,9 @@ void Emulator::Keybindings(sf::Keyboard::Key keyPressed) {
 	ImGui::End();
 }
 
+
+
+// show the about screen
 void Emulator::about() {
 
 	if (showAbout == false) {
@@ -328,6 +359,9 @@ void Emulator::about() {
 	ImGui::End();
 }
 
+
+
+// create button that shows the current keybinding and allows changes to that keybind
 void Emulator::SetKey(std::string buttonName, std::string currentKey, Gameboy::Buttons button, sf::Keyboard::Key keyPressed) {
 
 	ImGui::Text((buttonName + ": ").c_str());
@@ -355,6 +389,9 @@ void Emulator::SetKey(std::string buttonName, std::string currentKey, Gameboy::B
 	}
 }
 
+
+
+// show list of recent files that can be loaded as roms
 void Emulator::RecentFileMenuItem(std::string filename) {
 
 	if (ImGui::MenuItem(filename.c_str(), NULL, false)) {
@@ -368,6 +405,9 @@ void Emulator::RecentFileMenuItem(std::string filename) {
 	}
 }
 
+
+
+// create button to create a save state for given number
 void Emulator::SaveStateMenuItem(int number) {
 
 	if (gameboy == nullptr) {
@@ -379,6 +419,9 @@ void Emulator::SaveStateMenuItem(int number) {
 	}
 }
 
+
+
+// create button to load a save state for given number
 void Emulator::LoadStateMenuItem(int number) {
 
 	if (gameboy == nullptr) {
@@ -390,6 +433,9 @@ void Emulator::LoadStateMenuItem(int number) {
 	}
 }
 
+
+
+// show tile data in memory
 void Emulator::TileWindow() {
 
 	if (showTileWindow == false || gameboy == nullptr) {
@@ -410,6 +456,9 @@ void Emulator::TileWindow() {
 	ImGui::End();
 }
 
+
+
+// show the background map in memory
 void Emulator::BackgroundWindow() {
 
 	if (showBackgroundWindow == false || gameboy == nullptr) {
@@ -424,11 +473,43 @@ void Emulator::BackgroundWindow() {
 		image.create(256, 256, gameboy->GetBackgroundPixels());
 		BackgroundTexture.loadFromImage(image);
 		ImGui::Image(BackgroundTexture, ImVec2(256 * 2, 256 * 2));
+
+		ImGui::Text("BG Map"); // manually select the location of the background map
+		static int BGMapSelect = 0;
+		if (ImGui::RadioButton("Auto##1", &BGMapSelect, 0)) {
+			gameboy->ppu.debugMapLocation = 0;
+		}
+		ImGui::SameLine();
+		if (ImGui::RadioButton("0x9800", &BGMapSelect, 1)) {
+			gameboy->ppu.debugMapLocation = Address::BGWTileInfo0;
+		}
+		ImGui::SameLine();
+		if (ImGui::RadioButton("0x9C00", &BGMapSelect, 2)) {
+			gameboy->ppu.debugMapLocation = Address::BGWTileInfo1;
+		}
+
+		ImGui::Text("BG Tiles"); // manually select which tiles are used for drawing the background
+		static int tileSelect = 0;
+		if (ImGui::RadioButton("Auto##2", &tileSelect, 0)) {
+			gameboy->ppu.debugTileLocation = 0;
+		}
+		ImGui::SameLine();
+		if (ImGui::RadioButton("0x8000", &tileSelect, 1)) {
+			gameboy->ppu.debugTileLocation = Address::TilePattern0;
+		}
+		ImGui::SameLine();
+		if (ImGui::RadioButton("0x8800", &tileSelect, 2)) {
+			gameboy->ppu.debugTileLocation = Address::TilePattern1;
+		}
 	}
 
 	ImGui::End();
 }
 
+
+
+// show the color palettes
+// only works for gameboy color games
 void Emulator::ColorPaletteWindow() {
 
 	if (showColorPalettteWindow == false) {
@@ -450,6 +531,9 @@ void Emulator::ColorPaletteWindow() {
 	ImGui::End();
 }
 
+
+
+// show all sprites with associated data
 void Emulator::SpriteWindow() {
 
 	if (showSpriteWindow == false) {
@@ -482,6 +566,9 @@ void Emulator::SpriteWindow() {
 	ImGui::End();
 }
 
+
+
+// show audio channel output and allow modifications to sound buffer, volume, mute, and enabled
 void Emulator::Channel() {
 
 	if (showAudioWindow == false) {
@@ -512,6 +599,9 @@ void Emulator::Channel() {
 	ImGui::End();
 }
 
+
+
+// save current settings to file
 void Emulator::SaveSettings() {
 
 	nlohmann::json settings;
@@ -529,7 +619,9 @@ void Emulator::SaveSettings() {
 
 	settings["keys"] = keyBingings;
 	settings["pixelScale"] = scale;
+
 	if (gameboy != nullptr) {
+
 		settings["muteAll"] = gameboy->apu.muteAll;
 		settings["muteC1"] = gameboy->apu.channel1.mute;
 		settings["muteC2"] = gameboy->apu.channel2.mute;
@@ -541,6 +633,7 @@ void Emulator::SaveSettings() {
 
 	nlohmann::json recentFilesJson;
 	for (size_t i = 0; i < recentFiles.size(); i++) {
+
 		recentFilesJson[i] = recentFiles[i];
 	}
 	settings["recent"] = recentFilesJson;
@@ -550,6 +643,9 @@ void Emulator::SaveSettings() {
 	out.close();
 }
 
+
+
+// load settings from file
 void Emulator::LoadSettings() {
 
 	std::ifstream in("Settings.json");
@@ -567,7 +663,9 @@ void Emulator::LoadSettings() {
 
 	scale = settings["pixelScale"]; 
 	graphics.window->setSize(sf::Vector2u(kScreenWidth * scale, kScreenHeight * scale + 20));
+
 	if (gameboy != nullptr) {
+
 		gameboy->apu.muteAll = settings["muteAll"];
 		gameboy->apu.channel1.mute = settings["muteC1"];
 		gameboy->apu.channel2.mute = settings["muteC2"];
@@ -578,7 +676,9 @@ void Emulator::LoadSettings() {
 	}
 
 	recentFiles.clear();
+
 	for (size_t i = 0; i < settings["recent"].size(); i++) {
+
 		recentFiles.push_back(settings["recent"][i]);
 	}
 }

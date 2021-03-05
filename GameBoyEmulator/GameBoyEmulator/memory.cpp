@@ -3,14 +3,6 @@
 
 
 
-void Memory::WriteMemorySpace(word address, byte value) {
-	memorySpace[address - Address::NonBankMemoryStart] = value;
-}
-
-byte Memory::ReadMemorySpace(word address) {
-	return memorySpace[address - Address::NonBankMemoryStart];
-}
-
 Memory::Memory() {
 
 	memorySpace = new byte[memorySize];
@@ -20,6 +12,9 @@ Memory::Memory() {
 	memset(OAM, 0, 0xA0);
 }
 
+
+
+// free memory  
 Memory::~Memory() {
 	delete[] memorySpace;
 	delete[] OAM;
@@ -41,6 +36,24 @@ Memory::~Memory() {
 	}
 }
 
+
+
+// access memory with offset
+void Memory::WriteMemorySpace(word address, byte value) {
+	memorySpace[address - Address::NonBankMemoryStart] = value;
+}
+
+
+
+
+// read memory with offset
+byte Memory::ReadMemorySpace(word address) {
+	return memorySpace[address - Address::NonBankMemoryStart];
+}
+
+
+
+// initialize memory with default values
 void Memory::PowerUpSequence() {
 
 	WriteMemorySpace(0xFF05, 0x00);
@@ -108,6 +121,9 @@ void Memory::PowerUpSequence() {
 	}
 }
 
+
+
+// load file into cartridge memory and configure settings according the MPC type and CGB
 bool Memory::LoadRom(const std::string fileName) {
 
 	std::ifstream romFile(fileName, std::ios::in, std::ios::binary);
@@ -233,6 +249,10 @@ void Memory::CreateRamBanks() {
 	}
 }
 
+
+
+// read from memory taking into account memory banking, and other special behaviour
+// vram bank can be specified if it is different from the current bank
 byte Memory::Read(word address, int vRamBank) {
 
 	//if (address == 0xFF26) { // hack for no audio
@@ -296,7 +316,7 @@ byte Memory::Read(word address, int vRamBank) {
 }
 
 
-
+// write to memory taking into account memory banking, and other special behaviour
 void Memory::Write(word address, byte data) {
 
 	// 0 - 7FFF cartrigde
@@ -476,6 +496,9 @@ void Memory::Write(word address, byte data) {
 	}
 }
 
+
+
+// use the right write function based on mbc type
 void Memory::WriteMBCSwitch(word address, byte data) {
 
 	switch (mbc) {
@@ -529,11 +552,17 @@ void Memory::WriteMBCSwitch(word address, byte data) {
 	}
 }
 
+
+
+// enable / disable the ram bank
 void Memory::mbc1_00001FFF(byte data) {
 	data &= 0x0F;
 	ramBankEnabled = (data == 0xA);
 }
 
+
+
+// change the current rom bank
 void Memory::mbc1_20003FFF(word address, byte data) {
 
 	data &= 0x1F;
@@ -544,6 +573,9 @@ void Memory::mbc1_20003FFF(word address, byte data) {
 	currentRomBank |= data;
 }
 
+
+
+// change the current ram bank
 void Memory::mbc1_40005FFF(byte data) {
 
 	if (memoryModel == mm4_32) {
@@ -559,6 +591,9 @@ void Memory::mbc1_40005FFF(byte data) {
 	}
 }
 
+
+
+// changes the behaviour of ram banking
 void Memory::mbc1_60007FFF(byte data) {
 
 	data &= 1;
@@ -571,6 +606,10 @@ void Memory::mbc1_60007FFF(byte data) {
 	}
 }
 
+
+
+// enables ram banks or changes current rom bank
+// bit 8 in address determines which behaviour is performed
 void Memory::mbc2_00003FFF(word address, byte data) {
 
 	if (BitTest(address, 8) == false) {
@@ -586,10 +625,16 @@ void Memory::mbc2_00003FFF(word address, byte data) {
 
 }
 
+
+
+// same as MBC 1 (enable / disable the ram bank)
 void Memory::mbc3_00001FFF(byte data) {
 	mbc1_00001FFF(data);
 }
 
+
+
+// change the rom bank
 void Memory::mbc3_20003FFF(byte data) {
 
 	data &= 0x7F;
@@ -599,6 +644,8 @@ void Memory::mbc3_20003FFF(byte data) {
 	currentRomBank = data;
 }
 
+
+// change the ram bank or map real time clock into memory
 void Memory::mbc3_40005FFF(byte data) {
 	if (data <= 3) {
 		data &= 3;
@@ -610,32 +657,49 @@ void Memory::mbc3_40005FFF(byte data) {
 
 }
 
+
+
+// latch the current time
 void Memory::mbc3_60007FFF(byte data) {
 
 	// latch the current time by writing 0x00 then 0x01
 }
 
+
+
+// same as MBC 1 (enable / disable the ram bank)
 void Memory::mbc5_00001FFF(byte data) {
 	mbc1_00001FFF(data);
 }
 
+
+
+// change the lower byte of the rom bank
 void Memory::mbc5_20002FFF(byte data) {
 	currentRomBank &= 0xFF00;
 	currentRomBank |= data;
 }
 
+
+
+// change the higher byte of the rom bank
 void Memory::mbc5_30003FFF(byte data) {
 	word bit8 = data & 0x1;
 	bit8 <<= 8;
 	currentRomBank |= bit8;
 }
 
+
+
+// change the ram bank
 void Memory::mbc5_40005FFF(byte data) {
 	data &= 0x0F;
 	currentRamBank = data;
 }
 
 
+
+// return the state of the joypad in the format expected from the rom
 byte Memory::GetJoypadState() {
 	
 	byte selectedKeys = ReadMemorySpace(Address::Joypad);
@@ -726,6 +790,8 @@ void Memory::IncrementDivAndTimerRegisters(byte clocks) {
 
 
 
+// write external ram (A000 - BFFF) to file
+// external ram is battery powered ram in the cartridge which is preserved after the gameboy is turned off and the cartridge removed
 void Memory::SaveExternalRam(std::string fileName) {
 
 	std::string saveFile = fileName.substr(0, fileName.find_last_of('.')) + ".sav";
@@ -744,6 +810,7 @@ void Memory::SaveExternalRam(std::string fileName) {
 
 
 
+// read external ram (A000 - BFFF) from file
 void Memory::LoadExternalRam(std::string fileName) {
 
 	std::string saveFileName = fileName.substr(0, fileName.find_last_of('.')) + ".sav";
@@ -772,6 +839,7 @@ void Memory::LoadExternalRam(std::string fileName) {
 
 
 
+// perform DMA during HBlank if it has been setup
 void Memory::HBlankDMA() {
 
 	if (vramDMATransferProgress < vramDMATransferLength) {

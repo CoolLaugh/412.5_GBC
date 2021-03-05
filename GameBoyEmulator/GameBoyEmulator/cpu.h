@@ -54,10 +54,6 @@ public:
 		word pc = 0x100;
 	};
 
-	Memory* memory;
-	PPU* graphics;
-	APU* apu;
-
 	Registers registers;
 	bool halted = false;
 	bool stop = false;
@@ -70,6 +66,11 @@ public:
 
 	bool logState = false;
 	byte lastLY = 0;
+
+	Memory* memory;
+	PPU* graphics;
+	APU* apu;
+
 
 	bool flagTest(flagType flag);
 	void flagSet(flagType flag);
@@ -194,9 +195,6 @@ public:
 
 	word Combinebytes(byte value1, byte value2);
 	std::pair<byte, byte> splitBytes(word value);
-
-	word CombinebytesR(byte value1, byte value2);
-	std::pair<byte, byte> splitBytesR(word value);
 
 	void cleanOutputState();
 	void outputState();

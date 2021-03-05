@@ -65,7 +65,7 @@ private:
 
 public:
 
-	void step(int clocks);
+	void step(int clocks, int speedmode);
 
 	void resetSC1Length(byte val);
 	void resetSC2Length(byte val);

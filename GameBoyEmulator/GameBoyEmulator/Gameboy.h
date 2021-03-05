@@ -28,7 +28,7 @@ public:
 	Gameboy(std::string Filename);
 	~Gameboy();
 
-	void Advance(int clockCount);
+	void Advance(int opcodeCount);
 	void SetButtonState(Buttons button, bool pressed);
 	byte* GetScreenPixels();
 	byte* GetBackgroundPixels();

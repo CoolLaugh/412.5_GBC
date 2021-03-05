@@ -1,5 +1,8 @@
 #include "Gameboy.h"
 
+
+
+// setup the cpu, memory, ppu, and apu
 Gameboy::Gameboy(std::string Filename) {
 
 	cpu.graphics = &ppu;
@@ -14,13 +17,18 @@ Gameboy::Gameboy(std::string Filename) {
 	cpu.apu = &apu;
 }
 
+
+
 Gameboy::~Gameboy() {
 
 }
 
-void Gameboy::Advance(int clockCount) {
 
-	for (size_t i = 0; i < clockCount; i++) {
+
+// advance the emulation by the number of instructions
+void Gameboy::Advance(int opcodeCount) {
+
+	for (size_t i = 0; i < opcodeCount; i++) {
 
 		byte LY = memory.Read(Address::LY);
 
@@ -47,6 +55,9 @@ void Gameboy::Advance(int clockCount) {
 	}
 }
 
+
+
+// change the state of a button from not pressed to pressed and vice versa
 void Gameboy::SetButtonState(Buttons button, bool pressed) {
 
 	switch (button) {
@@ -78,22 +89,34 @@ void Gameboy::SetButtonState(Buttons button, bool pressed) {
 
 }
 
+
+
+// get pixels for the main screen
 byte * Gameboy::GetScreenPixels() {
 	return ppu.backgroundPixels;
 }
 
+
+// get pixels for the background map in memory
 byte * Gameboy::GetBackgroundPixels() {
 	return ppu.BGMapBackgroundPixels;
 }
 
+
+// get pixels for tile data in memory
 byte * Gameboy::GetTilePixels() {
 	return ppu.tileMemoryPixels;
 }
 
+
+// get pixels for showing palette color
 byte * Gameboy::GetColorPalettePixels() {
 	return ppu.ColorPalettePixels;
 }
 
+
+
+// save the current state of the gameboy to file
 void Gameboy::SaveState(int stateNumber) {
 
 	byte* variablesState = new byte[0x100];
@@ -111,10 +134,10 @@ void Gameboy::SaveState(int stateNumber) {
 	variablesState[variablesIndex++] = cpu.registers.e;
 	variablesState[variablesIndex++] = cpu.registers.h;
 	variablesState[variablesIndex++] = cpu.registers.l;
-	variablesState[variablesIndex++] = cpu.splitBytes(cpu.registers.sp).first;
-	variablesState[variablesIndex++] = cpu.splitBytes(cpu.registers.sp).second;
-	variablesState[variablesIndex++] = cpu.splitBytes(cpu.registers.pc).first;
-	variablesState[variablesIndex++] = cpu.splitBytes(cpu.registers.pc).second;
+	variablesState[variablesIndex++] = SplitBytes(cpu.registers.sp).lsb;
+	variablesState[variablesIndex++] = SplitBytes(cpu.registers.sp).msb;
+	variablesState[variablesIndex++] = SplitBytes(cpu.registers.pc).lsb;
+	variablesState[variablesIndex++] = SplitBytes(cpu.registers.pc).msb;
 
 
 	variablesState[variablesIndex++] = cpu.halted;
@@ -124,24 +147,25 @@ void Gameboy::SaveState(int stateNumber) {
 	variablesState[variablesIndex++] = cpu.interuptEnableInstructionCount;
 	variablesState[variablesIndex++] = cpu.ColorGameBoyMode;
 	variablesState[variablesIndex++] = cpu.speedMode;
+	variablesState[variablesIndex++] = cpu.lastLY;
 
 
-	variablesState[variablesIndex++] = cpu.splitBytes(ppu.clocksThisLine).first;
-	variablesState[variablesIndex++] = cpu.splitBytes(ppu.clocksThisLine).second;
+	variablesState[variablesIndex++] = SplitBytes(ppu.clocksThisLine).lsb;
+	variablesState[variablesIndex++] = SplitBytes(ppu.clocksThisLine).msb;
 
 
 	variablesState[variablesIndex++] = memory.stopHblankDMA;
 	variablesState[variablesIndex++] = memory.currentRamBank;
 	variablesState[variablesIndex++] = memory.currentWramBank;
 	variablesState[variablesIndex++] = memory.currentVramBank;
-	variablesState[variablesIndex++] = cpu.splitBytes(memory.currentRomBank).first;
-	variablesState[variablesIndex++] = cpu.splitBytes(memory.currentRomBank).second;
+	variablesState[variablesIndex++] = SplitBytes(memory.currentRomBank).lsb;
+	variablesState[variablesIndex++] = SplitBytes(memory.currentRomBank).msb;
 	variablesState[variablesIndex++] = memory.numberOfRamBanks;
 	variablesState[variablesIndex++] = memory.ramBankEnabled;
 	variablesState[variablesIndex++] = memory.mbc;
 	variablesState[variablesIndex++] = memory.memoryModel;
-	variablesState[variablesIndex++] = cpu.splitBytes(memory.dividerRegister).first;
-	variablesState[variablesIndex++] = cpu.splitBytes(memory.dividerRegister).second;
+	variablesState[variablesIndex++] = SplitBytes(memory.dividerRegister).lsb;
+	variablesState[variablesIndex++] = SplitBytes(memory.dividerRegister).msb;
 	variablesState[variablesIndex++] = memory.timerOverflow;
 	variablesState[variablesIndex++] = memory.oldBit;
 
@@ -149,13 +173,15 @@ void Gameboy::SaveState(int stateNumber) {
 	int sizeOfVram = (int)memory.vramBank.size() * 0x2000;
 	int sizeOfMemorySpaceBank = (int)memory.ramBank.size() * 0x2000;
 	int sizeOfWram = (int)memory.wramBank.size() * 0x1000;
-	int sizeOfMemorySpace = 0x10000;
+	int sizeOfSpriteData = 0xA0;
+	int sizeOfMemorySpace = 0x100;
 	int sizeOfColorPalette = 0x40 + 0x40;
 
 	int fileSize = sizeOfVariables +
 		sizeOfVram +
 		sizeOfMemorySpaceBank +
 		sizeOfWram +
+		sizeOfSpriteData +
 		sizeOfMemorySpace +
 		sizeOfColorPalette;
 
@@ -188,8 +214,12 @@ void Gameboy::SaveState(int stateNumber) {
 		}
 	}
 
-	for (size_t i = 0; i <= 0x100; i++) {
-		state[index++] = memory.Read(i + 0xFF00);
+	for (size_t i = 0; i < 0xA0; i++) {
+		state[index++] = memory.OAM[i];
+	}
+
+	for (size_t i = 0; i < 0x100; i++) {
+		state[index++] = memory.memorySpace[i];
 	}
 
 	for (size_t i = 0x00; i < 0x40; i++) {
@@ -209,9 +239,16 @@ void Gameboy::SaveState(int stateNumber) {
 	cpu.outputStateBuffer += "SAVE STATE CREATED\n";
 }
 
+
+
+// load the state of the gameboy from a file
 void Gameboy::LoadState(int stateNumber) {
 
 	std::string stateFilename = RomFilename.substr(0, RomFilename.find_last_of('.')) + "SaveState" + std::to_string(stateNumber) + ".ss";
+
+	if(fs::exists(stateFilename) == false) {
+		return; // do nothing
+	}
 
 	std::ifstream stateFile(stateFilename, std::ifstream::binary);
 
@@ -238,9 +275,9 @@ void Gameboy::LoadState(int stateNumber) {
 	cpu.registers.h = state[index++];
 	cpu.registers.l = state[index++];
 
-	cpu.registers.sp = cpu.Combinebytes(state[index], state[index + 1]);
+	cpu.registers.sp = Combinebytes(state[index], state[index + 1]);
 	index += 2;
-	cpu.registers.pc = cpu.Combinebytes(state[index], state[index + 1]);
+	cpu.registers.pc = Combinebytes(state[index], state[index + 1]);
 	index += 2;
 
 
@@ -251,9 +288,9 @@ void Gameboy::LoadState(int stateNumber) {
 	cpu.interuptEnableInstructionCount = state[index++];
 	cpu.ColorGameBoyMode = state[index++];
 	cpu.speedMode = state[index++];
+	cpu.lastLY = state[index++];
 
-
-	ppu.clocksThisLine = cpu.Combinebytes(state[index], state[index + 1]);
+	ppu.clocksThisLine = Combinebytes(state[index], state[index + 1]);
 	index += 2;
 
 	memory.stopHblankDMA = state[index++];
@@ -274,7 +311,7 @@ void Gameboy::LoadState(int stateNumber) {
 	memory.ColorGameBoyMode = cpu.ColorGameBoyMode;
 	ppu.ColorGameBoyMode = cpu.ColorGameBoyMode;
 
-	memory.CreateRamBanks();
+	memory.CreateRamBanks(); // clear and recreate bank memory
 
 	for (size_t bank = 0; bank < memory.vramBank.size(); bank++) {
 
@@ -298,6 +335,10 @@ void Gameboy::LoadState(int stateNumber) {
 
 			memory.wramBank[bank][address] = state[index++];
 		}
+	}
+
+	for (size_t i = 0; i < 0xA0; i++) {
+		memory.OAM[i] = state[index++];
 	}
 
 	for (size_t i = 0; i < 0x100; i++) {
