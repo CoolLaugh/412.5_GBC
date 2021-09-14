@@ -9,14 +9,12 @@ This is a gameboy and gameboy color emulator written in C++ using SFML for graph
 
 # Tested and Working Games
 
-* Tetris - fully working\*
-* Dr.Mario - fully working\*
-* Links Awakening - fully working\*
-* Super Mario Land - fully working\*
-* Super Mario Land 2 - fully working\*
-* Kirby's Dream Land - fully working\*
-
-\*audio is not implemented yet
+* Tetris - fully working
+* Dr.Mario - fully working
+* Links Awakening - fully working
+* Super Mario Land - fully working
+* Super Mario Land 2 - fully working
+* Kirby's Dream Land - fully working
 
 # Test Roms Passed
 * Blargg's cpu_instrs
